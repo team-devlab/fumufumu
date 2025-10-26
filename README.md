@@ -19,4 +19,3 @@ pnpm install
 pnpm dev
 ```
 
-詳細は[docs/README.md](./docs/README.md)を参照してください。
