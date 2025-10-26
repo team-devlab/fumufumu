@@ -4,6 +4,12 @@
   "private": true,
   "scripts": {
     "dev": "pnpm --filter @fumufumu/* dev",
-    "build": "pnpm --filter @fumufumu/* build"
+    "build": "pnpm --filter @fumufumu/* build",
+    "test": "pnpm --filter @fumufumu/worker test"
+  },
+  "devDependencies": {
+    "@vitest/runner": "3.2.2",
+    "@vitest/snapshot": "3.2.2",
+    "vitest": "3.2.2"
   }
 }
