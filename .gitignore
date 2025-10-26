@@ -142,8 +142,19 @@ vite.config.ts.timestamp-*
 .pnpm-debug.log*
 .pnpm-store/
 
-# Wrangler
+# Wrangler (Cloudflare Workers)
 .wrangler/
+.dev.vars
+
+# Next.js
+next-env.d.ts
+.vercel
+
+# Worker specific
+dist/
+
+# misc
+*.pem
 
 # OS
 .DS_Store
