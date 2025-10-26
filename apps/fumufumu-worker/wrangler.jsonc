@@ -1,6 +1,6 @@
 {
   "$schema": "node_modules/wrangler/config-schema.json",
-  "name": "my-worker",
+  "name": "fumufumu-worker",
   "main": "src/index.ts",
   "compatibility_date": "2025-10-26",
   "dev": {
