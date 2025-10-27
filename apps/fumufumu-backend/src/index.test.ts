@@ -1,7 +1,7 @@
 import { describe, it, expect } from 'vitest';
 import app from './index';
 
-describe('Worker', () => {
+describe('Backend API', () => {
   it('should handle root request', async () => {
     const req = new Request('http://localhost/');
     const res = await app.fetch(req);

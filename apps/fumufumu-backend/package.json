@@ -1,5 +1,5 @@
 {
-  "name": "@fumufumu/worker",
+  "name": "@fumufumu/backend",
   "type": "module",
   "scripts": {
     "dev": "wrangler dev",

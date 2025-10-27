@@ -5,7 +5,7 @@
   "scripts": {
     "dev": "pnpm --filter @fumufumu/* dev",
     "build": "pnpm --filter @fumufumu/* build",
-    "test": "pnpm --filter @fumufumu/worker test"
+    "test": "pnpm --filter @fumufumu/backend test"
   },
   "devDependencies": {
     "@vitest/runner": "3.2.2",
