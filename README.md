@@ -1,6 +1,6 @@
 # fumufumu
 
-モノレポ構成のNext.js + Cloudflare Workersプロジェクト
+Next.js + Cloudflare Workersプロジェクト
 
 ## 概要
 
@@ -11,11 +11,21 @@
 
 ## クイックスタート
 
-```bash
-# 依存関係のインストール
-pnpm install
+各アプリは独立して動作します。
 
-# 開発サーバー起動
+### フロントエンド
+
+```bash
+cd apps/fumufumu-frontend
+pnpm install
+pnpm dev
+```
+
+### バックエンド
+
+```bash
+cd apps/fumufumu-backend
+pnpm install
 pnpm dev
 ```
 
