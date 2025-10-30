@@ -1,7 +1,9 @@
-export default function Home() {
+export default function Top() {
   return (
     <div className="">
-      Helloお
+      Topぺージ
+      <br/>・そのうちLPとかになることを一旦想定。
+      <br/>・α版としてはここから遷移させることを想定。
     </div>
   );
 }
