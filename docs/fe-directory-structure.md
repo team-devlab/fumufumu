@@ -1,7 +1,8 @@
 ## **📁 Fumufumu Frontend アプリケーション構造 (Next.js App Router)**
 
 ※Feature-Drivenといいつつ、なるべくファイルベースルーティングのところからコードを分離して、Feature別（相談、回答、タグ、通知 etc）にコンポーネントやロジック群を書けたらいいなぁと思っているぐらいです。一旦厳密に守る必要はありません（レビュー時にこれはこっちに切り出したほうがいいかもとは提案するかもです）
-※重かったりしたら随時辞めます
+<br>※Featuresディレクトリの参考実装としては、apps\fumufumu-frontend\src\app\(main)\experiment\page.tsx やこちらの[PR](https://github.com/team-devlab/fumufumu/pull/6)を参考にしてください
+<br>※重かったりしたら随時辞めます
 
 このドキュメントは、@fumufumu/frontend アプリケーションの最終的なディレクトリ構造（アーキテクチャ）を示します。これは現在の最小構成ではなく、機能追加を通じて目指すべき整理された構成の青写真です。
 
