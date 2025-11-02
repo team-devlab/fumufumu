@@ -22,6 +22,10 @@ jobs:
         with:
           node-version: 20
       
+      - name: Enable pnpm via Corepack
+        # Node.js がインストールされている環境で pnpm を有効化
+        run: corepack enable
+      
       - name: Install dependencies
         # pnpm-workspace.yamlがあるため pnpm install を実行し、依存関係を解決
         run: pnpm install --frozen-lockfile
