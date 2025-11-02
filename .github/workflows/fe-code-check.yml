@@ -1,0 +1,32 @@
+name: Code Quality CI
+
+on:
+  pull_request:
+    branches: [main, master]
+
+jobs:
+  biome_check:
+    name: Biome Check
+    runs-on: ubuntu-latest
+    
+    steps:
+      - name: Checkout Repository
+        uses: actions/checkout@v4
+        
+      - name: Setup Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: 20
+          cache: 'pnpm' # pnpmを使用しているため、キャッシュをpnpmに設定
+          
+      - name: Install dependencies
+        # pnpm-workspace.yamlがあるため pnpm install を実行
+        run: pnpm install --frozen-lockfile
+
+      # Biomeのセットアップ（バージョンを自動検出）
+      - name: Setup Biome CLI
+        uses: biomejs/setup-biome@v2
+
+      # format, lint, organize imports のチェックを同時に実行（ファイルへの書き込みは行わない）
+      - name: Run Biome CI
+        run: pnpm exec biome ci
