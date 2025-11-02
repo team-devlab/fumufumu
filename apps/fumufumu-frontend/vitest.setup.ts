@@ -1,1 +1,1 @@
-import '@testing-library/jest-dom/vitest'; // カスタムマッチャーを有効化
+import "@testing-library/jest-dom/vitest"; // カスタムマッチャーを有効化

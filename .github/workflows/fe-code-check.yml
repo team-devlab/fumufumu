@@ -1,0 +1,42 @@
+name: Frontend Code Check (Biome & Tests)
+
+on:
+  pull_request:
+    branches: [main, master]
+
+jobs:
+  frontend_quality:
+    name: Biome & Vitest Check
+    runs-on: ubuntu-latest
+
+    defaults:
+      run:
+        working-directory: apps/fumufumu-frontend/
+    
+    steps:
+      - name: Checkout Repository
+        uses: actions/checkout@v4
+        
+      - name: Setup Node.js and pnpm
+        uses: actions/setup-node@v6
+        with:
+          node-version: 20
+      
+      - name: Enable pnpm via Corepack
+        # Node.js がインストールされている環境で pnpm を有効化
+        run: corepack enable
+      
+      - name: Install dependencies
+        # pnpm-workspace.yamlがあるため pnpm install を実行し、依存関係を解決
+        run: pnpm install --frozen-lockfile
+
+      # Biomeのセットアップ（バージョンを自動検出）
+      - name: Setup Biome CLI
+        uses: biomejs/setup-biome@v2
+
+      # format, lint, organize imports のチェックを同時に実行（ファイルへの書き込みは行わない）
+      - name: Run Biome CI
+        run: pnpm exec biome ci
+      
+      - name: Run Vitest Tests
+        run: pnpm test

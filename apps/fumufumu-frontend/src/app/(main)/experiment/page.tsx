@@ -29,7 +29,7 @@ export default function ExperimentPage() {
 //   const handleCreateContent = () => {
 //     setIsProcessing(true);
 //     console.log("コンテンツ作成処理を開始...");
-    
+
 //     // 処理のデモとして3秒後に完了
 //     setTimeout(() => {
 //       console.log("コンテンツ作成処理が完了しました。");
@@ -42,7 +42,7 @@ export default function ExperimentPage() {
 //       <div className="flex justify-between items-center">
 //         {/* メインタイトル */}
 //         <h1 className="text-4xl font-extrabold text-gray-900">ダッシュボード</h1>
-        
+
 //         {/* 主要アクションボタンの利用例 */}
 //         <Button onClick={handleCreateContent} disabled={isProcessing} className="bg-blue-300">
 //           テスト {isProcessing ? '処理中...' : 'コンソールログを表示'}
