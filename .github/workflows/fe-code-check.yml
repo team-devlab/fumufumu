@@ -17,11 +17,10 @@ jobs:
       - name: Checkout Repository
         uses: actions/checkout@v4
         
-      - name: Setup Node.jsand pnpm
+      - name: Setup Node.js and pnpm
         uses: actions/setup-node@v6
         with:
           node-version: 20
-          cache: 'pnpm' # pnpmを使用しているため、キャッシュをpnpmに設定
       
       - name: Install dependencies
         # pnpm-workspace.yamlがあるため pnpm install を実行し、依存関係を解決
