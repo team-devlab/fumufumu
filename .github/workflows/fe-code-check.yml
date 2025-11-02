@@ -22,9 +22,7 @@ jobs:
         with:
           node-version: 20
           cache: 'pnpm' # pnpmを使用しているため、キャッシュをpnpmに設定
-          
-      - name: Enable pnpm via Corepack
-        run: corepack enable
+          package-manager: 'pnpm' # pnpm を自動インストールし、PATHに通す
       
       - name: Install dependencies
         # pnpm-workspace.yamlがあるため pnpm install を実行し、依存関係を解決
