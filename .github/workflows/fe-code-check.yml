@@ -21,7 +21,6 @@ jobs:
         uses: actions/setup-node@v6
         with:
           node-version: 20
-          pnpm-version: 9 # pnpm をインストールして PATH に通す
           cache: 'pnpm' # pnpmを使用しているため、キャッシュをpnpmに設定
       
       - name: Install dependencies
