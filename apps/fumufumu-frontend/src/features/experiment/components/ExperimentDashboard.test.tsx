@@ -1,6 +1,6 @@
 import { describe, it, expect, vi, afterEach, beforeEach } from 'vitest';
 import { render, screen, fireEvent } from '@testing-library/react';
-import { ExperimentDashboard } from './ExperimentDashboard';
+import { ExperimentDashboard } from '@/features/experiment/components/ExperimentDashboard';
 
 // --- カスタムフックのモック化 ---
 // コンポーネントテストでは、依存するカスタムフックの内部ロジックではなく、

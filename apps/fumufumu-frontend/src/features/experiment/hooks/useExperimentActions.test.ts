@@ -3,7 +3,7 @@
 import { describe, it, expect, vi, beforeEach, afterEach } from 'vitest';
 // hooksをテストするために、testing-library/react から renderHook を使用します
 import { renderHook, act, waitFor } from '@testing-library/react'
-import { useExperimentActions } from './useExperimentActions';
+import { useExperimentActions } from '@/features/experiment/hooks/useExperimentActions'
 import * as mockApi from '@/features/experiment/api/mockApi'; // APIモジュールをインポート
 
 // --- APIモジュールのモック化 ---
