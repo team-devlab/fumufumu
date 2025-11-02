@@ -21,8 +21,8 @@ jobs:
         uses: actions/setup-node@v6
         with:
           node-version: 20
+          pnpm-version: 9 # pnpm をインストールして PATH に通す
           cache: 'pnpm' # pnpmを使用しているため、キャッシュをpnpmに設定
-          package-manager: 'pnpm' # pnpm を自動インストールし、PATHに通す
       
       - name: Install dependencies
         # pnpm-workspace.yamlがあるため pnpm install を実行し、依存関係を解決
