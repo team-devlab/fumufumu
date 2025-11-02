@@ -1,8 +1,8 @@
 "use client";
 
 import { useState } from "react";
-import { createContent } from "../api/mockApi";
-import type { ExperimentContent } from "../types";
+import { createContent } from "@/features/experiment/api/mockApi";
+import type { ExperimentContent } from "@/features/experiment/types";
 
 /**
  * 実験機能のアクションと状態を管理するカスタムフック

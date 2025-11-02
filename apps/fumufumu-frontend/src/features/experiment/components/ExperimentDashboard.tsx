@@ -1,7 +1,7 @@
 "use client";
 
 import { Button } from "@/components/ui/Button"; // 汎用UIコンポーネントをインポート
-import { useExperimentActions } from "../hooks/useExperimentActions";
+import { useExperimentActions } from "@/features/experiment/hooks/useExperimentActions";
 
 /**
  * 実験機能のダッシュボードUI（ロジックも含む）

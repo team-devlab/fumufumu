@@ -1,4 +1,4 @@
-import type { ExperimentContent } from "../types";
+import type { ExperimentContent } from "@/features/experiment/types";
 
 /**
  * 外部APIとの通信をシミュレートする関数

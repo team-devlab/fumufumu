@@ -4,7 +4,7 @@ import { describe, it, expect, vi, beforeEach, afterEach } from 'vitest';
 // hooksをテストするために、testing-library/react から renderHook を使用します
 import { renderHook, act, waitFor } from '@testing-library/react'
 import { useExperimentActions } from './useExperimentActions';
-import * as mockApi from '../api/mockApi'; // APIモジュールをインポート
+import * as mockApi from '@/features/experiment/api/mockApi'; // APIモジュールをインポート
 
 // --- APIモジュールのモック化 ---
 // Vitestの vi.mock を使って、外部依存（API呼び出し）を隔離します。
