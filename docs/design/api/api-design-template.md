@@ -73,8 +73,8 @@ id: integer # 作成されたID。
 
 指定されたIDのリソースを取得します。
 
-  * **認証:** 必須
-  * **タグ:** [domain], read
+- **認証:** 必須
+- **タグ:** [domain], read
 
 #### パス/クエリパラメータ (Parameters)
 
@@ -101,8 +101,8 @@ id: integer
 
 リソースのリストを取得します。
 
-  * **認証:** 必須
-  * **タグ:** [domain], list
+- **認証:** 必須
+- **タグ:** [domain], list
 
 #### パス/クエリパラメータ (Parameters)
 
@@ -131,8 +131,8 @@ data: array of ref # [DOMAIN_NAME] オブジェクトの配列
 
 リソースを部分的に更新します。
 
-  * **認証:** 必須
-  * **タグ:** [domain], update
+- **認証:** 必須
+- **タグ:** [domain], update
 
 #### リクエストボディ (Request Body)
 
@@ -150,8 +150,8 @@ status: string (任意) # 更新するステータス。
 
 リソースを削除します。
 
-  * **認証:** 必須 (適切な権限が必要)
-  * **タグ:** [domain], delete
+- **認証:** 必須 (適切な権限が必要)
+- **タグ:** [domain], delete
 
 #### レスポンス (Responses)
 
