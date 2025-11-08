@@ -37,7 +37,6 @@ reason: string # そのフィールドが無効である理由。
 
 ```text
 # フィールド名: 型 # 説明
-type: string # エラータイプを一意に識別するURI (例: "/probs/validation-error")。
 title: string # エラーの簡潔なサマリー。 (例: "Bad Request" or "Payment Required")
 status: integer # この問題を引き起こしたオリジナルのHTTPステータスコード。
 detail: string # 問題の具体的な詳細な説明。開発者向けの情報を含める。
