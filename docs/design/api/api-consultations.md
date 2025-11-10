@@ -96,17 +96,51 @@ data: array of ref # Consultationオブジェクトの配列（schemas.md参照�
 }
 ```
 
-### 400 Bad Request - リクエストが不正
+##### 🔴 400 Bad Request
 
-### 401 Unauthorized - 認証エラー
+パラメータの形式や制約違反。
 
-```text
-# HTTP Status: エラーコード # 説明
-400: INVALID_INPUT # パラメータの形式や制約違反。
-401: UNAUTHORIZED # 認証エラー。
-404: NOT_FOUND # リソースが見つからない。
-500: INTERNAL_SERVER_ERROR # サーバーエラー。
+```json
+{
+  "title": "Bad Request",
+  "status": 400,
+  "detail": "パラメータの形式が不正です。",
+  "invalid_params": [
+    {
+      "name": "userId",
+      "reason": "整数値を指定してください。"
+    }
+  ]
+}
 ```
+
+##### 🔴 401 Unauthorized
+
+認証エラー。
+
+```json
+{
+  "title": "Unauthorized",
+  "status": 401,
+  "detail": "認証に失敗しました。有効なトークンを指定してください。"
+}
+```
+
+##### 🔴 500 Internal Server Error
+
+サーバーエラー。
+
+```json
+{
+  "title": "Internal Server Error",
+  "status": 500,
+  "detail": "サーバー内部でエラーが発生しました。"
+}
+```
+
+**エラーレスポンス形式:**
+- すべてのエラーレスポンスは `ErrorResponse` オブジェクト（schemas.md参照）に準拠します。
+- RFC 9457 (Problem Details for HTTP APIs) に準拠しています。
 
 -----
 
