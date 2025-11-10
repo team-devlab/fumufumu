@@ -11,7 +11,7 @@
 ### 相談一覧取得
 
 * **メソッド:** `GET`
-* **パス:** `/api/v1/consultations`
+* **パス:** `/api/consultations`
 * **クエリパラメータ:**
   - `userId` (integer, 任意): 特定ユーザーの相談のみを取得
   - `draft` (boolean, 任意): 下書き状態で絞り込み（`true`: 下書きのみ、`false`: 公開済みのみ）
@@ -19,10 +19,10 @@
 * **リクエストボディ:** なし
 
 **クエリ例:**
-- `/api/v1/consultations` - 全件取得
-- `/api/v1/consultations?userId=12` - ユーザーID=12の相談一覧
-- `/api/v1/consultations?userId=12&draft=false` - ユーザーID=12の公開済み相談
-- `/api/v1/consultations?userId=12&solved=true` - ユーザーID=12の解決済み相談
+- `/api/consultations` - 全件取得
+- `/api/consultations?userId=12` - ユーザーID=12の相談一覧
+- `/api/consultations?userId=12&draft=false` - ユーザーID=12の公開済み相談
+- `/api/consultations?userId=12&solved=true` - ユーザーID=12の解決済み相談
 
 ---
 
