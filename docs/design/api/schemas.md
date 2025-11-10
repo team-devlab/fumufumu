@@ -19,7 +19,32 @@ updated_at: string # 最終更新日時 (ISO 8601)。
 ````
 
 ### Consultation
-<!-- 一旦省略 -->
+
+相談の情報を示すオブジェクトです。
+
+```text
+# フィールド名: 型 # 説明
+id: integer # 相談ID。
+title: string # 相談タイトル。
+body_preview: string # 本文のプレビュー（一覧用）。※ questions.body から動的生成
+draft: boolean # 下書き状態フラグ。
+hidden_at: datetime|null # 非公開日時。
+solved_at: datetime|null # 解決日時。
+created_at: string # 作成日時 (ISO 8601)。
+updated_at: string # 最終更新日時 (ISO 8601)。
+author: ref # Userオブジェクトを参照（投稿者情報）。
+tags: array of ref # Tagオブジェクトの配列を参照。
+```
+
+### Tag
+
+タグ情報を示すオブジェクトです。
+
+```text
+# フィールド名: 型 # 説明
+id: integer # タグID。
+name: string # タグ名。
+```
 
 ### InvalidParam (入力エラー詳細)
 

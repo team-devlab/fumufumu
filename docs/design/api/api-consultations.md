@@ -30,6 +30,15 @@
 
 ### 200 OK - 成功
 
+```text
+# フィールド名: 型 # 説明
+meta: object # メタ情報
+  total: integer # 全件数
+data: array of ref # Consultationオブジェクトの配列（schemas.md参照）
+```
+
+#### Response Example (JSON)
+
 ```json
 {
   "meta": {
@@ -76,31 +85,6 @@
         { "id": 6, "name": "インフラ" }
       ]
     }
-  ]
-}
-```
-
-#### data[i] の構造（インラインコメント付き）
-
-```jsonc
-{
-  "id": 101,                               // consultations.id
-  "title": "エンジニア職種：開発orマネジメント、どちらを目指すべき？",  // consultations.title
-  "body_preview": "キャリア設計で悩んでいます。将来的に自分が...",      // consultations.body の抜粋
-  "draft": false,                          // consultations.draft
-  "hidden_at": null,                       // consultations.hidden_at
-  "solved_at": null,                       // consultations.solved_at
-  "created_at": "2025-11-01T09:00:00Z",   // consultations.created_at
-  "updated_at": "2025-11-09T10:42:00Z",   // consultations.updated_at
-  "author": {                              // users（投稿者）
-    "id": 12,                              // users.id
-    "name": "Kazuki Toyoda",               // users.name
-    "auth_service_user_id": "github_12345", // users.auth_service_user_id
-    "disabled": false                      // users.disabled
-  },
-  "tags": [                                // question_taggings 経由で tags を取得
-    { "id": 1, "name": "キャリア" },
-    { "id": 2, "name": "エンジニア" }
   ]
 }
 ```
