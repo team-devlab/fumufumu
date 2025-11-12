@@ -12,9 +12,9 @@ jobs:
       run:
         working-directory: apps/fumufumu-backend/
 
-			# CloudflareアカウントIDを環境変数としてロード（チェックステップで使用）
+    # CloudflareアカウントIDを環境変数としてロード（チェックステップで使用）
     env:
-        CLOUDFLARE_ACCOUNT_ID: ${{ secrets.CLOUDFLARE_ACCOUNT_ID }}
+      CLOUDFLARE_ACCOUNT_ID: ${{ secrets.CLOUDFLARE_ACCOUNT_ID }}
 
     steps:
       - name: Checkout repository
