@@ -64,7 +64,7 @@ jobs:
           
           # commandオプションを使用し、プレビューとD1バインディングをCLI引数で渡す
           command: |
-            # --preview と一意な Worker 名を指定
+            # プレビューデプロイと一意な Worker 名を指定
             wrangler deploy --preview --name=${{ github.head_ref || github.ref_name }}-ci-test
             
             # D1バインディングの上書き
