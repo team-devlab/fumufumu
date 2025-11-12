@@ -1,0 +1,81 @@
+name: Backend CI / Cloudflare Credentials & Health Check
+
+on:
+  pull_request:
+    branches: [main, master]
+
+jobs:
+  deploy_and_check:
+    runs-on: ubuntu-latest
+
+    defaults:
+      run:
+        working-directory: apps/fumufumu-backend/
+
+			# CloudflareアカウントIDを環境変数としてロード（チェックステップで使用）
+    env:
+        CLOUDFLARE_ACCOUNT_ID: ${{ secrets.CLOUDFLARE_ACCOUNT_ID }}
+
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v4
+
+      - name: Setup Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: 20
+          cache: "pnpm" # pnpmを使用しているためキャッシュを有効化
+
+      - name: Install dependencies
+        run: pnpm install
+
+      # --- 【ステップ 1: シークレットの有効性確認】 ---
+
+      # APIトークンが有効であることを確認（wrangler whoamiが成功すれば有効）
+      - name: Validate Cloudflare API Token (wrangler whoami)
+        uses: cloudflare/wrangler-action@v3
+        with:
+          apiToken: ${{ secrets.CLOUDFLARE_API_TOKEN }}
+          command: whoami # トークンが有効かをチェックする最も安全なコマンド
+
+      # Account IDが空ではないことを確認
+      - name: Validate Account ID is Provided
+        run: |
+          if [ -z "$CLOUDFLARE_ACCOUNT_ID" ]; then
+            echo "::error::CLOUDFLARE_ACCOUNT_ID is empty. Please check your GitHub Secrets."
+            exit 1
+          fi
+          echo "Cloudflare Account ID is successfully loaded."
+
+      # --- 【ステップ 2: プレビューデプロイ】 ---
+
+      # Workerを隔離されたプレビュー環境にデプロイ
+      - name: Deploy to Cloudflare Preview
+        id: worker-deploy
+        uses: cloudflare/wrangler-action@v3
+        with:
+          apiToken: ${{ secrets.CLOUDFLARE_API_TOKEN }}
+          accountId: ${{ secrets.CLOUDFLARE_ACCOUNT_ID }}
+          # プレビューデプロイを明示的に指定（安全性を確保）
+          preview: true
+          workers-dev: true
+          d1Bindings: |
+            DB: ${{ secrets.D1_DATABASE_ID }}
+
+      # --- 【ステップ 3: ヘルスチェックの実行】 ---
+
+      - name: Wait for Deployment to Start
+        # デプロイ後にWorkerが起動するまで待機（5秒は推奨値）
+        run: sleep 5
+
+      - name: Validate D1 Connection via /health Endpoint
+        run: |
+          # アクションの出力からプレビューURLを取得
+          PREVIEW_URL="${{ steps.worker-deploy.outputs.deployment-url }}"
+          HEALTH_URL="$PREVIEW_URL/health"
+
+          echo "Checking health at: $HEALTH_URL"
+
+          # curlでリクエストを送信し、ステータスコードが200であることを確認
+          # -fS: 4xx/5xx エラー時に curl が失敗コードを返すように強制
+          curl -fS $HEALTH_URL
