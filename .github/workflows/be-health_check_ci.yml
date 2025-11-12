@@ -3,18 +3,18 @@ name: Backend CI / Cloudflare Credentials & Health Check
 on:
   pull_request:
     branches: [main, master]
+  workflow_dispatch: # 手動実行の柔軟性を確保
 
 jobs:
   deploy_and_check:
     runs-on: ubuntu-latest
+    env:
+      CLOUDFLARE_ACCOUNT_ID: ${{ secrets.CLOUDFLARE_ACCOUNT_ID }}
+      WORKER_PATH: apps/fumufumu-backend # サブディレクトリのパスを定義
 
     defaults:
       run:
-        working-directory: apps/fumufumu-backend/
-
-    # CloudflareアカウントIDを環境変数としてロード（チェックステップで使用）
-    env:
-      CLOUDFLARE_ACCOUNT_ID: ${{ secrets.CLOUDFLARE_ACCOUNT_ID }}
+        working-directory: ${{ env.WORKER_PATH }}
 
     steps:
       - name: Checkout repository
@@ -35,14 +35,14 @@ jobs:
 
       # --- 【ステップ 1: シークレットの有効性確認】 ---
 
-      # APIトークンが有効であることを確認（wrangler whoamiが成功すれば有効）
       - name: Validate Cloudflare API Token (wrangler whoami)
         uses: cloudflare/wrangler-action@v3
         with:
           apiToken: ${{ secrets.CLOUDFLARE_API_TOKEN }}
-          command: whoami # トークンが有効かをチェックする最も安全なコマンド
+          # アクションに実行ディレクトリを明示
+          workingDirectory: ${{ env.WORKER_PATH }}
+          command: whoami
 
-      # Account IDが空ではないことを確認
       - name: Validate Account ID is Provided
         run: |
           if [ -z "$CLOUDFLARE_ACCOUNT_ID" ]; then
@@ -53,33 +53,41 @@ jobs:
 
       # --- 【ステップ 2: プレビューデプロイ】 ---
 
-      # Workerを隔離されたプレビュー環境にデプロイ
       - name: Deploy to Cloudflare Preview
         id: worker-deploy
         uses: cloudflare/wrangler-action@v3
         with:
           apiToken: ${{ secrets.CLOUDFLARE_API_TOKEN }}
           accountId: ${{ secrets.CLOUDFLARE_ACCOUNT_ID }}
-          # プレビューデプロイを明示的に指定（安全性を確保）
-          preview: true
-          workers-dev: true
-          d1Bindings: |
-            DB: ${{ secrets.D1_DATABASE_ID }}
+          # アクションに実行ディレクトリを明示
+          workingDirectory: ${{ env.WORKER_PATH }}
+          
+          # commandオプションを使用し、プレビューとD1バインディングをCLI引数で渡す
+          command: |
+            # --preview と一意な Worker 名を指定
+            wrangler deploy --preview --name=${{ github.head_ref || github.ref_name }}-ci-test
+            
+            # D1バインディングの上書き
+            wrangler d1 binding set --name=DB --database-id=${{ secrets.D1_DATABASE_ID }}
 
       # --- 【ステップ 3: ヘルスチェックの実行】 ---
 
-      - name: Wait for Deployment to Start
-        # デプロイ後にWorkerが起動するまで待機（5秒は推奨値）
-        run: sleep 5
-
-      - name: Validate D1 Connection via /health Endpoint
+      - name: Wait and Validate D1 Connection via /health Endpoint
         run: |
-          # アクションの出力からプレビューURLを取得
           PREVIEW_URL="${{ steps.worker-deploy.outputs.deployment-url }}"
-          HEALTH_URL="$PREVIEW_URL/health"
+          
+          echo "Waiting 5 seconds for Worker to propagate..."
+          sleep 5 # 安定化のための安全マージン
 
-          echo "Checking health at: $HEALTH_URL"
-
+          echo "Checking health at: $PREVIEW_URL/health"
+          
           # curlでリクエストを送信し、ステータスコードが200であることを確認
-          # -fS: 4xx/5xx エラー時に curl が失敗コードを返すように強制
-          curl -fS $HEALTH_URL
+          # -fS: 4xx/5xx エラー時に CI が失敗するように強制
+          curl -fS "$PREVIEW_URL/health"
+
+          if [ $? -eq 0 ]; then
+            echo "✅ Health check successful! D1 connection is confirmed."
+          else
+            echo "::error::Health check failed. Worker or D1 connection is down."
+            exit 1
+          fi
