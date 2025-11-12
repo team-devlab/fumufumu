@@ -61,34 +61,40 @@ jobs:
           jq "$JQ_FILTER" wrangler.jsonc > wrangler.tmp.jsonc && mv wrangler.tmp.jsonc wrangler.jsonc
           echo "D1 database configuration removed from wrangler.jsonc for safe CI deployment."
 
-      # --- 【ステップ 2.2: プレビューデプロイを実行】 ---
-      - name: Execute Preview Deployment
+      # --- 【ステップ 2.1: wrangler.jsonc準備とデプロイ】 ---
+      - name: Prepare D1 Binding and Execute Preview Deployment
         id: worker-deploy
         run: |
-          # Worker名に使用するブランチ名を整形（スラッシュをハイフンに置換）
+          # 1. D1バインディングを一時的に設定ファイルに追記
+          # D1_DATABASE_IDシークレットを使用し、DBバインディングを設定
+          JQ_FILTER=".d1_databases |= (. or []) + [{\"binding\": \"DB\", \"database_id\": \"${{ secrets.D1_DATABASE_ID }}\", \"database_name\": \"ci-database\"}]"
+          jq "$JQ_FILTER" wrangler.jsonc > wrangler.tmp.jsonc && mv wrangler.tmp.jsonc wrangler.jsonc
+          echo "D1 database binding (DB -> ${{ secrets.D1_DATABASE_ID }}) added to wrangler.jsonc for CI deployment."
+
+          # 2. Worker名に使用するブランチ名を整形（スラッシュをハイフンに置換）
           BRANCH_NAME="${{ github.head_ref || github.ref_name }}"
           WORKER_NAME=$(echo "$BRANCH_NAME" | tr '/' '-' | tr '[:upper:]' '[:lower:]')-ci-test
 
-          # デプロイを実行し、結果を変数に格納 (失敗時にも出力をキャプチャするため)
+          # 3. デプロイを実行（D1バインディング情報も同時に適用される）
           DEPLOY_OUTPUT=$(npx wrangler deploy \
             --env ci \
             --name="$WORKER_NAME" 2>&1)
             
           EXIT_CODE=$?
-
+          
           # Wranglerの出力をデバッグ用に常に出力
           echo "--- Wrangler Output (Raw) ---"
           echo "$DEPLOY_OUTPUT"
           echo "-----------------------------"
-
+          
           if [ $EXIT_CODE -ne 0 ]; then
             echo "::error::Deployment failed. Exit code $EXIT_CODE. See output above."
             exit 1
           fi
-
-          # 3. プレビューURLの取得と設定
+          
+          # 4. プレビューURLの取得と設定
           PREVIEW_URL=$(echo "$DEPLOY_OUTPUT" | grep 'https://' | grep 'workers.dev' | head -n 1)
-
+          
           if [ -z "$PREVIEW_URL" ]; then
             echo "::error::Could not extract deployment URL from wrangler output."
             exit 1
