@@ -3,7 +3,7 @@ name: Backend CI / Cloudflare Credentials & Health Check
 on:
   pull_request:
     branches: [main, master]
-  workflow_dispatch: # 手動実行の柔軟性を確保
+  workflow_dispatch:
 
 jobs:
   deploy_and_check:
@@ -20,18 +20,20 @@ jobs:
       - name: Checkout repository
         uses: actions/checkout@v4
 
+      # jq のインストール（JSON操作のため）
+      - name: Install Dependencies for CI
+        run: |
+          sudo apt-get update && sudo apt-get install -y jq
+          corepack enable
+          # モノレポのルートに戻り、すべての依存関係をインストール
+          cd ${{ github.workspace }}
+          pnpm install --frozen-lockfile
+
       - name: Setup Node.js
         uses: actions/setup-node@v4
         with:
           node-version: 20
-      
-      - name: Enable pnpm via Corepack
-        # Node.js がインストールされている環境で pnpm を有効化
-        run: corepack enable
-
-      - name: Install dependencies
-        # pnpm-workspace.yamlがあるため pnpm install を実行し、依存関係を解決
-        run: pnpm install --frozen-lockfile
+          cache: 'pnpm'
 
       # --- 【ステップ 1: シークレットの有効性確認】 ---
 
@@ -39,9 +41,8 @@ jobs:
         uses: cloudflare/wrangler-action@v3
         with:
           apiToken: ${{ secrets.CLOUDFLARE_API_TOKEN }}
-          # アクションに実行ディレクトリを明示
           workingDirectory: ${{ env.WORKER_PATH }}
-          command: whoami
+          command: whoami # トークンが有効かをチェックするコマンド
 
       - name: Validate Account ID is Provided
         run: |
@@ -53,18 +54,25 @@ jobs:
 
       # --- 【ステップ 2: プレビューデプロイ】 ---
 
+      - name: Prepare wrangler.jsonc for CI Deploy
+        # D1 バインディングエラー(10021)回避のため、設定ファイルから d1_databases を一時的に削除する
+        run: |
+          JQ_FILTER='del(.d1_databases)'
+          # 変更を一時ファイルに保存し、元ファイルを上書き
+          jq "$JQ_FILTER" wrangler.jsonc > wrangler.tmp.jsonc && mv wrangler.tmp.jsonc wrangler.jsonc
+          echo "D1 database configuration removed from wrangler.jsonc for safe CI deployment."
+
       - name: Deploy to Cloudflare Preview
         id: worker-deploy
         uses: cloudflare/wrangler-action@v3
         with:
           apiToken: ${{ secrets.CLOUDFLARE_API_TOKEN }}
           accountId: ${{ secrets.CLOUDFLARE_ACCOUNT_ID }}
-          # アクションに実行ディレクトリを明示
           workingDirectory: ${{ env.WORKER_PATH }}
           
-          # commandオプションを使用し、プレビューとD1バインディングをCLI引数で渡す
           command: |
             deploy --env ci --name=${{ github.head_ref || github.ref_name }}-ci-test
+
             d1 binding set --env ci --name=DB --database-id=${{ secrets.D1_DATABASE_ID }}
 
       # --- 【ステップ 3: ヘルスチェックの実行】 ---
@@ -74,12 +82,12 @@ jobs:
           PREVIEW_URL="${{ steps.worker-deploy.outputs.deployment-url }}"
           
           echo "Waiting 5 seconds for Worker to propagate..."
-          sleep 5 # 安定化のための安全マージン
+          # 安定化のための安全マージン
+          sleep 5
 
           echo "Checking health at: $PREVIEW_URL/health"
           
           # curlでリクエストを送信し、ステータスコードが200であることを確認
-          # -fS: 4xx/5xx エラー時に CI が失敗するように強制
           curl -fS "$PREVIEW_URL/health"
 
           if [ $? -eq 0 ]; then
