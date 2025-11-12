@@ -56,9 +56,13 @@ jobs:
     - name: Prepare D1 Binding and Execute Preview Deployment
       id: worker-deploy
       run: |
-        # 1. D1バインディングを一時的に設定ファイルに追記
-        # D1_DATABASE_IDシークレットを使用し、DBバインディングを設定
-        JQ_FILTER=".d1_databases |= (. or []) + [{\"binding\": \"DB\", \"database_id\": \"${{ secrets.D1_DATABASE_ID }}\", \"database_name\": \"ci-database\"}]"
+        # 1.1. d1_databasesキーを完全に削除する (安全のため)
+        jq 'del(.d1_databases)' wrangler.jsonc > wrangler.tmp.jsonc && mv wrangler.tmp.jsonc wrangler.jsonc
+        echo "Existing D1 database configuration cleared."
+
+        # 1.2. D1バインディングを一時的に設定ファイルに追記
+        # ここで、JQ_FILTERは必ず空か、有効なJSONオブジェクトに対して適用される。
+        JQ_FILTER=".d1_databases = [{\"binding\": \"DB\", \"database_id\": \"${{ secrets.D1_DATABASE_ID }}\", \"database_name\": \"ci-database\"}]"
         jq "$JQ_FILTER" wrangler.jsonc > wrangler.tmp.jsonc && mv wrangler.tmp.jsonc wrangler.jsonc
         echo "D1 database binding (DB -> ${{ secrets.D1_DATABASE_ID }}) added to wrangler.jsonc for CI deployment."
 
