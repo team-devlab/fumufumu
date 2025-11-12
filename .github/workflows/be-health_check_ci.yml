@@ -23,30 +23,24 @@ jobs:
       # jq のインストール (JSON操作のため)
       - name: Install jq
         run: sudo apt-get update && sudo apt-get install -y jq
-
       - name: Setup Node.js
         uses: actions/setup-node@v6
         with:
           node-version: 20
 
       - name: Enable pnpm via Corepack
-        # Node.js がインストールされている環境で pnpm を有効化
         run: corepack enable
-      
-      - name: Install dependencies
-        # pnpm-workspace.yamlがあるため pnpm install を実行し、依存関係を解決
-        run: |
-          pnpm install --frozen-lockfile
+
+      - name: Install Worker Dependencies
+        run: pnpm install --frozen-lockfile
 
       # --- 【ステップ 1: シークレットの有効性確認】 ---
-
       - name: Validate Cloudflare API Token (wrangler whoami)
-        uses: cloudflare/wrangler-action@v3
-        with:
-          apiToken: ${{ secrets.CLOUDFLARE_API_TOKEN }}
-          workingDirectory: ${{ env.WORKER_PATH }}
-          command: whoami # トークンが有効かをチェックするコマンド
-
+        run: |
+          pnpm exec wrangler whoami
+        env:
+          CF_API_TOKEN: ${{ secrets.CLOUDFLARE_API_TOKEN }}
+          
       - name: Validate Account ID is Provided
         run: |
           if [ -z "$CLOUDFLARE_ACCOUNT_ID" ]; then
@@ -67,20 +61,54 @@ jobs:
 
       - name: Deploy to Cloudflare Preview
         id: worker-deploy
-        uses: cloudflare/wrangler-action@v3
-        with:
-          apiToken: ${{ secrets.CLOUDFLARE_API_TOKEN }}
-          accountId: ${{ secrets.CLOUDFLARE_ACCOUNT_ID }}
-          workingDirectory: ${{ env.WORKER_PATH }}
-          
-          command: |
-            deploy --env ci --name=${{ github.head_ref || github.ref_name }}-ci-test
-            d1 binding set --env ci --name=DB --database-id=${{ secrets.D1_DATABASE_ID }}
+        run: |
+          # 1. デプロイを実行し、結果を変数に格納 (Wranglerの出力からURLを取得するため)
+          # CF_API_TOKEN と CF_ACCOUNT_ID は環境変数として自動認識される
+          DEPLOY_OUTPUT=$(pnpm exec wrangler deploy \
+            --env ci \
+            --name=${{ github.head_ref || github.ref_name }}-ci-test 2>&1)
+            
+          if [ $? -ne 0 ]; then
+            echo "::error::Worker Deployment Failed."
+            echo "$DEPLOY_OUTPUT"
+            exit 1
+          fi
 
+          echo "$DEPLOY_OUTPUT"
+          
+          # 2. D1バインディングを設定（デプロイ成功後のみ）
+          pnpm exec wrangler d1 binding set \
+            --env ci \
+            --name=DB \
+            --database-id=${{ secrets.D1_DATABASE_ID }}
+          
+          if [ $? -ne 0 ]; then
+            echo "::error::D1 Binding Setup Failed."
+            exit 1
+          fi
+
+          # 3. プレビューURLの取得
+          # 出力から 'https://' で始まり、かつ 'workers.dev' を含む行を抽出
+          PREVIEW_URL=$(echo "$DEPLOY_OUTPUT" | grep 'https://' | grep 'workers.dev' | head -n 1)
+          
+          if [ -z "$PREVIEW_URL" ]; then
+            echo "::error::Could not extract deployment URL from wrangler output."
+            # Malformed Responseエラーが出た場合、ここが失敗することが多かった
+            exit 1
+          fi
+
+          # 後続のステップでURLを使えるようにする
+          echo "deployment-url=$PREVIEW_URL" >> "$GITHUB_OUTPUT"
+          echo "✅ Deployment successful. URL: $PREVIEW_URL"
+        env:
+          CF_API_TOKEN: ${{ secrets.CLOUDFLARE_API_TOKEN }}
+          CF_ACCOUNT_ID: ${{ secrets.CLOUDFLARE_ACCOUNT_ID }}
+          
       # --- 【ステップ 3: ヘルスチェックの実行】 ---
 
       - name: Wait and Validate D1 Connection via /health Endpoint
         run: |
+          # worker-deployステップの出力を参照
           PREVIEW_URL="${{ steps.worker-deploy.outputs.deployment-url }}"
           
           echo "Waiting 5 seconds for Worker to propagate..."
@@ -88,7 +116,7 @@ jobs:
 
           echo "Checking health at: $PREVIEW_URL/health"
           
-          # curlでリクエストを送信し、ステータスコードが200であることを確認
+          # curlでリクエストを送信し、ステータスコードが200であることを確認 (-fSでエラー時に失敗)
           curl -fS "$PREVIEW_URL/health"
 
           if [ $? -eq 0 ]; then
