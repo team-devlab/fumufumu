@@ -43,7 +43,7 @@ jobs:
       # --- 【ステップ 1: シークレットの有効性確認】 ---
       - name: Validate Cloudflare API Token (wrangler whoami)
         run: |
-          pnpm exec wrangler whoami
+          npx wrangler whoami
         env:
           CF_API_TOKEN: ${{ secrets.CLOUDFLARE_API_TOKEN }}
           
@@ -69,7 +69,7 @@ jobs:
         id: worker-deploy
         run: |
           # 1. デプロイを実行し、結果を変数に格納（エラー時に出力を取得するため）
-          DEPLOY_OUTPUT=$(pnpm exec wrangler deploy \
+          DEPLOY_OUTPUT=$(npx wrangler deploy \
             --env ci \
             --name=${{ github.head_ref || github.ref_name }}-ci-test 2>&1)
             
@@ -86,7 +86,7 @@ jobs:
           fi
 
           # 2. D1バインディングを設定（デプロイ成功後のみ）
-          pnpm exec wrangler d1 binding set \
+          npx wrangler d1 binding set \
             --env ci \
             --name=DB \
             --database-id=${{ secrets.D1_DATABASE_ID }}
