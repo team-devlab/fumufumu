@@ -40,12 +40,6 @@ jobs:
       - name: Install Worker Dependencies
         run: pnpm install --frozen-lockfile
 
-      # --- 【必須：ビルドステップ】 ---
-      - name: Build Worker Code
-        # package.jsonで定義されたビルドスクリプトを実行
-        run: pnpm run build
-      # -----------------------------------
-
       # --- 【ステップ 1: シークレットの有効性確認】 ---
       - name: Validate Cloudflare API Token (wrangler whoami)
         run: |
@@ -75,12 +69,10 @@ jobs:
         id: worker-deploy
         run: |
           # 1. デプロイを実行し、結果を変数に格納（エラー時に出力を取得するため）
-          # コマンドの終了ステータスに関わらず、出力をキャプチャ
           DEPLOY_OUTPUT=$(pnpm exec wrangler deploy \
             --env ci \
             --name=${{ github.head_ref || github.ref_name }}-ci-test 2>&1)
             
-          # コマンドの終了ステータスを変数に保存
           EXIT_CODE=$?
 
           # デバッグのため、Wranglerの出力全体を常にログに出力
