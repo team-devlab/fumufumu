@@ -88,7 +88,8 @@ jobs:
         fi
         
         # 4. プレビューURLの取得と設定
-        PREVIEW_URL=$(echo "$DEPLOY_OUTPUT" | grep 'https://' | grep 'workers.dev' | head -n 1)
+        # xargs を追加し、URL前後の空白文字を削除する
+        PREVIEW_URL=$(echo "$DEPLOY_OUTPUT" | grep 'https://' | grep 'workers.dev' | head -n 1 | xargs)
         
         if [ -z "$PREVIEW_URL" ]; then
           echo "::error::Could not extract deployment URL from wrangler output."
