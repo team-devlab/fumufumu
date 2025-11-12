@@ -20,20 +20,22 @@ jobs:
       - name: Checkout repository
         uses: actions/checkout@v4
 
-      # jq のインストール（JSON操作のため）
-      - name: Install Dependencies for CI
-        run: |
-          sudo apt-get update && sudo apt-get install -y jq
-          corepack enable
-          # モノレポのルートに戻り、すべての依存関係をインストール
-          cd ${{ github.workspace }}
-          pnpm install --frozen-lockfile
+      # jq のインストール (JSON操作のため)
+      - name: Install jq
+        run: sudo apt-get update && sudo apt-get install -y jq
 
       - name: Setup Node.js
-        uses: actions/setup-node@v4
+        uses: actions/setup-node@v6
         with:
           node-version: 20
-          cache: 'pnpm'
+
+      - name: Enable pnpm via Corepack
+        # Node.js がインストールされている環境で pnpm を有効化
+        run: corepack enable
+      
+      - name: Enable pnpm via Corepack
+        # Node.js がインストールされている環境で pnpm を有効化
+        run: corepack enable
 
       # --- 【ステップ 1: シークレットの有効性確認】 ---
 
@@ -72,7 +74,6 @@ jobs:
           
           command: |
             deploy --env ci --name=${{ github.head_ref || github.ref_name }}-ci-test
-
             d1 binding set --env ci --name=DB --database-id=${{ secrets.D1_DATABASE_ID }}
 
       # --- 【ステップ 3: ヘルスチェックの実行】 ---
@@ -82,7 +83,6 @@ jobs:
           PREVIEW_URL="${{ steps.worker-deploy.outputs.deployment-url }}"
           
           echo "Waiting 5 seconds for Worker to propagate..."
-          # 安定化のための安全マージン
           sleep 5
 
           echo "Checking health at: $PREVIEW_URL/health"
