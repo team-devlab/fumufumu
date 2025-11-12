@@ -8,12 +8,15 @@ on:
 jobs:
   deploy_and_check:
     runs-on: ubuntu-latest
+
+    # CIのシェルスクリプトで参照するために環境変数を設定
     env:
       CLOUDFLARE_ACCOUNT_ID: ${{ secrets.CLOUDFLARE_ACCOUNT_ID }}
       WORKER_PATH: apps/fumufumu-backend # サブディレクトリのパスを定義
 
     defaults:
       run:
+        # run: コマンドは基本的に Worker のディレクトリで実行される
         working-directory: ${{ env.WORKER_PATH }}
 
     steps:
@@ -23,6 +26,8 @@ jobs:
       # jq のインストール (JSON操作のため)
       - name: Install jq
         run: sudo apt-get update && sudo apt-get install -y jq
+
+      # Node.js と pnpm のセットアップ
       - name: Setup Node.js
         uses: actions/setup-node@v6
         with:
@@ -31,8 +36,15 @@ jobs:
       - name: Enable pnpm via Corepack
         run: corepack enable
 
+      # 依存関係のインストール（Workerディレクトリ内で実行）
       - name: Install Worker Dependencies
         run: pnpm install --frozen-lockfile
+
+      # --- 【必須：ビルドステップ】 ---
+      - name: Build Worker Code
+        # package.jsonで定義されたビルドスクリプトを実行
+        run: pnpm run build
+      # -----------------------------------
 
       # --- 【ステップ 1: シークレットの有効性確認】 ---
       - name: Validate Cloudflare API Token (wrangler whoami)
@@ -59,23 +71,28 @@ jobs:
           jq "$JQ_FILTER" wrangler.jsonc > wrangler.tmp.jsonc && mv wrangler.tmp.jsonc wrangler.jsonc
           echo "D1 database configuration removed from wrangler.jsonc for safe CI deployment."
 
-      - name: Deploy to Cloudflare Preview
+      - name: Deploy and Set D1 Binding
         id: worker-deploy
         run: |
-          # 1. デプロイを実行し、結果を変数に格納 (Wranglerの出力からURLを取得するため)
-          # CF_API_TOKEN と CF_ACCOUNT_ID は環境変数として自動認識される
+          # 1. デプロイを実行し、結果を変数に格納（エラー時に出力を取得するため）
+          # コマンドの終了ステータスに関わらず、出力をキャプチャ
           DEPLOY_OUTPUT=$(pnpm exec wrangler deploy \
             --env ci \
             --name=${{ github.head_ref || github.ref_name }}-ci-test 2>&1)
             
-          if [ $? -ne 0 ]; then
-            echo "::error::Worker Deployment Failed."
-            echo "$DEPLOY_OUTPUT"
+          # コマンドの終了ステータスを変数に保存
+          EXIT_CODE=$?
+
+          # デバッグのため、Wranglerの出力全体を常にログに出力
+          echo "--- Wrangler Output ---"
+          echo "$DEPLOY_OUTPUT"
+          echo "-----------------------"
+          
+          if [ $EXIT_CODE -ne 0 ]; then
+            echo "::error::Worker Deployment Failed with exit code $EXIT_CODE. See Wrangler Output above for details."
             exit 1
           fi
 
-          echo "$DEPLOY_OUTPUT"
-          
           # 2. D1バインディングを設定（デプロイ成功後のみ）
           pnpm exec wrangler d1 binding set \
             --env ci \
@@ -92,8 +109,7 @@ jobs:
           PREVIEW_URL=$(echo "$DEPLOY_OUTPUT" | grep 'https://' | grep 'workers.dev' | head -n 1)
           
           if [ -z "$PREVIEW_URL" ]; then
-            echo "::error::Could not extract deployment URL from wrangler output."
-            # Malformed Responseエラーが出た場合、ここが失敗することが多かった
+            echo "::error::Could not extract deployment URL from wrangler output. Check output for Malformed Response errors."
             exit 1
           fi
 
