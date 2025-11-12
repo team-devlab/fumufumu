@@ -64,8 +64,8 @@ jobs:
           
           # commandオプションを使用し、プレビューとD1バインディングをCLI引数で渡す
           command: |
-            wrangler deploy --preview --name=${{ github.head_ref || github.ref_name }}-ci-test
-            wrangler d1 binding set --name=DB --database-id=${{ secrets.D1_DATABASE_ID }}
+            deploy --preview --name=${{ github.head_ref || github.ref_name }}-ci-test
+            d1 binding set --name=DB --database-id=${{ secrets.D1_DATABASE_ID }}
 
       # --- 【ステップ 3: ヘルスチェックの実行】 ---
 
