@@ -43,7 +43,7 @@ jobs:
           npx wrangler whoami
         env:
           CF_API_TOKEN: ${{ secrets.CLOUDFLARE_API_TOKEN }}
-          
+
       - name: Validate Account ID is Provided
         run: |
           if [ -z "$CLOUDFLARE_ACCOUNT_ID" ]; then
@@ -65,10 +65,14 @@ jobs:
       - name: Execute Preview Deployment
         id: worker-deploy
         run: |
+          # Worker名に使用するブランチ名を整形（スラッシュをハイフンに置換）
+          BRANCH_NAME="${{ github.head_ref || github.ref_name }}"
+          WORKER_NAME=$(echo "$BRANCH_NAME" | tr '/' '-' | tr '[:upper:]' '[:lower:]')-ci-test
+
           # デプロイを実行し、結果を変数に格納 (失敗時にも出力をキャプチャするため)
           DEPLOY_OUTPUT=$(npx wrangler deploy \
             --env ci \
-            --name=${{ github.head_ref || github.ref_name }}-ci-test 2>&1)
+            --name="$WORKER_NAME" 2>&1)
             
           EXIT_CODE=$?
 
@@ -81,10 +85,10 @@ jobs:
             echo "::error::Deployment failed. Exit code $EXIT_CODE. See output above."
             exit 1
           fi
-          
+
           # 3. プレビューURLの取得と設定
           PREVIEW_URL=$(echo "$DEPLOY_OUTPUT" | grep 'https://' | grep 'workers.dev' | head -n 1)
-          
+
           if [ -z "$PREVIEW_URL" ]; then
             echo "::error::Could not extract deployment URL from wrangler output."
             exit 1
@@ -106,7 +110,7 @@ jobs:
             --env ci \
             --name=DB \
             --database-id=${{ secrets.D1_DATABASE_ID }}
-          
+
           if [ $? -ne 0 ]; then
             echo "::error::D1 Binding Setup Failed."
             exit 1
@@ -120,12 +124,12 @@ jobs:
         run: |
           # worker-deployステップの出力を参照
           PREVIEW_URL="${{ steps.worker-deploy.outputs.deployment-url }}"
-          
+
           echo "Waiting 5 seconds for Worker to propagate..."
           sleep 5
 
           echo "Checking health at: $PREVIEW_URL/health"
-          
+
           # curlでリクエストを送信し、ステータスコードが200であることを確認
           curl -fS "$PREVIEW_URL/health"
 
