@@ -9,12 +9,14 @@
     "test:watch": "vitest --watch"
   },
   "dependencies": {
+    "drizzle-orm": "^0.44.7",
     "hono": "^4.10.3"
   },
   "devDependencies": {
     "@cloudflare/vitest-pool-workers": "^0.10.0",
     "@cloudflare/workers-types": "^4.20251014.0",
     "@types/node": "^24.9.1",
+    "drizzle-kit": "^0.31.6",
     "vitest": "^3.2.4",
     "wrangler": "^4.46.0"
   }
