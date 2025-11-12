@@ -5,7 +5,7 @@
   "compatibility_date": "2025-10-26",
   "dev": {
     "ip": "127.0.0.1",
-    "port": 8080,
+    "port": 8787,
     "local_protocol": "http"
   }
 }
