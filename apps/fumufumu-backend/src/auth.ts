@@ -15,16 +15,16 @@ export function createBetterAuth(db: DrizzleD1Database, env: Env) {
 			provider: "sqlite",
 		}),
 		user: {
-			modelName: "auth_user",
+			modelName: "auth_users",
 		},
 		session: {
-			modelName: "auth_session",
+			modelName: "auth_sessions",
 		},
 		account: {
-			modelName: "auth_account",
+			modelName: "auth_accounts",
 		},
 		verification: {
-			modelName: "auth_verification",
+			modelName: "auth_verifications",
 		},
 		secret: env.BETTER_AUTH_SECRET,
 		baseURL: env.BETTER_AUTH_URL,

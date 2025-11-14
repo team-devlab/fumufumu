@@ -17,16 +17,16 @@ export const auth = betterAuth({
         provider: "sqlite",
     }),
 		user: {
-			modelName: "auth_user",
+			modelName: "auth_users",
 		},
 		session: {
-			modelName: "auth_session",
+			modelName: "auth_sessions",
 		},
 		account: {
-			modelName: "auth_account",
+			modelName: "auth_accounts",
 		},
 		verification: {
-			modelName: "auth_verification",
+			modelName: "auth_verifications",
 		},
     secret: "THIS_IS_DUMMY_SECRET_FOR_CLI_ONLY", 
     // CLI実行時に不要なbaseURLなどは省略
