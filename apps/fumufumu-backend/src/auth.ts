@@ -1,7 +1,6 @@
 import { betterAuth } from "better-auth";
 import { drizzleAdapter } from "better-auth/adapters/drizzle";
 import type { DrizzleD1Database } from 'drizzle-orm/d1';
-
 import type { Env } from './index';
 
 /**
@@ -13,10 +12,21 @@ import type { Env } from './index';
 export function createBetterAuth(db: DrizzleD1Database, env: Env) {
 	return betterAuth({
 		database: drizzleAdapter(db, {
-			provider: "sqlite", // drizzle.config.ts の設定に合わせる
+			provider: "sqlite",
 		}),
+		user: {
+			modelName: "auth_user",
+		},
+		session: {
+			modelName: "auth_session",
+		},
+		account: {
+			modelName: "auth_account",
+		},
+		verification: {
+			modelName: "auth_verification",
+		},
 		secret: env.BETTER_AUTH_SECRET,
 		baseURL: env.BETTER_AUTH_URL,
-		// ... 他の認証設定（メール、ソーシャルなど）
 	});
 }
