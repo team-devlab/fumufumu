@@ -1,0 +1,8 @@
+# ローカル開発で Wrangler によって使用されます
+# 本番環境では、これらは Cloudflare Worker Secrets として設定する必要があります。
+
+# Better Auth のシークレットキー
+BETTER_AUTH_SECRET=
+
+# Better Auth のベースURL。ローカル開発URLを設定してください。
+BETTER_AUTH_URL=
