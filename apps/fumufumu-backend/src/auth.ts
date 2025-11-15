@@ -30,3 +30,6 @@ export function createBetterAuth(db: DrizzleD1Database, env: Env) {
 		baseURL: env.BETTER_AUTH_URL,
 	});
 }
+
+// createBetterAuth 関数の戻り値の型を抽出してエクスポート
+export type AuthInstance = ReturnType<typeof createBetterAuth>;
