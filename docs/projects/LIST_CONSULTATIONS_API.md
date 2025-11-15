@@ -78,7 +78,7 @@ apps/fumufumu-backend/
 
 - [x] `consultations.ts` スキーマ定義
 - [x] マイグレーションファイルの生成（`pnpm generate`）
-- [ ] ローカルDBへの適用（`pnpm local:migration`）
+- [x] ローカルDBへの適用（`pnpm local:migration`）
 - [ ] Drizzle Studioで確認
 
 ### フェーズ2: プロジェクト構造の整備 ⏳
