@@ -6,9 +6,15 @@
     "deploy": "wrangler deploy --minify",
     "cf-typegen": "wrangler types --env-interface CloudflareBindings",
     "test": "vitest",
-    "test:watch": "vitest --watch"
+    "test:watch": "vitest --watch",
+    "generate": "drizzle-kit generate",
+    "generate:custom": "drizzle-kit generate --custom",
+    "studio": "drizzle-kit studio",
+    "local:migration": "wrangler d1 migrations apply YOUR_DB_NAME --local",
+    "remote:migration": "wrangler d1 migrations apply xxx --remote"
   },
   "dependencies": {
+    "better-auth": "^1.3.34",
     "drizzle-orm": "^0.44.7",
     "hono": "^4.10.3"
   },
@@ -16,6 +22,7 @@
     "@cloudflare/vitest-pool-workers": "^0.10.0",
     "@cloudflare/workers-types": "^4.20251014.0",
     "@types/node": "^24.9.1",
+    "better-sqlite3": "^12.4.1",
     "drizzle-kit": "^0.31.6",
     "vitest": "^3.2.4",
     "wrangler": "^4.46.0"
