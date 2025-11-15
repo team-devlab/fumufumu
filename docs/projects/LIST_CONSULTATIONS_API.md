@@ -127,12 +127,11 @@ apps/fumufumu-backend/
 
 - [ ] ローカルサーバー起動（`pnpm dev`）
 - [ ] テストデータの投入
-- [ ] curlでAPIテスト
+- [ ] curlでAPIテスト **← 今回の実装ゴール**
   - [ ] `/api/consultations` - 全件取得
   - [ ] `/api/consultations?userId=1` - ユーザー絞り込み
   - [ ] `/api/consultations?draft=false` - 公開済みのみ
   - [ ] `/api/consultations?solved=true` - 解決済みのみ
-- [ ] フロントエンドからの表示確認 **← 今回の実装ゴール**
 
 ---
 ---
