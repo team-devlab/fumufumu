@@ -7,7 +7,7 @@
 ### 対象エンドポイント
 
 ```
-GET /consultations
+GET /api/consultations
 ```
 
 ### 主な機能
@@ -43,7 +43,7 @@ apps/fumufumu-backend/
 │   ├── index.ts                          # エントリーポイント
 │   │
 │   ├── routes/                           # Presentation層
-│   │   ├── consultations.ts              # 相談関連ルート（新規）
+│   │   ├── consultations.ts              # /api/consultations 相談関連ルート（新規）
 │   │   └── health.ts                     # ヘルスチェック（移動）
 │   │
 │   ├── services/                         # Business層（新規ディレクトリ）
@@ -116,7 +116,7 @@ apps/fumufumu-backend/
 #### 4-3. Route層（Controller）
 
 - [ ] `consultations.ts` の単体テスト作成
-- [ ] GET `/consultations` エンドポイントの実装
+- [ ] GET `/api/consultations` エンドポイントの実装
   - [ ] クエリパラメータの取得
   - [ ] バリデーション
   - [ ] ServiceとRepositoryのDI
@@ -128,10 +128,10 @@ apps/fumufumu-backend/
 - [ ] ローカルサーバー起動（`pnpm dev`）
 - [ ] テストデータの投入
 - [ ] curlでAPIテスト
-  - [ ] `/consultations` - 全件取得
-  - [ ] `/consultations?userId=1` - ユーザー絞り込み
-  - [ ] `/consultations?draft=false` - 公開済みのみ
-  - [ ] `/consultations?solved=true` - 解決済みのみ
+  - [ ] `/api/consultations` - 全件取得
+  - [ ] `/api/consultations?userId=1` - ユーザー絞り込み
+  - [ ] `/api/consultations?draft=false` - 公開済みのみ
+  - [ ] `/api/consultations?solved=true` - 解決済みのみ
 - [ ] フロントエンドからの表示確認 **← 今回の実装ゴール**
 
 ---
