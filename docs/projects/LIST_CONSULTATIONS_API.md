@@ -74,12 +74,13 @@ apps/fumufumu-backend/
 
 ## 実装の流れ
 
-### フェーズ1: DBスキーマの定義 ⏳
+### フェーズ1: DBスキーマの定義 ✅
 
 - [x] `consultations.ts` スキーマ定義
 - [x] マイグレーションファイルの生成（`pnpm generate`）
 - [x] ローカルDBへの適用（`pnpm local:migration`）
-- [ ] Drizzle Studioで確認
+- [x] Drizzle Studioで確認
+- [x] シードデータの投入
 
 ### フェーズ2: プロジェクト構造の整備 ⏳
 
