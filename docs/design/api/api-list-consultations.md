@@ -11,7 +11,7 @@
 
 ### 📝 list-consultations: 相談のリスト取得
 
-#### GET /consultations
+#### GET /api/consultations
 
 相談の一覧を取得します。
 
@@ -28,10 +28,10 @@ solved: Query/boolean (任意) # 解決状態で絞り込み。true: 解決済�
 ```
 
 **クエリ例:**
-- `/consultations` - 全件取得
-- `/consultations?userId=12` - ユーザーID=12の相談一覧
-- `/consultations?userId=12&draft=false` - ユーザーID=12の公開済み相談
-- `/consultations?userId=12&solved=true` - ユーザーID=12の解決済み相談
+- `/api/consultations` - 全件取得
+- `/api/consultations?userId=12` - ユーザーID=12の相談一覧
+- `/api/consultations?userId=12&draft=false` - ユーザーID=12の公開済み相談
+- `/api/consultations?userId=12&solved=true` - ユーザーID=12の解決済み相談
 
 #### レスポンス (Responses)
 
