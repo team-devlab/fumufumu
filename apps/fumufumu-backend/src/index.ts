@@ -34,7 +34,7 @@ const app = new Hono<{ Bindings: Env, Variables: Variables }>()
 
 // --- DI ミドルウェア ---
 app.use('*', async (c, next) => {
-  console.log(`[DEBUG] 1. Middleware Start: Path=${c.req.path}`);
+  // console.log(`[DEBUG] 1. Middleware Start: Path=${c.req.path}`);
 
   const env = c.env;
   // スキーマを渡してDrizzleインスタンスを作成
@@ -45,7 +45,7 @@ app.use('*', async (c, next) => {
   const auth = createBetterAuth(db, env);
   c.set('auth', auth);
 
-  console.log(`[DEBUG] 2. Auth Instance Set: Exists=${!!c.get('auth')}`);
+  // console.log(`[DEBUG] 2. Auth Instance Set: Exists=${!!c.get('auth')}`);
   await next();
 });
 
@@ -102,43 +102,53 @@ api.post('/signup', async (c: Context<{ Bindings: Env, Variables: Variables }>) 
     return c.json({ error: 'Email and password are required' }, 400);
   }
 
-  let result: any;
+  // 1. Better Auth でサインアップを実行 (asResponse: true)
+  //    認証トークンをクッキーに設定したHono Responseが返る
+  let authResponse: Response;
+  let authResult: any;
 
   try {
-    // Better Auth の API を直接呼び出す
-    result = await auth.api.signUpEmail({
+    const betterAuthResponse = await auth.api.signUpEmail({
       body: {
         email,
         password,
         name,
       },
-      asResponse: false,
+      // 🚨 修正: asResponse: true にし、クッキーを含むResponseを取得する
+      asResponse: true,
     });
+
+    authResponse = betterAuthResponse;
+
+    // レスポンスボディをJSONとして読み取り、必要な情報（authUserId）を取得
+    authResult = await betterAuthResponse.json();
 
   } catch (e) {
     console.error('Sign-up failed:', e);
+    // Better Authからエラーレスポンスが返された場合、そのレスポンスをそのまま返す
+    if (e instanceof Response) {
+      return e;
+    }
     return c.json({ error: 'Sign-up failed', details: (e as Error).message }, 400);
   }
 
-  const authUserId = result.user?.id;
-  // セッション ID を取得 (session.id か token のどちらか、または両方から取得を試みる)
-  const sessionId = result.session?.id || result.token;
+  const authUserId = authResult.user?.id;
 
-  if (!sessionId || !authUserId) {
-    throw new Error("Sign-up succeeded, but session or user ID was not returned.");
+  if (!authUserId) {
+    // サインアップは成功したが、ユーザーIDが取得できなかった場合
+    console.error("Sign-up succeeded, but user ID was not returned by Better Auth response.");
+    return c.json({ error: 'Internal server error: Auth User ID missing.' }, 500);
   }
 
   let appUserId: number = 0; // 業務ユーザーIDのスコープを確保
 
-  // 🚨 修正: Miniflare環境でのDrizzle D1トランザクションエラーを回避するため、
-  // db.transaction() を使用せず、順次クエリを実行します。
+  // 2. 業務DB (users, authMappings) の更新
   try {
     // 1. usersテーブルに業務ユーザーを作成
     const userInsertResult = await db.insert(users).values({
       name: name, // Better Authに渡された名前を使用
     }).returning({ id: users.id });
 
-    // 挿入が成功し、IDが返されたことを確認
     if (!userInsertResult || userInsertResult.length === 0) {
       throw new Error("Failed to insert user into 'users' table.");
     }
@@ -152,25 +162,36 @@ api.post('/signup', async (c: Context<{ Bindings: Env, Variables: Variables }>) 
       authUserId: authUserId,
     });
 
-    // 3. セッションに業務ユーザーIDを紐づける (Better Authのカスタムペイロード)
-    // 🚨 セッション更新APIが型定義に存在しないため、この処理はスキップし、保護ルートでDB検索を行う
-    console.warn("WARNING: Skipping session data update due to type error. Using AuthMapping DB search for appUserId.");
-
   } catch (e) {
     console.error('DB transaction failed:', e);
     // エラー発生時に500を返す
     return c.json({ error: 'Failed to complete user setup on business DB.', details: (e as Error).message }, 500);
   }
 
+  // 3. Better Auth のResponseをそのまま返し、クッキーをクライアントに設定させる
+  //    ただし、ここでは業務IDを付け加えたいので、Responseを再構築する
 
-  // 💡 appUserIdが0で返される場合はDBトランザクションが失敗しているため、
-  // catchブロックでエラーを返しているため、この時点では成功していると見なせる
-  return c.json({
+  // 業務ユーザーIDをResponse Headerに追加（またはResponse Bodyに追加）する
+  const responseBody = {
     message: 'User created and signed in successfully.',
-    app_session_id: sessionId,
     auth_user_id: authUserId,
     app_user_id: appUserId,
-  });
+  };
+
+  // Better AuthのレスポンスからSet-Cookieヘッダーを取得
+  const setCookieHeader = authResponse.headers.get('Set-Cookie');
+
+  // Honoのレスポンスオブジェクトを作成
+  const honoResponse = c.json(responseBody, 200);
+
+  // Set-CookieヘッダーをBetter Authのレスポンスからコピー
+  if (setCookieHeader) {
+    honoResponse.headers.set('Set-Cookie', setCookieHeader);
+  } else {
+    console.warn("WARNING: Set-Cookie header missing from Better Auth response during signup.");
+  }
+
+  return honoResponse;
 });
 
 
@@ -184,37 +205,56 @@ api.post('/signin', async (c: Context<{ Bindings: Env, Variables: Variables }>) 
     return c.json({ error: 'Email and password are required' }, 400);
   }
 
-  let result: any;
+  let authResponse: Response;
+  let authResult: any;
 
   try {
-    // Better Auth の API を直接呼び出す
-    result = await auth.api.signInEmail({
+    const betterAuthResponse = await auth.api.signInEmail({
       body: {
         email,
         password,
       },
-      asResponse: false,
+      // 🚨 修正: asResponse: true にし、クッキーを含むResponseを取得する
+      asResponse: true,
     });
+
+    authResponse = betterAuthResponse;
+    authResult = await betterAuthResponse.json();
+
   } catch (e) {
     console.error('Sign-in failed:', e);
+    if (e instanceof Response) {
+      return e;
+    }
     return c.json({ error: 'Sign-in failed', details: (e as Error).message }, 401);
   }
 
-  const sessionId = result.session?.id || result.token;
-  const authUserId = result.user?.id;
+  const authUserId = authResult.user?.id;
 
-  if (!sessionId || !authUserId) {
-    throw new Error("Sign-in succeeded, but session or user ID was not returned.");
+  if (!authUserId) {
+    // サインインは成功したが、ユーザーIDが取得できなかった場合
+    console.error("Sign-in succeeded, but user ID was not returned by Better Auth response.");
+    return c.json({ error: 'Internal server error: Auth User ID missing.' }, 500);
   }
 
-  // サインイン時もセッションへのID紐づけはスキップし、ミドルウェアでDB検索を行う
+  // Better Auth のResponseからSet-Cookieヘッダーを取得
+  const setCookieHeader = authResponse.headers.get('Set-Cookie');
 
-  // 成功したセッション情報を返す
-  return c.json({
+  // Honoのレスポンスオブジェクトを作成
+  const honoResponse = c.json({
     message: 'Sign in successful.',
-    app_session_id: sessionId,
     auth_user_id: authUserId,
-  });
+  }, 200);
+
+  // Set-CookieヘッダーをBetter Authのレスポンスからコピー
+  if (setCookieHeader) {
+    honoResponse.headers.set('Set-Cookie', setCookieHeader);
+  } else {
+    console.warn("WARNING: Set-Cookie header missing from Better Auth response during signin.");
+  }
+
+  // 成功したセッション情報を返す (クッキーヘッダー付き)
+  return honoResponse;
 });
 
 
@@ -234,11 +274,14 @@ api.use('/protected', async (c, next) => {
 
   // セッションが存在しないか、Better Auth側のユーザー情報がない場合は認証失敗
   if (!session || !session.user) {
+    // console.log("[DEBUG] Auth Failed: Session or User Missing");
     return c.json({ error: 'Unauthorized. Session invalid or missing.' }, 401);
   }
 
   // Auth側のユーザーIDを取得
   const authUserId = session.user.id;
+  // console.log(`[DEBUG] Auth Success. authUserId: ${authUserId}`);
+
 
   // 🚨 回避策: authUserIdをキーとしてauthMappingsテーブルからappUserIdを取得
   const mapping = await db.query.authMappings.findFirst({
@@ -253,6 +296,7 @@ api.use('/protected', async (c, next) => {
 
   // appUserId (業務ID) をコンテキストに格納
   c.set('appUserId', mapping.appUserId);
+  // console.log(`[DEBUG] appUserId Set: ${mapping.appUserId}`);
 
   await next();
 });
