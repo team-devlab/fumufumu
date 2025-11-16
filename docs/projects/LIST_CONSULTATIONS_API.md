@@ -74,13 +74,13 @@ apps/fumufumu-backend/
 
 ## 実装の流れ
 
-### フェーズ1: DBスキーマの定義 ⏳
+### フェーズ1: DBスキーマの定義 ✅
 
-- [ ] `consultations.ts` スキーマ定義
-- [ ] `tags.ts` スキーマ定義
-- [ ] マイグレーションファイルの生成（`pnpm generate`）
-- [ ] ローカルDBへの適用（`pnpm local:migration`）
-- [ ] Drizzle Studioで確認
+- [x] `consultations.ts` スキーマ定義
+- [x] マイグレーションファイルの生成（`pnpm generate`）
+- [x] ローカルDBへの適用（`pnpm local:migration`）
+- [x] Drizzle Studioで確認
+- [x] シードデータの投入
 
 ### フェーズ2: プロジェクト構造の整備 ⏳
 
@@ -98,7 +98,6 @@ apps/fumufumu-backend/
 
 #### 4-1. Repository層
 
-- [ ] `consultation.repository.ts` の単体テスト作成
 - [ ] `ConsultationRepository` クラスの実装
   - [ ] `findAll()` メソッド（フィルタリング対応）
   - [ ] クエリビルダーの実装
@@ -116,6 +115,7 @@ apps/fumufumu-backend/
 #### 4-3. Route層（Controller）
 
 - [ ] `consultations.ts` の単体テスト作成
+※テストは、API単体テストのみ実装
 - [ ] GET `/api/consultations` エンドポイントの実装
   - [ ] クエリパラメータの取得
   - [ ] バリデーション

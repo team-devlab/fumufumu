@@ -15,6 +15,20 @@
       "when": 1763135816688,
       "tag": "0001_warm_reptil",
       "breakpoints": true
+    },
+    {
+      "idx": 2,
+      "version": "6",
+      "when": 1763189664814,
+      "tag": "0002_harsh_timeslip",
+      "breakpoints": true
+    },
+    {
+      "idx": 3,
+      "version": "6",
+      "when": 1763298336037,
+      "tag": "0003_heavy_martin_li",
+      "breakpoints": true
     }
   ]
 }
