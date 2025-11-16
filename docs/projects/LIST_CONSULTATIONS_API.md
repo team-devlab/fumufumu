@@ -82,11 +82,11 @@ apps/fumufumu-backend/
 - [x] Drizzle Studioで確認
 - [x] シードデータの投入
 
-### フェーズ2: プロジェクト構造の整備 ⏳
+### フェーズ2: プロジェクト構造の整備 ✅
 
-- [ ] `routes/`, `services/`, `repositories/` ディレクトリ作成
-- [ ] `types/`, `utils/` ディレクトリ作成
-- [ ] 既存コードのリファクタリング（`health.ts` の分離等）
+- [x] `routes/`, `services/`, `repositories/` ディレクトリ作成
+- [x] `types/`ディレクトリ作成
+
 
 ### フェーズ3: 型定義とユーティリティ ⏳
 
