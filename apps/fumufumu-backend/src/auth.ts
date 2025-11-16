@@ -1,34 +1,43 @@
+// src/auth.ts
+
 import { betterAuth } from "better-auth";
 import { drizzleAdapter } from "better-auth/adapters/drizzle";
-import { drizzle } from 'drizzle-orm/d1';
 import { eq, sql } from 'drizzle-orm';
-import type { Env } from './index';
-import type { D1Database } from '@cloudflare/workers-types';
+import type { Env, DbInstance } from './index';
+
+// 修正: userSchema と authSchema の両方をインポート (ここで定義を利用)
 import * as userSchema from "./db/schema/user";
 import * as authSchema from "./db/schema/auth";
-const schema = {
-	...authSchema,
-	...userSchema,
-}
 
-// NOTE: Better AuthのSession型は公開されていない可能性があるため、
-// ここでは必要なプロパティのみを持つ最小限のインターフェースを定義するか、
-// 型を無視して実装を進めます。今回は型を無視して実装を進めます。
+// index.ts から schema をインポートしていた行は不要になる場合がありますが、
+// 安全のため、ここではauth.ts内でローカルに結合します。
+// import { schema as fullSchema } from './index'; // <- この行は不要
+
+// Better Authが使用するすべてのスキーマを結合
+const authDrizzleSchema = {
+	...authSchema, // auth_users, auth_sessions, etc.
+	// ...userSchema, // 業務DBスキーマはBetter Authには必須ではないが、渡しても問題ないことが多い
+};
 
 /**
  * Drizzleインスタンスと環境変数を受け取って Better Auth インスタンスを生成する関数
- * @param d1Binding D1Databaseのバインディング
+ * @param db DbInstance型
  * @param env Cloudflare Workersの環境変数 (Bindings)
  * @returns Better Authインスタンス
  */
-export function createBetterAuth(d1Binding: D1Database, env: Env) {
-	const db = drizzle(d1Binding, { schema });
+// 修正: index.ts から schema を受け取る引数を削除 (DIミドルウェアの修正も必要)
+export function createBetterAuth(db: DbInstance, env: Env) {
 	const { users, authMappings } = userSchema;
 
 	return betterAuth({
 		database: drizzleAdapter(db, {
 			provider: "sqlite",
+			schema: authDrizzleSchema,
 		}),
+		emailAndPassword: { // [!code highlight]
+			enabled: true,
+			autoSignIn: true, // ★ 修正: 自動サインインを明示的に有効化 ★ // [!code focus]
+		}, // [!code highlight]
 		user: {
 			modelName: "auth_users",
 		},
@@ -44,9 +53,6 @@ export function createBetterAuth(d1Binding: D1Database, env: Env) {
 		secret: env.BETTER_AUTH_SECRET,
 		baseURL: env.BETTER_AUTH_URL,
 		callbacks: {
-			// 引数にインポートした型ではなく、インラインで型を定義 (anyを避けるため)
-			// TypeScriptの型推論が不足しているため、引数にオブジェクトの分解構文を使い、
-			// 必要なプロパティの型を明示的に指定します。
 			user: async ({ authUserId, session }: { authUserId: string, session: { user: { name?: string | null } } & Record<string, any> }) => {
 
 				const existingMapping = await db.query.authMappings.findFirst({
@@ -87,5 +93,4 @@ export function createBetterAuth(d1Binding: D1Database, env: Env) {
 	});
 }
 
-// createBetterAuth 関数の戻り値の型を抽出してエクスポート
 export type AuthInstance = ReturnType<typeof createBetterAuth>;
