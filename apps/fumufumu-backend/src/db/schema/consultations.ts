@@ -11,8 +11,7 @@ export const consultations = sqliteTable("consultations", {
 	hiddenAt: integer("hidden_at", { mode: "timestamp_ms" }),
 	solvedAt: integer("solved_at", { mode: "timestamp_ms" }),
 	authorId: integer("author_id")
-		.notNull()
-		.references(() => users.id, { onDelete: "cascade" }),
+		.references(() => users.id, { onDelete: "set null" }),
 	createdAt: integer("created_at", { mode: "timestamp_ms" })
 		.default(sql`(cast(unixepoch('subsecond') * 1000 as integer))`)
 		.notNull(),
