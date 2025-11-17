@@ -252,7 +252,7 @@ api.use('/protected', async (c, next) => {
   const session = await auth.api.getSession({ headers: c.req.raw.headers });
 
   // セッションが存在しないか、Better Auth側のユーザー情報がない場合は認証失敗
-  if (!session || !session.user) {
+  if (!session?.user) {
     return c.json({ error: 'Unauthorized. Session invalid or missing.' }, 401);
   }
 
