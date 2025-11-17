@@ -32,16 +32,17 @@ interface Variables {
 
 const app = new Hono<{ Bindings: Env, Variables: Variables }>()
 
-// --- DI ミドルウェア ---
+// --- 依存性注入 (DI) ミドルウェア ---
 app.use('*', async (c, next) => {
   const env = c.env;
-  // スキーマを渡してDrizzleインスタンスを作成
+  // Drizzleインスタンスを作成し、DB接続とスキーマをHono Contextに設定
   const db = drizzle(env.DB, { schema });
-
   c.set('db', db as DbInstance);
 
+  // Better AuthインスタンスをHono Contextに設定
   const auth = createBetterAuth(db, env);
   c.set('auth', auth);
+
   await next();
 });
 
@@ -57,6 +58,7 @@ app.get('/health', async (c) => {
     // D1データベースへの接続オブジェクトを作成
     const db = drizzle(env.DB);
 
+    // 接続テスト
     const _ = await db.$client.prepare('SELECT 1').all();
     return c.json({
       status: 'ok',
@@ -86,7 +88,9 @@ const api = new Hono<{ Bindings: Env, Variables: Variables }>()
  * 認証情報なしで利用可能なルート (SignUp, SignIn)
  * ----------------------------------------------------
  */
-api.post('/signup', async (c: Context<{ Bindings: Env, Variables: Variables }>) => {
+
+// サインアップ API (POST /api/signup)
+api.post('/signup', async (c) => {
   const auth = c.get('auth');
   const db = c.get('db');
   const body = await c.req.json();
@@ -96,7 +100,7 @@ api.post('/signup', async (c: Context<{ Bindings: Env, Variables: Variables }>) 
     return c.json({ error: 'Email and password are required' }, 400);
   }
 
-  // 認証トークンをクッキーに設定したHono Responseが返る
+  // Better Authでサインアップを実行
   let authResponse: Response;
   let authResult: any;
 
@@ -107,7 +111,7 @@ api.post('/signup', async (c: Context<{ Bindings: Env, Variables: Variables }>) 
         password,
         name,
       },
-      // クッキーを含むResponseを取得する
+      // クッキーを含むResponseを取得
       asResponse: true,
     });
 
@@ -116,7 +120,7 @@ api.post('/signup', async (c: Context<{ Bindings: Env, Variables: Variables }>) 
 
   } catch (e) {
     console.error('Sign-up failed:', e);
-    // Better Authからエラーレスポンスが返された場合、そのレスポンスをそのまま返す
+    // Better Authからのエラーレスポンスをそのまま返す
     if (e instanceof Response) {
       return e;
     }
@@ -124,15 +128,15 @@ api.post('/signup', async (c: Context<{ Bindings: Env, Variables: Variables }>) 
   }
 
   const authUserId = authResult.user?.id;
-
+  
   if (!authUserId) {
     console.error("Sign-up succeeded, but user ID was not returned by Better Auth response.");
     return c.json({ error: 'Internal server error: Auth User ID missing.' }, 500);
   }
 
-  let appUserId: number = 0;
+  let appUserId: number;
 
-  // 業務DB (users, authMappings) の更新
+  // 業務DB (users, authMappings) の更新とIDマッピング
   try {
     const userInsertResult = await db.insert(users).values({
       name: name,
@@ -154,30 +158,28 @@ api.post('/signup', async (c: Context<{ Bindings: Env, Variables: Variables }>) 
     return c.json({ error: 'Failed to complete user setup on business DB.', details: (e as Error).message }, 500);
   }
 
-  // 業務ユーザーIDをResponse Bodyに追加する
+  // 業務ユーザーIDをResponse Bodyに追加し、クッキーヘッダーをコピー
   const responseBody = {
     message: 'User created and signed in successfully.',
     auth_user_id: authUserId,
     app_user_id: appUserId,
   };
 
-  // Better AuthのレスポンスからSet-Cookieヘッダーを取得（クッキーをクライアントに設定させる）
   const setCookieHeader = authResponse.headers.get('Set-Cookie');
-
   const honoResponse = c.json(responseBody, 200);
 
-  // Set-CookieヘッダーをBetter Authのレスポンスからコピー
   if (setCookieHeader) {
     honoResponse.headers.set('Set-Cookie', setCookieHeader);
   } else {
     console.warn("WARNING: Set-Cookie header missing from Better Auth response during signup.");
   }
-
+  
   return honoResponse;
 });
 
 
-api.post('/signin', async (c: Context<{ Bindings: Env, Variables: Variables }>) => {
+// サインイン API (POST /api/signin)
+api.post('/signin', async (c) => {
   const auth = c.get('auth');
   const body = await c.req.json();
   const { email, password } = body;
@@ -195,7 +197,7 @@ api.post('/signin', async (c: Context<{ Bindings: Env, Variables: Variables }>) 
         email,
         password,
       },
-      // クッキーを含むResponseを取得する
+      // クッキーを含むResponseを取得
       asResponse: true,
     });
 
@@ -224,7 +226,7 @@ api.post('/signin', async (c: Context<{ Bindings: Env, Variables: Variables }>) 
     message: 'Sign in successful.',
     auth_user_id: authUserId,
   }, 200);
-
+  
   // Set-CookieヘッダーをBetter Authのレスポンスからコピー
   if (setCookieHeader) {
     honoResponse.headers.set('Set-Cookie', setCookieHeader);
@@ -237,17 +239,16 @@ api.post('/signin', async (c: Context<{ Bindings: Env, Variables: Variables }>) 
 
 
 /**
- * 認証必須のルート (Protected, etc)
+ * 認証必須のルート
  * ----------------------------------------------------
  */
 
-// 保護ミドルウェアの定義: 認証とID注入 (AuthMapping 検索バージョン)
+// 保護ミドルウェアの定義: 認証とID注入
 api.use('/protected', async (c, next) => {
   const auth = c.get('auth');
   const db = c.get('db');
 
-  // セッションの検証: クライアントから送信されたクッキー/ヘッダーを使用
-  // sessionオブジェクトにはauthUserIdが含まれる
+  // セッションの検証
   const session = await auth.api.getSession({ headers: c.req.raw.headers });
 
   // セッションが存在しないか、Better Auth側のユーザー情報がない場合は認証失敗
@@ -259,7 +260,7 @@ api.use('/protected', async (c, next) => {
   const authUserId = session.user.id;
 
 
-  // 🚨 回避策: authUserIdをキーとしてauthMappingsテーブルからappUserIdを取得
+  // authUserIdをキーとしてauthMappingsテーブルからappUserIdを取得(ID分離のための処理)
   const mapping = await db.query.authMappings.findFirst({
     where: eq(authMappings.authUserId, authUserId),
   });
