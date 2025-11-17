@@ -90,7 +90,7 @@ apps/fumufumu-backend/
 
 ### フェーズ3: 型定義とユーティリティ ⏳
 
-- [ ] `consultation.types.ts` の作成（DTOやEntity型）
+- [x] `consultation.types.ts` の作成（DTOやEntity型）
 - [ ] `validation.ts` の作成（クエリパラメータ検証）
 - [ ] `error-handler.ts` の作成（統一エラーレスポンス）
 
