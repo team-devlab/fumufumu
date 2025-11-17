@@ -18,10 +18,10 @@ export function createBetterAuth(db: DbInstance, env: Env) {
 			autoSignIn: true,
 		},
 		user: {
-			modelName: "auth_users",
+			modelName: "authUsers",
 		},
 		session: {
-			modelName: "auth_sessions",
+			modelName: "authSessions",
 			// 💡 パフォーマンス改善のための Cookie Cache を有効にする
 			cookieCache: {
 				enabled: true,
@@ -29,10 +29,10 @@ export function createBetterAuth(db: DbInstance, env: Env) {
 			}
 		},
 		account: {
-			modelName: "auth_accounts",
+			modelName: "authAccounts",
 		},
 		verification: {
-			modelName: "auth_verifications",
+			modelName: "authVerifications",
 		},
 		secret: env.BETTER_AUTH_SECRET,
 		baseURL: env.BETTER_AUTH_URL,

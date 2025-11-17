@@ -1,7 +1,7 @@
 import { sql } from "drizzle-orm";
 import { sqliteTable, text, integer } from "drizzle-orm/sqlite-core";
 
-export const auth_users = sqliteTable("auth_users", {
+export const authUsers = sqliteTable("auth_users", {
   id: text("id").primaryKey(),
   name: text("name").notNull(),
   email: text("email").notNull().unique(),
@@ -18,7 +18,7 @@ export const auth_users = sqliteTable("auth_users", {
     .notNull(),
 });
 
-export const auth_sessions = sqliteTable("auth_sessions", {
+export const authSessions = sqliteTable("auth_sessions", {
   id: text("id").primaryKey(),
   expiresAt: integer("expires_at", { mode: "timestamp_ms" }).notNull(),
   token: text("token").notNull().unique(),
@@ -32,16 +32,16 @@ export const auth_sessions = sqliteTable("auth_sessions", {
   userAgent: text("user_agent"),
   userId: text("user_id")
     .notNull()
-    .references(() => auth_users.id, { onDelete: "cascade" }),
+    .references(() => authUsers.id, { onDelete: "cascade" }),
 });
 
-export const auth_accounts = sqliteTable("auth_accounts", {
+export const authAccounts = sqliteTable("auth_accounts", {
   id: text("id").primaryKey(),
   accountId: text("account_id").notNull(),
   providerId: text("provider_id").notNull(),
   userId: text("user_id")
     .notNull()
-    .references(() => auth_users.id, { onDelete: "cascade" }),
+    .references(() => authUsers.id, { onDelete: "cascade" }),
   accessToken: text("access_token"),
   refreshToken: text("refresh_token"),
   idToken: text("id_token"),
@@ -61,7 +61,7 @@ export const auth_accounts = sqliteTable("auth_accounts", {
     .notNull(),
 });
 
-export const auth_verifications = sqliteTable("auth_verifications", {
+export const autherifications = sqliteTable("auth_verifications", {
   id: text("id").primaryKey(),
   identifier: text("identifier").notNull(),
   value: text("value").notNull(),
