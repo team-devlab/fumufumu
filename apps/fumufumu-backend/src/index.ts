@@ -34,8 +34,6 @@ const app = new Hono<{ Bindings: Env, Variables: Variables }>()
 
 // --- DI ミドルウェア ---
 app.use('*', async (c, next) => {
-  // console.log(`[DEBUG] 1. Middleware Start: Path=${c.req.path}`);
-
   const env = c.env;
   // スキーマを渡してDrizzleインスタンスを作成
   const db = drizzle(env.DB, { schema });
@@ -44,8 +42,6 @@ app.use('*', async (c, next) => {
 
   const auth = createBetterAuth(db, env);
   c.set('auth', auth);
-
-  // console.log(`[DEBUG] 2. Auth Instance Set: Exists=${!!c.get('auth')}`);
   await next();
 });
 
@@ -90,8 +86,6 @@ const api = new Hono<{ Bindings: Env, Variables: Variables }>()
  * 認証情報なしで利用可能なルート (SignUp, SignIn)
  * ----------------------------------------------------
  */
-
-// サインアップ API (POST /api/signup)
 api.post('/signup', async (c: Context<{ Bindings: Env, Variables: Variables }>) => {
   const auth = c.get('auth');
   const db = c.get('db');
@@ -102,8 +96,7 @@ api.post('/signup', async (c: Context<{ Bindings: Env, Variables: Variables }>) 
     return c.json({ error: 'Email and password are required' }, 400);
   }
 
-  // 1. Better Auth でサインアップを実行 (asResponse: true)
-  //    認証トークンをクッキーに設定したHono Responseが返る
+  // 認証トークンをクッキーに設定したHono Responseが返る
   let authResponse: Response;
   let authResult: any;
 
@@ -114,13 +107,11 @@ api.post('/signup', async (c: Context<{ Bindings: Env, Variables: Variables }>) 
         password,
         name,
       },
-      // 🚨 修正: asResponse: true にし、クッキーを含むResponseを取得する
+      // クッキーを含むResponseを取得する
       asResponse: true,
     });
 
     authResponse = betterAuthResponse;
-
-    // レスポンスボディをJSONとして読み取り、必要な情報（authUserId）を取得
     authResult = await betterAuthResponse.json();
 
   } catch (e) {
@@ -135,53 +126,44 @@ api.post('/signup', async (c: Context<{ Bindings: Env, Variables: Variables }>) 
   const authUserId = authResult.user?.id;
 
   if (!authUserId) {
-    // サインアップは成功したが、ユーザーIDが取得できなかった場合
     console.error("Sign-up succeeded, but user ID was not returned by Better Auth response.");
     return c.json({ error: 'Internal server error: Auth User ID missing.' }, 500);
   }
 
-  let appUserId: number = 0; // 業務ユーザーIDのスコープを確保
+  let appUserId: number = 0;
 
-  // 2. 業務DB (users, authMappings) の更新
+  // 業務DB (users, authMappings) の更新
   try {
-    // 1. usersテーブルに業務ユーザーを作成
     const userInsertResult = await db.insert(users).values({
-      name: name, // Better Authに渡された名前を使用
+      name: name,
     }).returning({ id: users.id });
 
     if (!userInsertResult || userInsertResult.length === 0) {
       throw new Error("Failed to insert user into 'users' table.");
     }
 
-    // 新しく作成された業務ユーザーIDを取得
     appUserId = userInsertResult[0].id;
 
-    // 2. authMappingsテーブルにマッピングを作成
-    await db.insert(authMappings).values({ // usersではなくauthMappingsを使用
+    await db.insert(authMappings).values({
       appUserId: appUserId,
       authUserId: authUserId,
     });
 
   } catch (e) {
     console.error('DB transaction failed:', e);
-    // エラー発生時に500を返す
     return c.json({ error: 'Failed to complete user setup on business DB.', details: (e as Error).message }, 500);
   }
 
-  // 3. Better Auth のResponseをそのまま返し、クッキーをクライアントに設定させる
-  //    ただし、ここでは業務IDを付け加えたいので、Responseを再構築する
-
-  // 業務ユーザーIDをResponse Headerに追加（またはResponse Bodyに追加）する
+  // 業務ユーザーIDをResponse Bodyに追加する
   const responseBody = {
     message: 'User created and signed in successfully.',
     auth_user_id: authUserId,
     app_user_id: appUserId,
   };
 
-  // Better AuthのレスポンスからSet-Cookieヘッダーを取得
+  // Better AuthのレスポンスからSet-Cookieヘッダーを取得（クッキーをクライアントに設定させる）
   const setCookieHeader = authResponse.headers.get('Set-Cookie');
 
-  // Honoのレスポンスオブジェクトを作成
   const honoResponse = c.json(responseBody, 200);
 
   // Set-CookieヘッダーをBetter Authのレスポンスからコピー
@@ -195,7 +177,6 @@ api.post('/signup', async (c: Context<{ Bindings: Env, Variables: Variables }>) 
 });
 
 
-// サインイン API (POST /api/signin)
 api.post('/signin', async (c: Context<{ Bindings: Env, Variables: Variables }>) => {
   const auth = c.get('auth');
   const body = await c.req.json();
@@ -214,7 +195,7 @@ api.post('/signin', async (c: Context<{ Bindings: Env, Variables: Variables }>) 
         email,
         password,
       },
-      // 🚨 修正: asResponse: true にし、クッキーを含むResponseを取得する
+      // クッキーを含むResponseを取得する
       asResponse: true,
     });
 
@@ -232,15 +213,13 @@ api.post('/signin', async (c: Context<{ Bindings: Env, Variables: Variables }>) 
   const authUserId = authResult.user?.id;
 
   if (!authUserId) {
-    // サインインは成功したが、ユーザーIDが取得できなかった場合
     console.error("Sign-in succeeded, but user ID was not returned by Better Auth response.");
     return c.json({ error: 'Internal server error: Auth User ID missing.' }, 500);
   }
 
-  // Better Auth のResponseからSet-Cookieヘッダーを取得
+  // Better AuthのレスポンスからSet-Cookieヘッダーを取得（クッキーをクライアントに設定させる）
   const setCookieHeader = authResponse.headers.get('Set-Cookie');
 
-  // Honoのレスポンスオブジェクトを作成
   const honoResponse = c.json({
     message: 'Sign in successful.',
     auth_user_id: authUserId,
@@ -253,13 +232,12 @@ api.post('/signin', async (c: Context<{ Bindings: Env, Variables: Variables }>) 
     console.warn("WARNING: Set-Cookie header missing from Better Auth response during signin.");
   }
 
-  // 成功したセッション情報を返す (クッキーヘッダー付き)
   return honoResponse;
 });
 
 
 /**
- * 認証必須のルート (Protected)
+ * 認証必須のルート (Protected, etc)
  * ----------------------------------------------------
  */
 
@@ -274,13 +252,11 @@ api.use('/protected', async (c, next) => {
 
   // セッションが存在しないか、Better Auth側のユーザー情報がない場合は認証失敗
   if (!session || !session.user) {
-    // console.log("[DEBUG] Auth Failed: Session or User Missing");
     return c.json({ error: 'Unauthorized. Session invalid or missing.' }, 401);
   }
 
   // Auth側のユーザーIDを取得
   const authUserId = session.user.id;
-  // console.log(`[DEBUG] Auth Success. authUserId: ${authUserId}`);
 
 
   // 🚨 回避策: authUserIdをキーとしてauthMappingsテーブルからappUserIdを取得
@@ -296,19 +272,16 @@ api.use('/protected', async (c, next) => {
 
   // appUserId (業務ID) をコンテキストに格納
   c.set('appUserId', mapping.appUserId);
-  // console.log(`[DEBUG] appUserId Set: ${mapping.appUserId}`);
 
   await next();
 });
 
 
-// /api/protected の修正: 業務DBアクセスを追加
 api.get('/protected', async (c) => {
   // コンテキストから業務 ID と DB インスタンスを取得
   const appUserId = c.get('appUserId');
   const db = c.get('db');
 
-  // appUserId を使って業務DBにアクセス
   const userSettings = await db.query.users.findFirst({
     where: eq(users.id, appUserId),
     columns: {

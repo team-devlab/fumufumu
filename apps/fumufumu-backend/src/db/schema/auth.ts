@@ -61,7 +61,7 @@ export const authAccounts = sqliteTable("auth_accounts", {
     .notNull(),
 });
 
-export const autherifications = sqliteTable("auth_verifications", {
+export const authVerifications = sqliteTable("auth_verifications", {
   id: text("id").primaryKey(),
   identifier: text("identifier").notNull(),
   value: text("value").notNull(),
