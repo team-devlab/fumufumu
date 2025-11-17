@@ -4,13 +4,7 @@ import type { Context } from "hono";
 import { ConsultationRepository } from "@/repositories/consultation.repository";
 import { ConsultationService } from "@/services/consultation.service";
 
-export interface Env {
-  DB: D1Database;
-  BETTER_AUTH_SECRET: string;
-  BETTER_AUTH_URL: string;
-}
-
-const app = new Hono<{ Bindings: Env }>()
+export const consultationsRoute = new Hono();
 
 /**
  * 相談一覧取得
@@ -34,6 +28,6 @@ export const listConsultations = async (c: Context) => {
 };
 
 // ルーティング登録
-app.get("/", listConsultations);
+consultationsRoute.get("/", listConsultations);
 
 

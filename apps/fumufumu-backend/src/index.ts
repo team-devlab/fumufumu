@@ -2,6 +2,7 @@ import { Hono } from 'hono'
 import { drizzle } from 'drizzle-orm/d1';
 import { getDb } from './db';
 import { createBetterAuth } from './auth';
+import { consultationsRoute } from '@/routes/consultations.controller';
 
 export interface Env {
   DB: D1Database;
@@ -68,5 +69,8 @@ app.get('/api/protected', async (c) => {
     user: session.user
   });
 });
+
+// 相談APIルートをマウント
+app.route('/api/consultations', consultationsRoute);
 
 export default app
