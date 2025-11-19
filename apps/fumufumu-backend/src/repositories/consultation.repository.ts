@@ -1,6 +1,7 @@
-// Data層: 相談データアクセス
+import { users } from "@/db/schema/user";
 import { consultations } from "@/db/schema/consultations";
 import type { DrizzleD1Database } from "drizzle-orm/d1";
+import { eq } from "drizzle-orm";
 
 export class ConsultationRepository {
 	constructor(private db: DrizzleD1Database) {}
@@ -14,8 +15,12 @@ export class ConsultationRepository {
 
 	async findAll() {
 		const getConsutationAll = await this.db
-			.select()
-			.from(consultations);
+			.select({
+				consultations: consultations,
+				author: users,
+			})
+			.from(consultations)
+			.leftJoin(users, eq(consultations.authorId, users.id));
 
 		return getConsutationAll;
 	}
