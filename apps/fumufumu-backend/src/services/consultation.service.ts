@@ -3,9 +3,6 @@ import type { ConsultationRepository } from "@/repositories/consultation.reposit
 
 export class ConsultationService {
 	constructor(private repository: ConsultationRepository) {}
-
-	// TODO: listConsultations()メソッドを実装
-	listConsultaitons() {
 		/**
 		 * 組織一覧を取得
 		 * 
@@ -33,6 +30,19 @@ export class ConsultationService {
 		 *  - ConsultationListResponse型で返却
 		 * 
 		 */
+
+	async listConsultaitons() {
+		const entities = await this.repository.findAll();
+
+		// 変換ロジック
+
+		// レスポンス形式に変換
+		return { 
+			meta: { 
+				total: entities.length
+			}, 
+			data: responses
+		};
 	}
 }
 
