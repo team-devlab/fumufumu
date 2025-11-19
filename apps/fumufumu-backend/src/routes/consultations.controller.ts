@@ -23,7 +23,7 @@ export const listConsultations = async (c: Context) => {
 	const db = c.get("db");
 	const repository = new ConsultationRepository(db);
 	const service = new ConsultationService(repository);
-	const result = await service.listConsultations();
+	const result = await service.listConsultaitons();
 	return c.json(result);
 };
 
