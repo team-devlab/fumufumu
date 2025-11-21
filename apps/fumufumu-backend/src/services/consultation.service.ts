@@ -37,21 +37,16 @@ export class ConsultationService {
 
 		// ステップ2: Entity → Response変換
 		const responses: ConsultationResponse[] = entities
-			// authorがnullの場合は除外（JOINでユーザーが見つからなかった場合）
 			.filter(({ author }) => author !== null)
 			.map(({ consultations, author }) => ({
 				id: consultations.id,
 				title: consultations.title,
-				// a) body（全文）→ body_preview（先頭100文字）に変換
 				body_preview: consultations.body.substring(0, 100),
 				draft: consultations.draft,
-				// b) 日付フィールド（Date型）→ ISO 8601文字列に変換
-				// c) キャメルケース → スネークケースに変換
 				hidden_at: consultations.hiddenAt?.toISOString() ?? null,
 				solved_at: consultations.solvedAt?.toISOString() ?? null,
 				created_at: consultations.createdAt.toISOString(),
 				updated_at: consultations.updatedAt.toISOString(),
-				// d) author（オブジェクト）をそのまま含める
 				author: author!
 			}));
 
