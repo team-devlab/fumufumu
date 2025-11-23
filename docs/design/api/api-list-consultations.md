@@ -66,11 +66,7 @@ data: array of ref # Consultationオブジェクトの配列（schemas.md参照�
         "name": "taro yamada",
         "auth_service_user_id": "github_12345",
         "disabled": false
-      },
-      "tags": [
-        { "id": 1, "name": "キャリア" },
-        { "id": 2, "name": "エンジニア" }
-      ]
+      }
     },
     {
       "id": 102,
@@ -86,11 +82,7 @@ data: array of ref # Consultationオブジェクトの配列（schemas.md参照�
         "name": "taro yamada",
         "auth_service_user_id": "github_12345",
         "disabled": false
-      },
-      "tags": [
-        { "id": 5, "name": "AWS" },
-        { "id": 6, "name": "インフラ" }
-      ]
+      }
     }
   ]
 }
