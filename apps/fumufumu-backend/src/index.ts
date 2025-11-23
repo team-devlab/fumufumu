@@ -1,8 +1,23 @@
 import { Hono } from 'hono'
-import { drizzle } from 'drizzle-orm/d1';
-import { getDb } from './db';
-import { createBetterAuth } from './auth';
+import { drizzle, DrizzleD1Database } from 'drizzle-orm/d1';
+
+import { createBetterAuth, type AuthInstance } from './auth';
+import type { D1Database } from '@cloudflare/workers-types';
+
+import * as authSchema from "./db/schema/auth";
+import * as userSchema from "./db/schema/user";
+
+import { authRouter } from './routes/auth.routes';
 import { consultationsRoute } from '@/routes/consultations.controller';
+import { protectedRouter } from './routes/protected.routes';
+
+// Drizzle ORMのスキーマを統合
+const schema = {
+  ...authSchema,
+  ...userSchema,
+}
+
+export type DbInstance = DrizzleD1Database<typeof schema>;
 
 export interface Env {
   DB: D1Database;
@@ -10,7 +25,29 @@ export interface Env {
   BETTER_AUTH_URL: string;
 }
 
-const app = new Hono<{ Bindings: Env }>()
+// Hono Context (Variables) の拡張
+export interface Variables {
+  auth: AuthInstance;
+  appUserId: number;
+  db: DbInstance;
+}
+
+const app = new Hono<{ Bindings: Env, Variables: Variables }>()
+
+// --- 依存性注入 (DI) ミドルウェア ---
+app.use('*', async (c, next) => {
+  const env = c.env;
+  // Drizzleインスタンスを作成し、DB接続とスキーマをHono Contextに設定
+  const db = drizzle(env.DB, { schema });
+  c.set('db', db as DbInstance);
+
+  // Better AuthインスタンスをHono Contextに設定
+  const auth = createBetterAuth(db, env);
+  c.set('auth', auth);
+
+  await next();
+});
+
 
 app.get('/', (c) => {
   return c.text('Hello Hono!')
@@ -23,10 +60,8 @@ app.get('/health', async (c) => {
     // D1データベースへの接続オブジェクトを作成
     const db = drizzle(env.DB);
 
-    // 負荷の低いテストクエリを実行 (SELECT 1 はDB接続を確認する最も一般的な方法)
-    // このクエリが成功すれば、D1との接続は正常と判断
+    // 接続テスト
     const _ = await db.$client.prepare('SELECT 1').all();
-
     return c.json({
       status: 'ok',
       database: 'connected',
@@ -35,7 +70,6 @@ app.get('/health', async (c) => {
 
   } catch (error) {
     console.error('D1 Health Check Failed:', error);
-
     return c.json({
       status: 'error',
       database: 'unavailable',
@@ -69,8 +103,5 @@ app.get('/api/protected', async (c) => {
     user: session.user
   });
 });
-
-// 相談APIルートをマウント
-app.route('/api/consultations', consultationsRoute);
 
 export default app
