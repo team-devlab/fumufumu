@@ -79,8 +79,7 @@ app.get('/health', async (c) => {
 })
 
 app.on(['GET', 'POST'], '/auth/*', async (c) => {
-  const db = getDb(c.env.DB);
-  const auth = createBetterAuth(db, c.env);
+  const auth = c.get('auth');
 
   // Better Auth のハンドラにリクエスト処理を委譲
   // c.req.raw は Hono の Request オブジェクトから、標準の Request オブジェクトを取得
@@ -88,8 +87,7 @@ app.on(['GET', 'POST'], '/auth/*', async (c) => {
 });
 
 app.get('/api/protected', async (c) => {
-  const db = getDb(c.env.DB);
-  const auth = createBetterAuth(db, c.env);
+  const auth = c.get('auth');
 
   // Better Auth の API メソッドを使ってセッションを取得
   const session = await auth.api.getSession({ headers: c.req.raw.headers });
@@ -103,5 +101,8 @@ app.get('/api/protected', async (c) => {
     user: session.user
   });
 });
+
+// 相談APIルートをマウント
+app.route('/api/consultations', consultationsRoute);
 
 export default app
