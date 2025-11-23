@@ -25,7 +25,7 @@ export function createBetterAuth(db: DbInstance, env: Env) {
 			// 💡 パフォーマンス改善のための Cookie Cache を有効にする
 			cookieCache: {
 				enabled: true,
-				maxAge: 5 * 60, // 5分間キャッシュ
+				maxAge: 7 * 24 * 60 * 60, // 一週間キャッシュ
 			}
 		},
 		account: {
