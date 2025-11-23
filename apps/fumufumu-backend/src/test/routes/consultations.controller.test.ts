@@ -1,5 +1,5 @@
 import { describe, it, expect, vi, beforeEach } from 'vitest';
-import { listConsultations } from './consultations.controller';
+import { listConsultations } from '../../routes/consultations.controller';
 import { ConsultationService } from '@/services/consultation.service';
 import type { Context } from 'hono';
 
