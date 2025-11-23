@@ -101,7 +101,7 @@ apps/fumufumu-backend/
 - [ ] `ConsultationRepository` クラスの実装
   - [ ] `findAll()` メソッド（フィルタリング対応）
   - [ ] クエリビルダーの実装
-- [ ] テストパス確認
+
 
 #### 4-2. Service層
 
@@ -110,7 +110,6 @@ apps/fumufumu-backend/
   - [ ] `listConsultations()` メソッド
   - [ ] レスポンス整形ロジック
   - [ ] `body_preview` の生成（先頭N文字）
-- [ ] テストパス確認
 
 #### 4-3. Route層（Controller）
 
@@ -121,7 +120,6 @@ apps/fumufumu-backend/
   - [ ] バリデーション
   - [ ] ServiceとRepositoryのDI
   - [ ] エラーハンドリング
-- [ ] テストパス確認
 
 ### フェーズ5: 動作確認 ⏳
 
