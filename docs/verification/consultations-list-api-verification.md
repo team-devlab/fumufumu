@@ -5,28 +5,34 @@
 相談一覧取得API（GET `/api/consultations`）の実装と動作確認結果をまとめたドキュメントです。
 
 - **実装日**: 2025-11-23
+- **更新日**: 2025-11-23（authGuard追加）
 - **エンドポイント**: `GET /api/consultations`
-- **認証**: 未実装（今後authGuardを統合予定）
+- **認証**: ✅ 実装済み（authGuardミドルウェアを使用）
 
 ---
 
 ## ✅ 実装した機能
 
-### 1. 基本機能
+### 1. 認証・認可
+- **authGuardミドルウェア**: セッション検証とappUserIDの取得
+- **デフォルトフィルタ**: userIdが指定されていない場合、ログインユーザーのappUserIdを使用
+- **401 Unauthorized**: 未認証の場合はエラーレスポンスを返却
+
+### 2. 基本機能
 - 相談データの一覧取得
 - authorとのJOIN取得
 - `body`から`body_preview`への自動生成（最初の100文字）
 - 日付のISO 8601形式への変換
 
-### 2. クエリパラメータによるフィルタリング
+### 3. クエリパラメータによるフィルタリング
 
-| パラメータ | 型 | 説明 | 例 |
-|-----------|----|----|-----|
-| `userId` | integer | 特定ユーザーの相談のみを取得 | `?userId=1` |
-| `draft` | boolean | 下書き状態で絞り込み | `?draft=false` |
-| `solved` | boolean | 解決状態で絞り込み | `?solved=true` |
+| パラメータ | 型 | 説明 | 例 | デフォルト値 |
+|-----------|----|----|-----|-------------|
+| `userId` | integer | 特定ユーザーの相談のみを取得 | `?userId=1` | ログインユーザーのappUserId |
+| `draft` | boolean | 下書き状態で絞り込み | `?draft=false` | - |
+| `solved` | boolean | 解決状態で絞り込み | `?solved=true` | - |
 
-### 3. レスポンス最適化
+### 4. レスポンス最適化
 - authorフィールドから不要なフィールド（createdAt, updatedAt）を削除
 - API設計書に準拠したレスポンス形式
 
@@ -249,16 +255,23 @@ DB (D1 Database)
 
 ### 主要ファイル
 
-1. **Controller**: `src/routes/consultations.controller.ts`
-   - クエリパラメータの取得と型変換
-   - フィルタオブジェクトの構築
+1. **Middleware**: `src/middlewares/authGuard.middleware.ts`
+   - セッション検証
+   - authUserId → appUserIdのマッピング
+   - 認証エラー時の401レスポンス
 
-2. **Service**: `src/services/consultation.service.ts`
+2. **Controller**: `src/routes/consultations.controller.ts`
+   - authGuardミドルウェアの適用
+   - appUserIdの取得
+   - クエリパラメータの取得と型変換
+   - フィルタオブジェクトの構築（userIdデフォルト値: appUserId）
+
+3. **Service**: `src/services/consultation.service.ts`
    - body → body_previewの生成
    - 日付のISO 8601変換
    - authorフィールドの整形
 
-3. **Repository**: `src/repositories/consultation.repository.ts`
+4. **Repository**: `src/repositories/consultation.repository.ts`
    - 動的WHERE句の構築
    - AND条件による複合フィルタ
    - authorとのLEFT JOIN
@@ -267,10 +280,11 @@ DB (D1 Database)
 
 ## 🚧 今後の課題
 
-### 1. 認証機能の統合
-- [ ] authGuardミドルウェアの適用
-- [ ] appUserIdの取得と利用
-- [ ] 認証エラー時の適切なレスポンス（401 Unauthorized）
+### 1. 認証機能の統合 ✅ 完了
+- [x] authGuardミドルウェアの適用
+- [x] appUserIdの取得と利用
+- [x] 認証エラー時の適切なレスポンス（401 Unauthorized）
+- [x] userIdクエリパラメータのデフォルト値としてappUserIdを使用
 
 ### 2. タグ機能の実装
 - [ ] question_taggingsテーブルとのJOIN

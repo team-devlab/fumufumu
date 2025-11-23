@@ -20,6 +20,9 @@ describe('Consultations API', () => {
 				if (key === 'db') {
 					return {}; // DBのモック
 				}
+				if (key === 'appUserId') {
+					return 1; // authGuard通過後のログインユーザーID
+				}
 				return undefined;
 			}),
 			req: {
@@ -90,6 +93,13 @@ describe('Consultations API', () => {
 			expect(Array.isArray(data.data)).toBe(true);
 			expect(data.data.length).toBe(2);
 
+			// userIdが指定されていない場合、appUserId (1) がデフォルトで使われる
+			expect(mockConsultationService.listConsultaitons).toHaveBeenCalledWith({
+				userId: 1,
+				draft: undefined,
+				solved: undefined,
+			});
+
 			// レスポンス構造の確認
 			const firstItem = data.data[0];
 			expect(firstItem).toHaveProperty('id');
@@ -159,7 +169,7 @@ describe('Consultations API', () => {
 			// アサーション
 			expect(data.data).toBeDefined();
 			expect(mockConsultationService.listConsultaitons).toHaveBeenCalledWith({
-				userId: undefined,
+				userId: 1, // userIdが指定されていない場合、appUserIdがデフォルト
 				draft: false,
 				solved: undefined,
 			});
@@ -207,7 +217,7 @@ describe('Consultations API', () => {
 			// アサーション
 			expect(data.data).toBeDefined();
 			expect(mockConsultationService.listConsultaitons).toHaveBeenCalledWith({
-				userId: undefined,
+				userId: 1, // userIdが指定されていない場合、appUserIdがデフォルト
 				draft: true,
 				solved: undefined,
 			});
@@ -255,7 +265,7 @@ describe('Consultations API', () => {
 			// アサーション
 			expect(data.data).toBeDefined();
 			expect(mockConsultationService.listConsultaitons).toHaveBeenCalledWith({
-				userId: undefined,
+				userId: 1, // userIdが指定されていない場合、appUserIdがデフォルト
 				draft: undefined,
 				solved: true,
 			});
@@ -303,7 +313,7 @@ describe('Consultations API', () => {
 			// アサーション
 			expect(data.data).toBeDefined();
 			expect(mockConsultationService.listConsultaitons).toHaveBeenCalledWith({
-				userId: undefined,
+				userId: 1, // userIdが指定されていない場合、appUserIdがデフォルト
 				draft: undefined,
 				solved: false,
 			});
@@ -467,6 +477,12 @@ describe('Consultations API', () => {
 			const data: any = await response.json();
 
 			// アサーション
+			expect(mockConsultationService.listConsultaitons).toHaveBeenCalledWith({
+				userId: 1, // userIdが指定されていない場合、appUserIdがデフォルト
+				draft: undefined,
+				solved: undefined,
+			});
+
 			// body_previewが100文字以下であることを確認
 			data.data.forEach((item: any) => {
 				expect(item.body_preview.length).toBeLessThanOrEqual(100);

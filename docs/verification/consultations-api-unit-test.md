@@ -9,24 +9,32 @@
 
 2025年11月23日
 
+## 更新履歴
+
+- **2025-11-23**: 初版作成
+- **2025-11-23**: authGuard追加に伴うテスト更新
+
 ## テスト対象
 
 - **ファイル**: `apps/fumufumu-backend/src/routes/consultations.controller.ts`
 - **関数**: `listConsultations`
 - **エンドポイント**: `GET /api/consultations`
+- **認証**: authGuardミドルウェアを使用（テストではモック化）
 
 ## テスト戦略
 
 ### モック化の対象
 
-1. **ConsultationService**: サービス層をモック化し、コントローラー層の処理のみをテスト
-2. **Hono Context**: リクエストコンテキストをモック化し、クエリパラメータの取得をシミュレート
-3. **Database**: DBへの接続は不要（Serviceがモック化されているため）
+1. **authGuard**: 認証済み状態をモック（appUserId = 1）
+2. **ConsultationService**: サービス層をモック化し、コントローラー層の処理のみをテスト
+3. **Hono Context**: リクエストコンテキストをモック化し、クエリパラメータの取得をシミュレート
+4. **Database**: DBへの接続は不要（Serviceがモック化されているため）
 
 ### テストの目的
 
+- authGuard通過後のappUserIdが正しく使用されているか
 - クエリパラメータが正しく解析されているか
-- サービス層に正しいフィルタ条件が渡されているか
+- サービス層に正しいフィルタ条件が渡されているか（userIdのデフォルト値: appUserId）
 - レスポンスの構造が正しいか
 
 ## テストケース
@@ -36,6 +44,8 @@
 **説明**: クエリパラメータなしで全ての相談データを取得できる
 
 **期待動作**:
+- サービス層に `{ userId: 1, draft: undefined, solved: undefined }` が渡される
+  - userIdが指定されていない場合、authGuardで設定されたappUserId (1) がデフォルトで使用される
 - `meta` と `data` プロパティが存在する
 - `data` が配列である
 - 各要素が必要なフィールドを持つ
@@ -52,7 +62,8 @@
 **クエリパラメータ**: `?draft=false`
 
 **期待動作**:
-- サービス層に `{ userId: undefined, draft: false, solved: undefined }` が渡される
+- サービス層に `{ userId: 1, draft: false, solved: undefined }` が渡される
+  - userIdが指定されていない場合、appUserId (1) がデフォルトで使用される
 - 全てのデータの `draft` が `false` である
 
 **結果**: ✅ PASS
@@ -66,7 +77,8 @@
 **クエリパラメータ**: `?draft=true`
 
 **期待動作**:
-- サービス層に `{ userId: undefined, draft: true, solved: undefined }` が渡される
+- サービス層に `{ userId: 1, draft: true, solved: undefined }` が渡される
+  - userIdが指定されていない場合、appUserId (1) がデフォルトで使用される
 - 全てのデータの `draft` が `true` である
 
 **結果**: ✅ PASS
@@ -80,7 +92,8 @@
 **クエリパラメータ**: `?solved=true`
 
 **期待動作**:
-- サービス層に `{ userId: undefined, draft: undefined, solved: true }` が渡される
+- サービス層に `{ userId: 1, draft: undefined, solved: true }` が渡される
+  - userIdが指定されていない場合、appUserId (1) がデフォルトで使用される
 - 全てのデータの `solved_at` が `null` でない
 
 **結果**: ✅ PASS
@@ -94,7 +107,8 @@
 **クエリパラメータ**: `?solved=false`
 
 **期待動作**:
-- サービス層に `{ userId: undefined, draft: undefined, solved: false }` が渡される
+- サービス層に `{ userId: 1, draft: undefined, solved: false }` が渡される
+  - userIdが指定されていない場合、appUserId (1) がデフォルトで使用される
 - 全てのデータの `solved_at` が `null` である
 
 **結果**: ✅ PASS
@@ -137,6 +151,7 @@
 **説明**: body_preview が100文字以内に切り取られている
 
 **期待動作**:
+- サービス層に `{ userId: 1, draft: undefined, solved: undefined }` が渡される
 - 全てのデータの `body_preview` の長さが100文字以下である
 
 **結果**: ✅ PASS
@@ -268,6 +283,7 @@ describe('Consultations API', () => {
     mockContext = {
       get: vi.fn((key: string) => {
         if (key === 'db') return {};
+        if (key === 'appUserId') return 1; // authGuard通過後のログインユーザーID
         return undefined;
       }),
       req: {
@@ -310,8 +326,9 @@ it('draft=false: 公開済みの相談のみを取得できる', async () => {
   const data: any = await response.json();
 
   // アサーション
+  // userIdが指定されていない場合、appUserId (1) がデフォルトで使用される
   expect(mockConsultationService.listConsultaitons).toHaveBeenCalledWith({
-    userId: undefined,
+    userId: 1, // authGuardで設定されたappUserIdがデフォルト
     draft: false,
     solved: undefined,
   });
