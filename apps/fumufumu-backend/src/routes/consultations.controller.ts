@@ -22,9 +22,10 @@ export const listConsultations = async (c: Context) => {
 		const solved = c.req.query("solved");
 
 		// フィルタオブジェクトを構築
-		// userIdが指定されていない場合は、ログインユーザーのappUserIdを使用
+		// userIdが指定されていない場合はundefined（全ユーザーの相談を取得）
+		// プロフィール画面などで自身の相談のみを取得する場合は、明示的にuserIdを指定する
 		const filters: ConsultationFilters = {
-			userId: userId ? Number(userId) : appUserId,
+			userId: userId ? Number(userId) : undefined,
 			draft: draft !== undefined ? draft === "true" : undefined,
 			solved: solved !== undefined ? solved === "true" : undefined,
 		};

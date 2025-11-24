@@ -93,9 +93,9 @@ describe('Consultations API', () => {
 			expect(Array.isArray(data.data)).toBe(true);
 			expect(data.data.length).toBe(2);
 
-			// userIdが指定されていない場合、appUserId (1) がデフォルトで使われる
+			// userIdが指定されていない場合はundefined（全ユーザーの相談を取得）
 			expect(mockConsultationService.listConsultaitons).toHaveBeenCalledWith({
-				userId: 1,
+				userId: undefined,
 				draft: undefined,
 				solved: undefined,
 			});
@@ -169,7 +169,7 @@ describe('Consultations API', () => {
 			// アサーション
 			expect(data.data).toBeDefined();
 			expect(mockConsultationService.listConsultaitons).toHaveBeenCalledWith({
-				userId: 1, // userIdが指定されていない場合、appUserIdがデフォルト
+				userId: undefined, // userIdが指定されていない場合はundefined（全ユーザー）
 				draft: false,
 				solved: undefined,
 			});
@@ -217,7 +217,7 @@ describe('Consultations API', () => {
 			// アサーション
 			expect(data.data).toBeDefined();
 			expect(mockConsultationService.listConsultaitons).toHaveBeenCalledWith({
-				userId: 1, // userIdが指定されていない場合、appUserIdがデフォルト
+				userId: undefined, // userIdが指定されていない場合はundefined（全ユーザー）
 				draft: true,
 				solved: undefined,
 			});
@@ -265,7 +265,7 @@ describe('Consultations API', () => {
 			// アサーション
 			expect(data.data).toBeDefined();
 			expect(mockConsultationService.listConsultaitons).toHaveBeenCalledWith({
-				userId: 1, // userIdが指定されていない場合、appUserIdがデフォルト
+				userId: undefined, // userIdが指定されていない場合はundefined（全ユーザー）
 				draft: undefined,
 				solved: true,
 			});
@@ -313,7 +313,7 @@ describe('Consultations API', () => {
 			// アサーション
 			expect(data.data).toBeDefined();
 			expect(mockConsultationService.listConsultaitons).toHaveBeenCalledWith({
-				userId: 1, // userIdが指定されていない場合、appUserIdがデフォルト
+				userId: undefined, // userIdが指定されていない場合はundefined（全ユーザー）
 				draft: undefined,
 				solved: false,
 			});
@@ -478,7 +478,7 @@ describe('Consultations API', () => {
 
 			// アサーション
 			expect(mockConsultationService.listConsultaitons).toHaveBeenCalledWith({
-				userId: 1, // userIdが指定されていない場合、appUserIdがデフォルト
+				userId: undefined, // userIdが指定されていない場合はundefined（全ユーザー）
 				draft: undefined,
 				solved: undefined,
 			});
