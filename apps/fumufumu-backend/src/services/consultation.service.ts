@@ -1,5 +1,6 @@
 // Business層: 相談ビジネスロジック
-import type { ConsultationRepository, ConsultationFilters } from "@/repositories/consultation.repository";
+import type { ConsultationRepository } from "@/repositories/consultation.repository";
+import type { ConsultationFilters } from "@/types/consultation.types";
 import type { ConsultationResponse, ConsultationListResponse } from "@/types/consultation.response";
 
 export class ConsultationService {

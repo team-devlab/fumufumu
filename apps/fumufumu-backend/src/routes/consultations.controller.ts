@@ -4,6 +4,7 @@ import type { Context } from "hono";
 import { ConsultationRepository } from "@/repositories/consultation.repository";
 import { ConsultationService } from "@/services/consultation.service";
 import { authGuard } from "@/middlewares/authGuard.middleware";
+import type { ConsultationFilters } from "@/types/consultation.types";
 
 export const consultationsRoute = new Hono();
 
@@ -21,7 +22,7 @@ export const listConsultations = async (c: Context) => {
 
 	// フィルタオブジェクトを構築
 	// userIdが指定されていない場合は、ログインユーザーのappUserIdを使用
-	const filters = {
+	const filters: ConsultationFilters = {
 		userId: userId ? Number(userId) : appUserId,
 		draft: draft !== undefined ? draft === "true" : undefined,
 		solved: solved !== undefined ? solved === "true" : undefined,
