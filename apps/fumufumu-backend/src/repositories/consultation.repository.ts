@@ -4,9 +4,6 @@ import type { DrizzleD1Database } from "drizzle-orm/d1";
 import { eq, and, isNull, isNotNull, type SQL } from "drizzle-orm";
 import type { ConsultationFilters } from "@/types/consultation.types";
 
-/**
- * 相談データへのアクセスを管理するRepository
- */
 export class ConsultationRepository {
 	constructor(private db: DrizzleD1Database) {}
 
@@ -23,17 +20,14 @@ export class ConsultationRepository {
 	async findAll(filters?: ConsultationFilters) {
 		const conditions: SQL[] = [];
 
-		// userId指定時: author_id = ?
 		if (filters?.userId !== undefined) {
 			conditions.push(eq(consultations.authorId, filters.userId));
 		}
 
-		// draft指定時: draft = ?
 		if (filters?.draft !== undefined) {
 			conditions.push(eq(consultations.draft, filters.draft));
 		}
 
-		// solved指定時: solved_at IS (NOT) NULL
 		if (filters?.solved !== undefined) {
 			conditions.push(
 				filters.solved
@@ -42,7 +36,6 @@ export class ConsultationRepository {
 			);
 		}
 
-		// ベースクエリ
 		const baseQuery = this.db
 			.select({
 				consultations: consultations,
@@ -51,7 +44,6 @@ export class ConsultationRepository {
 			.from(consultations)
 			.leftJoin(users, eq(consultations.authorId, users.id));
 
-		// 条件がある場合はWHERE句を追加
 		return conditions.length > 0
 			? await baseQuery.where(and(...conditions))
 			: await baseQuery;
