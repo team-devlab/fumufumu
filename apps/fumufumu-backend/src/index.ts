@@ -80,6 +80,7 @@ app.get('/health', async (c) => {
   }
 })
 
+// Better Auth標準エンドポイント（/auth/sign-in, /auth/sign-upなど）
 app.on(['GET', 'POST'], '/auth/*', async (c) => {
   const auth = c.get('auth');
 
@@ -88,23 +89,19 @@ app.on(['GET', 'POST'], '/auth/*', async (c) => {
   return auth.handler(c.req.raw);
 });
 
-app.get('/api/protected', async (c) => {
-  const auth = c.get('auth');
+// --- APIルーター（/api配下） ---
+const api = new Hono<{ Bindings: Env, Variables: Variables }>();
 
-  // Better Auth の API メソッドを使ってセッションを取得
-  const session = await auth.api.getSession({ headers: c.req.raw.headers });
+// カスタム認証エンドポイント（/api/signup, /api/signinなど）
+api.route('/auth', authRouter);
 
-  if (!session) {
-    return c.json({ error: 'Unauthorized' }, 401);
-  }
+// 保護されたエンドポイント（/api/protected）
+api.route('/protected', protectedRouter);
 
-  return c.json({
-    message: 'Welcome to the protected area!',
-    user: session.user
-  });
-});
+// 相談API（/api/consultations）
+api.route('/consultations', consultationsRoute);
 
-// 相談APIルートをマウント
-app.route('/api/consultations', consultationsRoute);
+// メインアプリにAPIルーターをマウント
+app.route('/api', api);
 
 export default app
