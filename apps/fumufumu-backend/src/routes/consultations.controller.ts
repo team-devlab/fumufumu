@@ -13,9 +13,6 @@ consultationsRoute.use("/*", authGuard);
 
 export const listConsultations = async (c: Context) => {
 	try {
-		// authGuardによってappUserIdがContextに設定されている
-		const appUserId = c.get("appUserId");
-
 		// クエリパラメータを取得
 		const userId = c.req.query("userId");
 		const draft = c.req.query("draft");
