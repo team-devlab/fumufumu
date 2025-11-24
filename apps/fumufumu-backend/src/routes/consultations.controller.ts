@@ -12,27 +12,39 @@ export const consultationsRoute = new Hono();
 consultationsRoute.use("/*", authGuard);
 
 export const listConsultations = async (c: Context) => {
-	// authGuardによってappUserIdがContextに設定されている
-	const appUserId = c.get("appUserId");
+	try {
+		// authGuardによってappUserIdがContextに設定されている
+		const appUserId = c.get("appUserId");
 
-	// クエリパラメータを取得
-	const userId = c.req.query("userId");
-	const draft = c.req.query("draft");
-	const solved = c.req.query("solved");
+		// クエリパラメータを取得
+		const userId = c.req.query("userId");
+		const draft = c.req.query("draft");
+		const solved = c.req.query("solved");
 
-	// フィルタオブジェクトを構築
-	// userIdが指定されていない場合は、ログインユーザーのappUserIdを使用
-	const filters: ConsultationFilters = {
-		userId: userId ? Number(userId) : appUserId,
-		draft: draft !== undefined ? draft === "true" : undefined,
-		solved: solved !== undefined ? solved === "true" : undefined,
-	};
+		// フィルタオブジェクトを構築
+		// userIdが指定されていない場合は、ログインユーザーのappUserIdを使用
+		const filters: ConsultationFilters = {
+			userId: userId ? Number(userId) : appUserId,
+			draft: draft !== undefined ? draft === "true" : undefined,
+			solved: solved !== undefined ? solved === "true" : undefined,
+		};
 
-	const db = c.get("db");
-	const repository = new ConsultationRepository(db);
-	const service = new ConsultationService(repository);
-	const result = await service.listConsultaitons(filters);
-	return c.json(result);
+		const db = c.get("db");
+		const repository = new ConsultationRepository(db);
+		const service = new ConsultationService(repository);
+		const result = await service.listConsultaitons(filters);
+		
+		return c.json(result, 200);
+	} catch (error) {
+		console.error('[listConsultations] Failed to fetch consultations:', error);
+		return c.json(
+			{
+				error: 'Internal server error',
+				message: 'Failed to fetch consultations',
+			},
+			500
+		);
+	}
 };
 
 // ルーティング登録
