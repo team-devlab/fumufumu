@@ -13,6 +13,7 @@
 
 - **2025-11-23**: 初版作成
 - **2025-11-23**: authGuard追加に伴うテスト更新
+- **2025-11-24**: エラーハンドリング追加、userIdフィルタ動作変更
 
 ## テスト対象
 
@@ -32,10 +33,11 @@
 
 ### テストの目的
 
-- authGuard通過後のappUserIdが正しく使用されているか
+- authGuard通過後の認証状態が保持されているか
 - クエリパラメータが正しく解析されているか
-- サービス層に正しいフィルタ条件が渡されているか（userIdのデフォルト値: appUserId）
+- サービス層に正しいフィルタ条件が渡されているか（userIdのデフォルト値: undefined）
 - レスポンスの構造が正しいか
+- エラーハンドリングが適切に動作するか
 
 ## テストケース
 
@@ -44,8 +46,8 @@
 **説明**: クエリパラメータなしで全ての相談データを取得できる
 
 **期待動作**:
-- サービス層に `{ userId: 1, draft: undefined, solved: undefined }` が渡される
-  - userIdが指定されていない場合、authGuardで設定されたappUserId (1) がデフォルトで使用される
+- サービス層に `{ userId: undefined, draft: undefined, solved: undefined }` が渡される
+  - userIdが指定されていない場合はundefined（全ユーザーの相談を取得）
 - `meta` と `data` プロパティが存在する
 - `data` が配列である
 - 各要素が必要なフィールドを持つ
@@ -62,8 +64,8 @@
 **クエリパラメータ**: `?draft=false`
 
 **期待動作**:
-- サービス層に `{ userId: 1, draft: false, solved: undefined }` が渡される
-  - userIdが指定されていない場合、appUserId (1) がデフォルトで使用される
+- サービス層に `{ userId: undefined, draft: false, solved: undefined }` が渡される
+  - userIdが指定されていない場合はundefined（全ユーザーの相談を取得）
 - 全てのデータの `draft` が `false` である
 
 **結果**: ✅ PASS
@@ -77,8 +79,8 @@
 **クエリパラメータ**: `?draft=true`
 
 **期待動作**:
-- サービス層に `{ userId: 1, draft: true, solved: undefined }` が渡される
-  - userIdが指定されていない場合、appUserId (1) がデフォルトで使用される
+- サービス層に `{ userId: undefined, draft: true, solved: undefined }` が渡される
+  - userIdが指定されていない場合はundefined（全ユーザーの相談を取得）
 - 全てのデータの `draft` が `true` である
 
 **結果**: ✅ PASS
@@ -92,8 +94,8 @@
 **クエリパラメータ**: `?solved=true`
 
 **期待動作**:
-- サービス層に `{ userId: 1, draft: undefined, solved: true }` が渡される
-  - userIdが指定されていない場合、appUserId (1) がデフォルトで使用される
+- サービス層に `{ userId: undefined, draft: undefined, solved: true }` が渡される
+  - userIdが指定されていない場合はundefined（全ユーザーの相談を取得）
 - 全てのデータの `solved_at` が `null` でない
 
 **結果**: ✅ PASS
@@ -107,8 +109,8 @@
 **クエリパラメータ**: `?solved=false`
 
 **期待動作**:
-- サービス層に `{ userId: 1, draft: undefined, solved: false }` が渡される
-  - userIdが指定されていない場合、appUserId (1) がデフォルトで使用される
+- サービス層に `{ userId: undefined, draft: undefined, solved: false }` が渡される
+  - userIdが指定されていない場合はundefined（全ユーザーの相談を取得）
 - 全てのデータの `solved_at` が `null` である
 
 **結果**: ✅ PASS
@@ -151,7 +153,7 @@
 **説明**: body_preview が100文字以内に切り取られている
 
 **期待動作**:
-- サービス層に `{ userId: 1, draft: undefined, solved: undefined }` が渡される
+- サービス層に `{ userId: undefined, draft: undefined, solved: undefined }` が渡される
 - 全てのデータの `body_preview` の長さが100文字以下である
 
 **結果**: ✅ PASS
@@ -283,7 +285,8 @@ describe('Consultations API', () => {
     mockContext = {
       get: vi.fn((key: string) => {
         if (key === 'db') return {};
-        if (key === 'appUserId') return 1; // authGuard通過後のログインユーザーID
+        // authGuardで設定されるが、現在の実装では使用していない
+        if (key === 'appUserId') return 1;
         return undefined;
       }),
       req: {
@@ -326,9 +329,9 @@ it('draft=false: 公開済みの相談のみを取得できる', async () => {
   const data: any = await response.json();
 
   // アサーション
-  // userIdが指定されていない場合、appUserId (1) がデフォルトで使用される
+  // userIdが指定されていない場合はundefined（全ユーザーの相談を取得）
   expect(mockConsultationService.listConsultaitons).toHaveBeenCalledWith({
-    userId: 1, // authGuardで設定されたappUserIdがデフォルト
+    userId: undefined,
     draft: false,
     solved: undefined,
   });
@@ -381,24 +384,39 @@ it('draft=false: 公開済みの相談のみを取得できる', async () => {
 - シードデータの挿入
 - エンドツーエンドのテスト
 
-### 2. エッジケースのテスト
+### 2. クエリパラメータのバリデーション
+
+現在、クエリパラメータのバリデーションは未実装です。以下の対応が必要：
+
+- **無効なuserIdの検証**: `userId=abc`、`userId=-1`などを400エラーで返す
+- **無効なdraft/solvedの検証**: `draft=yes`などを400エラーで返す
+- **推奨アプローチ**: zod + @hono/zod-validator の導入
+  - バリデーションミドルウェアとして実装
+  - スキーマ定義により型安全性を確保
+  - 自動的に400エラーレスポンスを返す
+
+### 3. エッジケースのテスト
 
 以下のようなエッジケースも追加でテストする必要があります：
 
-- 無効なクエリパラメータ（例: `userId=abc`）
 - 存在しないユーザーIDでのフィルタ
 - 空の結果セット
 - 大量データでのパフォーマンス
 
-### 3. エラーハンドリングのテスト
+### 4. エラーハンドリングのテスト
 
 現在のテストは正常系のみをカバーしています。以下のエラーケースも必要です：
 
-- サービス層でのエラー発生時の挙動
+- サービス層でのエラー発生時の挙動（500エラーが返ることの検証）
 - DB接続エラー時の挙動
 - タイムアウト処理
 
-### 4. レスポンスフォーマットの検証
+**現在の実装状況**:
+- ✅ try-catchブロックによるエラーハンドリング実装済み
+- ✅ 500 Internal Server Errorレスポンス実装済み
+- ❌ エラーハンドリングのユニットテスト未実装
+
+### 5. レスポンスフォーマットの検証
 
 - JSONスキーマバリデーション
 - RFC 9457 Problem Details形式のエラーレスポンス

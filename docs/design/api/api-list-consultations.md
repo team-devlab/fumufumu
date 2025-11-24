@@ -15,17 +15,23 @@
 
 相談の一覧を取得します。
 
-- **認証:** 必須（TODO: DBの準備でき次第、認証機能を導入するためその時に対応予定）
+- **認証:** ✅ 必須（authGuardミドルウェアで実装済み）
 - **タグ:** consultations, list
+- **エラーハンドリング:** ✅ 実装済み（500 Internal Server Error対応）
 
 #### パス/クエリパラメータ (Parameters)
 
 ```text
 # パラメータ名: 位置/型 (必須/任意) # 説明
-userId: Query/integer (任意) # 特定ユーザーの相談のみを取得。
+userId: Query/integer (任意) # 特定ユーザーの相談のみを取得。未指定時は全ユーザーの相談を返す。
 draft: Query/boolean (任意) # 下書き状態で絞り込み。true: 下書きのみ、false: 公開済みのみ。
 solved: Query/boolean (任意) # 解決状態で絞り込み。true: 解決済み、false: 未解決。
 ```
+
+**パラメータの使用シーン:**
+- **相談一覧画面**: パラメータなし → 全ユーザーの相談を取得
+- **プロフィール画面**: `?userId={id}` → 指定ユーザーの相談のみ取得
+- **下書き一覧**: `?userId={id}&draft=true` → ユーザーの下書きのみ取得
 
 **クエリ例:**
 - `/api/consultations` - 全件取得
@@ -90,7 +96,7 @@ data: array of ref # Consultationオブジェクトの配列（schemas.md参照�
 
 ##### 🔴 400 Bad Request
 
-パラメータの形式や制約違反。
+パラメータの形式や制約違反（❌ バリデーション未実装）。
 
 ```json
 {
@@ -106,6 +112,8 @@ data: array of ref # Consultationオブジェクトの配列（schemas.md参照�
 }
 ```
 
+**TODO**: 次のPRでzod + @hono/zod-validatorによるバリデーション実装予定
+
 ##### 🔴 401 Unauthorized
 
 認証エラー。
@@ -120,8 +128,17 @@ data: array of ref # Consultationオブジェクトの配列（schemas.md参照�
 
 ##### 🔴 500 Internal Server Error
 
-サーバーエラー。
+サーバーエラー（✅ 実装済み）。
 
+**現在の実装:**
+```json
+{
+  "error": "Internal server error",
+  "message": "Failed to fetch consultations"
+}
+```
+
+**将来的なRFC 9457準拠形式:**
 ```json
 {
   "title": "Internal Server Error",

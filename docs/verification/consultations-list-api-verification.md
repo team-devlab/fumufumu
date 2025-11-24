@@ -5,7 +5,7 @@
 相談一覧取得API（GET `/api/consultations`）の実装と動作確認結果をまとめたドキュメントです。
 
 - **実装日**: 2025-11-23
-- **更新日**: 2025-11-23（authGuard追加）
+- **更新日**: 2025-11-24（エラーハンドリング追加、userIdフィルタ動作変更）
 - **エンドポイント**: `GET /api/consultations`
 - **認証**: ✅ 実装済み（authGuardミドルウェアを使用）
 
@@ -15,8 +15,8 @@
 
 ### 1. 認証・認可
 - **authGuardミドルウェア**: セッション検証とappUserIDの取得
-- **デフォルトフィルタ**: userIdが指定されていない場合、ログインユーザーのappUserIdを使用
 - **401 Unauthorized**: 未認証の場合はエラーレスポンスを返却
+- **500 Internal Server Error**: サーバーエラー時のエラーハンドリング
 
 ### 2. 基本機能
 - 相談データの一覧取得
@@ -28,9 +28,13 @@
 
 | パラメータ | 型 | 説明 | 例 | デフォルト値 |
 |-----------|----|----|-----|-------------|
-| `userId` | integer | 特定ユーザーの相談のみを取得 | `?userId=1` | ログインユーザーのappUserId |
+| `userId` | integer | 特定ユーザーの相談のみを取得 | `?userId=1` | undefined（全ユーザー） |
 | `draft` | boolean | 下書き状態で絞り込み | `?draft=false` | - |
 | `solved` | boolean | 解決状態で絞り込み | `?solved=true` | - |
+
+**使用シーン**:
+- **相談一覧画面**: `GET /api/consultations` → 全ユーザーの相談を取得
+- **プロフィール画面**: `GET /api/consultations?userId={id}` → 指定ユーザーの相談のみ取得
 
 ### 4. レスポンス最適化
 - authorフィールドから不要なフィールド（createdAt, updatedAt）を削除
