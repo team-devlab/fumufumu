@@ -1,16 +1,16 @@
 import { Hono } from 'hono'
 import { drizzle, DrizzleD1Database } from 'drizzle-orm/d1';
 
-import { createBetterAuth, type AuthInstance } from './auth';
+import { createBetterAuth, type AuthInstance } from '@/auth';
 import type { D1Database } from '@cloudflare/workers-types';
 
-import * as authSchema from "./db/schema/auth";
-import * as userSchema from "./db/schema/user";
-import * as consultationsSchema from "./db/schema/consultations";
+import * as authSchema from '@/db/schema/auth';
+import * as userSchema from '@/db/schema/user';
+import * as consultationsSchema from '@/db/schema/consultations';
 
-import { authRouter } from './routes/auth.routes';
+import { authRouter } from '@/routes/auth.routes';
 import { consultationsRoute } from '@/routes/consultations.controller';
-import { protectedRouter } from './routes/protected.routes';
+import { protectedRouter } from '@/routes/protected.routes';
 
 // Drizzle ORMのスキーマを統合
 const schema = {
