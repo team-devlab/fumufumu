@@ -10,7 +10,7 @@ export type ConsultationResponse = {
 	solved_at: string | null;
 	created_at: string;
 	updated_at: string;
-	author: Author;
+	author: Author | null;
 };
 
 // 相談リストレスポンス
