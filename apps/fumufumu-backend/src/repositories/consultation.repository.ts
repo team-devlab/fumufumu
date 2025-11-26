@@ -35,13 +35,12 @@ export class ConsultationRepository {
 			);
 		}
 
-		// RQBのfindManyを使用（ORMらしい抽象化）
 		return await this.db.query.consultations.findMany({
 			where: whereConditions.length > 0 
 				? and(...whereConditions) 
 				: undefined,
 			with: {
-				author: true, // リレーションを簡潔に記述
+				author: true,
 			},
 		});
 	}
