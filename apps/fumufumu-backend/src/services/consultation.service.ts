@@ -6,7 +6,7 @@ import type { ConsultationResponse, ConsultationListResponse } from "@/types/con
 export class ConsultationService {
 	constructor(private repository: ConsultationRepository) {}
 
-	async listConsultaitons(filters?: ConsultationFilters): Promise<ConsultationListResponse> {
+	async listConsultations(filters?: ConsultationFilters): Promise<ConsultationListResponse> {
 		const entities = await this.repository.findAll(filters);
 
 		const responses: ConsultationResponse[] = entities
