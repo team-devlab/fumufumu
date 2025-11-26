@@ -80,19 +80,11 @@ app.get('/health', async (c) => {
   }
 })
 
-// Better Auth標準エンドポイント（/auth/sign-in, /auth/sign-upなど）
-app.on(['GET', 'POST'], '/auth/*', async (c) => {
-  const auth = c.get('auth');
-
-  // Better Auth のハンドラにリクエスト処理を委譲
-  // c.req.raw は Hono の Request オブジェクトから、標準の Request オブジェクトを取得
-  return auth.handler(c.req.raw);
-});
 
 // --- APIルーター（/api配下） ---
 const api = new Hono<{ Bindings: Env, Variables: Variables }>();
 
-// カスタム認証エンドポイント（/api/signup, /api/signinなど）
+// カスタム認証エンドポイント（/api/auth/signup, /api/auth/signinなど）
 api.route('/auth', authRouter);
 
 // 保護されたエンドポイント（/api/protected）
