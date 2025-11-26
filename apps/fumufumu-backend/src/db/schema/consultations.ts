@@ -1,4 +1,4 @@
-import { sql } from "drizzle-orm";
+import { sql, relations } from "drizzle-orm";
 import { sqliteTable, text, integer } from "drizzle-orm/sqlite-core";
 import { users } from "./user";
 
@@ -20,4 +20,12 @@ export const consultations = sqliteTable("consultations", {
 		.$onUpdate(() => /* @__PURE__ */ new Date())
 		.notNull(),
 });
+
+// リレーション定義（RQB用）
+export const consultationsRelations = relations(consultations, ({ one }) => ({
+	author: one(users, {
+		fields: [consultations.authorId],
+		references: [users.id],
+	}),
+}));
 
