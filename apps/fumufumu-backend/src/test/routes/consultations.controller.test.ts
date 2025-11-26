@@ -488,6 +488,26 @@ describe('Consultations API', () => {
 				expect(item.body_preview.length).toBeLessThanOrEqual(100);
 			});
 		});
+
+		it('エラー処理: Serviceが失敗した場合に500エラーを返す', async () => {
+			// Serviceが例外をスローするようにモック設定
+			mockConsultationService = {
+					listConsultations: vi.fn().mockRejectedValue(new Error('DB connection failed')),
+			};
+			vi.mocked(ConsultationService).mockImplementation(() => mockConsultationService);
+
+			// Honoのjsonメソッドをスパイ
+			const jsonSpy = vi.spyOn(mockContext, 'json');
+
+			// テスト実行
+			await listConsultations(mockContext);
+			
+			// アサーション: jsonが500ステータスで呼ばれていることを確認
+			expect(jsonSpy).toHaveBeenCalledWith(
+					expect.objectContaining({ error: 'Internal server error' }),
+					500
+			);
+		});
 	});
 });
 
