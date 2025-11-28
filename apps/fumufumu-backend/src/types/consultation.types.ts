@@ -13,7 +13,7 @@ export type ConsultationEntity = {
 	draft: boolean;
 	hiddenAt: Date | null;
 	solvedAt: Date | null;
-	authorId: number | null;
+	authorId: number;
 	createdAt: Date;
 	updatedAt: Date;
 	author: {
@@ -22,5 +22,5 @@ export type ConsultationEntity = {
 		disabled: boolean;
 		createdAt: Date;
 		updatedAt: Date;
-	} | null;
+	};
 };

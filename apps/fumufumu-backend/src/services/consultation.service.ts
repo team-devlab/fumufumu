@@ -10,23 +10,21 @@ export class ConsultationService {
 	async listConsultations(filters?: ConsultationFilters): Promise<ConsultationListResponse> {
 		const entities = await this.repository.findAll(filters);
 
-		const responses: ConsultationResponse[] = entities
-			.filter((entity): entity is ConsultationEntity & { author: NonNullable<ConsultationEntity['author']> } => entity.author !== null)
-			.map((entity) => ({
-				id: entity.id,
-				title: entity.title,
-				body_preview: entity.body.substring(0, 100),
-				draft: entity.draft,
-				hidden_at: entity.hiddenAt?.toISOString() ?? null,
-				solved_at: entity.solvedAt?.toISOString() ?? null,
-				created_at: entity.createdAt.toISOString(),
-				updated_at: entity.updatedAt.toISOString(),
-				author: {
-					id: entity.author.id,
-					name: entity.author.name,
-					disabled: entity.author.disabled,
-				}
-			}));
+		const responses: ConsultationResponse[] = entities.map((entity) => ({
+			id: entity.id,
+			title: entity.title,
+			body_preview: entity.body.substring(0, 100),
+			draft: entity.draft,
+			hidden_at: entity.hiddenAt?.toISOString() ?? null,
+			solved_at: entity.solvedAt?.toISOString() ?? null,
+			created_at: entity.createdAt.toISOString(),
+			updated_at: entity.updatedAt.toISOString(),
+			author: {
+				id: entity.author.id,
+				name: entity.author.name,
+				disabled: entity.author.disabled,
+			}
+		}));
 
 		return { 
 			meta: { 
