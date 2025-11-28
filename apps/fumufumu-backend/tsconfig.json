@@ -10,9 +10,14 @@
       "DOM"
     ],
     "types": [
-      "@cloudflare/workers-types"
+      "@cloudflare/workers-types",
+      "@cloudflare/vitest-pool-workers"
     ],
     "jsx": "react-jsx",
-    "jsxImportSource": "hono/jsx"
+    "jsxImportSource": "hono/jsx",
+    "baseUrl": ".",
+    "paths": {
+      "@/*": ["src/*"]
+    }
   },
 }

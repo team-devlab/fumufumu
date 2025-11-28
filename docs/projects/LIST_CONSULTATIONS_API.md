@@ -82,15 +82,15 @@ apps/fumufumu-backend/
 - [x] Drizzle Studioで確認
 - [x] シードデータの投入
 
-### フェーズ2: プロジェクト構造の整備 ⏳
+### フェーズ2: プロジェクト構造の整備 ✅
 
-- [ ] `routes/`, `services/`, `repositories/` ディレクトリ作成
-- [ ] `types/`, `utils/` ディレクトリ作成
-- [ ] 既存コードのリファクタリング（`health.ts` の分離等）
+- [x] `routes/`, `services/`, `repositories/` ディレクトリ作成
+- [x] `types/`ディレクトリ作成
+
 
 ### フェーズ3: 型定義とユーティリティ ⏳
 
-- [ ] `consultation.types.ts` の作成（DTOやEntity型）
+- [x] `consultation.types.ts` の作成（DTOやEntity型）
 - [ ] `validation.ts` の作成（クエリパラメータ検証）
 - [ ] `error-handler.ts` の作成（統一エラーレスポンス）
 
@@ -101,7 +101,7 @@ apps/fumufumu-backend/
 - [ ] `ConsultationRepository` クラスの実装
   - [ ] `findAll()` メソッド（フィルタリング対応）
   - [ ] クエリビルダーの実装
-- [ ] テストパス確認
+
 
 #### 4-2. Service層
 
@@ -110,7 +110,6 @@ apps/fumufumu-backend/
   - [ ] `listConsultations()` メソッド
   - [ ] レスポンス整形ロジック
   - [ ] `body_preview` の生成（先頭N文字）
-- [ ] テストパス確認
 
 #### 4-3. Route層（Controller）
 
@@ -121,7 +120,6 @@ apps/fumufumu-backend/
   - [ ] バリデーション
   - [ ] ServiceとRepositoryのDI
   - [ ] エラーハンドリング
-- [ ] テストパス確認
 
 ### フェーズ5: 動作確認 ⏳
 

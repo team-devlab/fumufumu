@@ -6,6 +6,8 @@
     "deploy": "wrangler deploy --minify",
     "cf-typegen": "wrangler types --env-interface CloudflareBindings",
     "test": "vitest",
+    "test:unit": "vitest --config vitest.unit.config.ts",
+    "test:integration": "vitest --config vitest.integration.config.ts",
     "test:watch": "vitest --watch",
     "generate": "drizzle-kit generate",
     "generate:custom": "drizzle-kit generate --custom",

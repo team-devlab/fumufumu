@@ -1,19 +1,22 @@
 import { Hono } from 'hono'
 import { drizzle, DrizzleD1Database } from 'drizzle-orm/d1';
 
-import { createBetterAuth, type AuthInstance } from './auth';
+import { createBetterAuth, type AuthInstance } from '@/auth';
 import type { D1Database } from '@cloudflare/workers-types';
 
-import * as authSchema from "./db/schema/auth";
-import * as userSchema from "./db/schema/user";
+import * as authSchema from '@/db/schema/auth';
+import * as userSchema from '@/db/schema/user';
+import * as consultationsSchema from '@/db/schema/consultations';
 
-import { authRouter } from './routes/auth.routes';
-import { protectedRouter } from './routes/protected.routes';
+import { authRouter } from '@/routes/auth.routes';
+import { consultationsRoute } from '@/routes/consultations.controller';
+import { protectedRouter } from '@/routes/protected.routes';
 
 // Drizzle ORMのスキーマを統合
 const schema = {
   ...authSchema,
   ...userSchema,
+  ...consultationsSchema,
 }
 
 export type DbInstance = DrizzleD1Database<typeof schema>;
@@ -78,21 +81,19 @@ app.get('/health', async (c) => {
 })
 
 
-// ------------------------------------------
-// API ルーティング
-// ------------------------------------------
+// --- APIルーター（/api配下） ---
+const api = new Hono<{ Bindings: Env, Variables: Variables }>();
 
-// API グループを作成 (メインルーターとして機能)
-const api = new Hono<{ Bindings: Env, Variables: Variables }>()
+// カスタム認証エンドポイント（/api/auth/signup, /api/auth/signinなど）
+api.route('/auth', authRouter);
 
-// 認証ルーターを登録: /api/signup, /api/signin に対応
-api.route('/', authRouter);
-
-// 保護ルーターを登録: /api/protected に対応
+// 認証テスト用エンドポイント（/api/protected）
 api.route('/protected', protectedRouter);
 
+// 相談API（/api/consultations）
+api.route('/consultations', consultationsRoute);
 
-// Honoアプリに API グループを登録
+// メインアプリにAPIルーターをマウント
 app.route('/api', api);
 
 export default app
