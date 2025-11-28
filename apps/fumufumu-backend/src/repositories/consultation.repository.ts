@@ -1,7 +1,7 @@
 import { consultations } from "@/db/schema/consultations";
 import type { DbInstance } from "@/index";
 import { eq, and, isNull, isNotNull, type SQL } from "drizzle-orm";
-import type { ConsultationFilters, ConsultationEntity } from "@/types/consultation.types";
+import type { ConsultationFilters } from "@/types/consultation.types";
 
 export class ConsultationRepository {
 	constructor(private db: DbInstance) {}
@@ -13,14 +13,11 @@ export class ConsultationRepository {
 	 * @param filters.userId - 著者IDで絞り込み
 	 * @param filters.draft - 下書き状態で絞り込み（true: 下書きのみ, false: 公開済みのみ）
 	 * @param filters.solved - 解決状態で絞り込み（true: 解決済みのみ, false: 未解決のみ）
-	 * @returns 相談データと著者情報の配列（authorは必須）
+	 * @returns 相談データと著者情報の配列（authorは退会済みの場合null）
 	 * @throws {Error} データベースクエリ実行エラー（上位層で処理）
 	 */
-	async findAll(filters?: ConsultationFilters): Promise<ConsultationEntity[]> {
+	async findAll(filters?: ConsultationFilters) {
 		const whereConditions: SQL[] = [];
-
-		// authorIdがNULLの相談は除外（authorは必須）
-		whereConditions.push(isNotNull(consultations.authorId));
 
 		if (filters?.userId !== undefined) {
 			whereConditions.push(eq(consultations.authorId, filters.userId));
@@ -38,15 +35,14 @@ export class ConsultationRepository {
 			);
 		}
 
-		const results = await this.db.query.consultations.findMany({
-			where: and(...whereConditions),
+		return await this.db.query.consultations.findMany({
+			where: whereConditions.length > 0 
+				? and(...whereConditions) 
+				: undefined,
 			with: {
 				author: true,
 			},
 		});
-		
-		// authorIdがNULLでないものだけを取得しているため、authorは必ず存在する
-		return results as ConsultationEntity[];
 	}
 }
 
