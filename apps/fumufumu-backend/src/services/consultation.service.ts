@@ -2,7 +2,6 @@
 import type { ConsultationRepository } from "@/repositories/consultation.repository";
 import type { ConsultationFilters } from "@/types/consultation.types";
 import type { ConsultationResponse, ConsultationListResponse } from "@/types/consultation.response";
-import type { ConsultationEntity } from "@/types/consultation.types";
 
 export class ConsultationService {
 	constructor(private repository: ConsultationRepository) {}

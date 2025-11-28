@@ -4,23 +4,3 @@ export type ConsultationFilters = {
 	draft?: boolean;
 	solved?: boolean;
 };
-
-// Repository層から返される相談データ（RQB用）
-export type ConsultationEntity = {
-	id: number;
-	title: string;
-	body: string;
-	draft: boolean;
-	hiddenAt: Date | null;
-	solvedAt: Date | null;
-	authorId: number | null;
-	createdAt: Date;
-	updatedAt: Date;
-	author: {
-		id: number;
-		name: string;
-		disabled: boolean;
-		createdAt: Date;
-		updatedAt: Date;
-	} | null;
-};
