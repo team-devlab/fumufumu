@@ -10,20 +10,19 @@ export class ConsultationService {
 		const entities = await this.repository.findAll(filters);
 
 		const responses: ConsultationResponse[] = entities
-			.filter((entity): entity is typeof entity & { author: NonNullable<typeof entity.author> } => entity.author !== null)
-			.map((entity) => ({
-				id: entity.id,
-				title: entity.title,
-				body_preview: entity.body.substring(0, 100),
-				draft: entity.draft,
-				hidden_at: entity.hiddenAt?.toISOString() ?? null,
-				solved_at: entity.solvedAt?.toISOString() ?? null,
-				created_at: entity.createdAt.toISOString(),
-				updated_at: entity.updatedAt.toISOString(),
-				author: {
-					id: entity.author!.id,
-					name: entity.author!.name,
-					disabled: entity.author!.disabled,
+			.map(({ consultations, author }) => ({
+				id: consultations.id,
+				title: consultations.title,
+				body_preview: consultations.body.substring(0, 100),
+				draft: consultations.draft,
+				hidden_at: consultations.hiddenAt?.toISOString() ?? null,
+				solved_at: consultations.solvedAt?.toISOString() ?? null,
+				created_at: consultations.createdAt.toISOString(),
+				updated_at: consultations.updatedAt.toISOString(),
+				author: author === null ? null : {
+					id: author.id, 
+					name: author.name,
+					disabled: author.disabled,
 				}
 			}));
 
