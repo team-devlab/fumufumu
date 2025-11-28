@@ -2,10 +2,12 @@
 
 ## 1. メタ情報
 
-- **ドキュメントバージョン**: v1.0
+- **ドキュメントバージョン**: v1.1
 - **対象ドメイン**: Consultations
 - **認証方法**: Bearer Token (JWT)
 - **共通データ形式**: JSON (UTF-8)
+- **更新日**: 2025-11-28
+- **更新内容**: RQB移行、著者退会対応、実装詳細の追記
 
 ## 2. 個別API定義
 
@@ -161,6 +163,82 @@ data: array of ref # Consultationオブジェクトの配列（schemas.md参照�
 **エラーレスポンス形式:**
 - すべてのエラーレスポンスは `ErrorResponse` オブジェクト（schemas.md参照）に準拠します。
 - RFC 9457 (Problem Details for HTTP APIs) に準拠しています。
+
+---
+
+## 3. 実装詳細
+
+### アーキテクチャ
+
+```
+Controller (consultations.controller.ts)
+  ↓ クエリパラメータ解析
+Service (consultation.service.ts)
+  ↓ ビジネスロジック
+Repository (consultation.repository.ts)
+  ↓ RQB（Relational Query Builder）
+DB (D1 Database)
+```
+
+### 主要な実装ポイント
+
+#### 1. RQB（Relational Query Builder）の使用
+```typescript
+// Repository層
+return await this.db.query.consultations.findMany({
+  where: whereConditions.length > 0 ? and(...whereConditions) : undefined,
+  with: {
+    author: true,  // リレーション取得
+  },
+});
+```
+
+**メリット**:
+- SQLライクな記述より抽象度が高く、可読性が向上
+- `findMany`というメソッド名で意図が明確
+- リレーションを`with`で簡潔に記述
+
+#### 2. 著者退会対応
+```typescript
+// Service層
+author: consultation.author ? {
+  id: consultation.author.id,
+  name: consultation.author.name,
+  disabled: consultation.author.disabled,
+} : null  // 退会済みの場合はnull
+```
+
+**仕様**:
+- 著者が退会済みの相談も取得可能
+- `author`フィールドは`null`または`Author`オブジェクト
+- フロントエンド側で「退会済みユーザー」として表示可能
+
+#### 3. クエリパラメータのデフォルト動作
+- `userId`未指定時: 全ユーザーの相談を取得（`undefined`）
+- `draft`未指定時: 下書き・公開両方を取得
+- `solved`未指定時: 解決済み・未解決両方を取得
+
+**使用シーン**:
+- **相談一覧画面**: パラメータなしで全件取得
+- **プロフィール画面**: `?userId={id}`で特定ユーザーの相談のみ
+
+---
+
+## 4. 今後の拡張予定
+
+### バリデーション（次のPR）
+- zod + @hono/zod-validatorの導入
+- クエリパラメータの型検証
+- 無効なパラメータに対する400エラー
+
+### ソート機能（将来）
+- `sortBy`パラメータ（created_at, updated_at）
+- `order`パラメータ（asc, desc）
+
+### ページネーション（将来）
+- `limit`パラメータ
+- `offset`パラメータ
+- `meta`にページネーション情報を追加
 
 -----
 

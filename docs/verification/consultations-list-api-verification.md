@@ -9,7 +9,7 @@
 相談一覧取得API（GET `/api/consultations`）の実装と動作確認結果をまとめたドキュメントです。
 
 - **実装日**: 2025-11-23
-- **更新日**: 2025-11-24（エラーハンドリング追加、userIdフィルタ動作変更）
+- **更新日**: 2025-11-28（RQB移行、著者退会対応、変数名リファクタリング）
 - **エンドポイント**: `GET /api/consultations`
 - **認証**: ✅ 実装済み（authGuardミドルウェアを使用）
 - **テスト手法**: 実際のAPIリクエストによる動作確認（curl + 開発サーバー）
@@ -24,8 +24,9 @@
 - **500 Internal Server Error**: サーバーエラー時のエラーハンドリング
 
 ### 2. 基本機能
-- 相談データの一覧取得
-- authorとのJOIN取得
+- 相談データの一覧取得（RQB使用）
+- authorとのリレーション取得（`with: { author: true }`）
+- 著者退会対応（`author`がnullの場合も取得可能）
 - `body`から`body_preview`への自動生成（最初の100文字）
 - 日付のISO 8601形式への変換
 
@@ -43,7 +44,13 @@
 
 ### 4. レスポンス最適化
 - authorフィールドから不要なフィールド（createdAt, updatedAt）を削除
+- 著者が退会済みの場合、`author`は`null`を返す
 - API設計書に準拠したレスポンス形式
+
+### 5. 実装アーキテクチャ
+- **Repository層**: Drizzle ORM の RQB（Relational Query Builder）を使用
+- **Service層**: ビジネスロジック（`body_preview`生成、日付変換、著者null処理）
+- **Controller層**: クエリパラメータの解析とエラーハンドリング
 
 ---
 
@@ -271,19 +278,21 @@ DB (D1 Database)
 
 2. **Controller**: `src/routes/consultations.controller.ts`
    - authGuardミドルウェアの適用
-   - appUserIdの取得
    - クエリパラメータの取得と型変換
-   - フィルタオブジェクトの構築（userIdデフォルト値: appUserId）
+   - フィルタオブジェクトの構築（userIdデフォルト値: undefined）
+   - エラーハンドリング（500 Internal Server Error）
 
 3. **Service**: `src/services/consultation.service.ts`
    - body → body_previewの生成
    - 日付のISO 8601変換
-   - authorフィールドの整形
+   - authorフィールドの整形（退会済みの場合はnull）
 
 4. **Repository**: `src/repositories/consultation.repository.ts`
+   - **RQB（Relational Query Builder）を使用**
+   - `findMany`メソッドによる相談一覧取得
    - 動的WHERE句の構築
    - AND条件による複合フィルタ
-   - authorとのLEFT JOIN
+   - `with: { author: true }`によるリレーション取得
 
 ---
 
@@ -291,21 +300,27 @@ DB (D1 Database)
 
 ### 1. 認証機能の統合 ✅ 完了
 - [x] authGuardミドルウェアの適用
-- [x] appUserIdの取得と利用
+- [x] appUserIdの取得
 - [x] 認証エラー時の適切なレスポンス（401 Unauthorized）
-- [x] userIdクエリパラメータのデフォルト値としてappUserIdを使用
+- [x] エラーハンドリング（500 Internal Server Error）
 
-### 2. タグ機能の実装
-- [ ] question_taggingsテーブルとのJOIN
+### 2. データ取得の最適化 ✅ 完了
+- [x] RQB（Relational Query Builder）への移行
+- [x] 著者退会対応（authorがnullの場合の処理）
+- [x] 変数名の明確化（entity → consultation）
+
+### 3. タグ機能の実装
+- [ ] question_taggingsテーブルとのリレーション
 - [ ] tagsフィールドのレスポンスへの追加
 
-### 3. パフォーマンス最適化
+### 4. パフォーマンス最適化
+- [ ] ソート機能の実装（作成日時降順など）
 - [ ] ページネーションの実装（limit, offset）
 - [ ] インデックスの追加検討
-- [ ] N+1問題の確認
 
-### 4. エラーハンドリング
-- [ ] バリデーションエラー（400 Bad Request）
+### 5. バリデーション（次のPRで対応予定）
+- [ ] クエリパラメータのバリデーション（zod + @hono/zod-validator）
+- [ ] 無効なパラメータに対する400エラー
 - [ ] RFC 9457準拠のエラーレスポンス
 
 ---
