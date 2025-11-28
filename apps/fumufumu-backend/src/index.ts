@@ -87,7 +87,7 @@ const api = new Hono<{ Bindings: Env, Variables: Variables }>();
 // カスタム認証エンドポイント（/api/auth/signup, /api/auth/signinなど）
 api.route('/auth', authRouter);
 
-// 保護されたエンドポイント（/api/protected）
+// 認証テスト用エンドポイント（/api/protected）
 api.route('/protected', protectedRouter);
 
 // 相談API（/api/consultations）
