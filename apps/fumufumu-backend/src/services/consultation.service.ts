@@ -7,21 +7,21 @@ export class ConsultationService {
 	constructor(private repository: ConsultationRepository) {}
 
 	async listConsultations(filters?: ConsultationFilters): Promise<ConsultationListResponse> {
-		const entities = await this.repository.findAll(filters);
+		const consultationList = await this.repository.findAll(filters);
 
-		const responses: ConsultationResponse[] = entities.map((entity) => ({
-			id: entity.id,
-			title: entity.title,
-			body_preview: entity.body.substring(0, 100),
-			draft: entity.draft,
-			hidden_at: entity.hiddenAt?.toISOString() ?? null,
-			solved_at: entity.solvedAt?.toISOString() ?? null,
-			created_at: entity.createdAt.toISOString(),
-			updated_at: entity.updatedAt.toISOString(),
-			author: entity.author ? {
-				id: entity.author.id,
-				name: entity.author.name,
-				disabled: entity.author.disabled,
+		const responses: ConsultationResponse[] = consultationList.map((consultation) => ({
+			id: consultation.id,
+			title: consultation.title,
+			body_preview: consultation.body.substring(0, 100),
+			draft: consultation.draft,
+			hidden_at: consultation.hiddenAt?.toISOString() ?? null,
+			solved_at: consultation.solvedAt?.toISOString() ?? null,
+			created_at: consultation.createdAt.toISOString(),
+			updated_at: consultation.updatedAt.toISOString(),
+			author: consultation.author ? {
+				id: consultation.author.id,
+				name: consultation.author.name,
+				disabled: consultation.author.disabled,
 			} : null
 		}));
 
