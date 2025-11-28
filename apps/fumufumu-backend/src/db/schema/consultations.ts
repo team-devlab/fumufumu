@@ -21,7 +21,7 @@ export const consultations = sqliteTable("consultations", {
 		.notNull(),
 });
 
-// リレーション定義（RQB用）
+// RQB用: Query APIのwith句で利用するためのリレーション設定
 export const consultationsRelations = relations(consultations, ({ one }) => ({
 	author: one(users, {
 		fields: [consultations.authorId],
