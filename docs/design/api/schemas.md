@@ -32,7 +32,7 @@ hidden_at: datetime|null # 非公開日時。
 solved_at: datetime|null # 解決日時。
 created_at: string # 作成日時 (ISO 8601)。
 updated_at: string # 最終更新日時 (ISO 8601)。
-author: ref # Userオブジェクトを参照（投稿者情報）。
+author: ref|null # Userオブジェクトを参照（投稿者情報）。著者が退会済みの場合はnull。
 tags: array of ref # Tagオブジェクトの配列を参照。
 ```
 

@@ -89,6 +89,17 @@ data: array of ref # Consultationオブジェクトの配列（schemas.md参照�
         "auth_service_user_id": "github_12345",
         "disabled": false
       }
+    },
+    {
+      "id": 103,
+      "title": "退会済みユーザーの相談例",
+      "body_preview": "著者が退会済みの場合、authorはnullになります...",
+      "draft": false,
+      "hidden_at": null,
+      "solved_at": null,
+      "created_at": "2025-10-15T14:20:00Z",
+      "updated_at": "2025-10-20T16:30:00Z",
+      "author": null
     }
   ]
 }
