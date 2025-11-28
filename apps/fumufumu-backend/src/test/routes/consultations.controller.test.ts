@@ -78,7 +78,7 @@ describe('Consultations API', () => {
 
 			// ConsultationServiceのモック設定
 			mockConsultationService = {
-				listConsultaitons: vi.fn().mockResolvedValue(mockData),
+				listConsultations: vi.fn().mockResolvedValue(mockData),
 			};
 			vi.mocked(ConsultationService).mockImplementation(() => mockConsultationService);
 
@@ -94,7 +94,7 @@ describe('Consultations API', () => {
 			expect(data.data.length).toBe(2);
 
 			// userIdが指定されていない場合はundefined（全ユーザーの相談を取得）
-			expect(mockConsultationService.listConsultaitons).toHaveBeenCalledWith({
+			expect(mockConsultationService.listConsultations).toHaveBeenCalledWith({
 				userId: undefined,
 				draft: undefined,
 				solved: undefined,
@@ -158,7 +158,7 @@ describe('Consultations API', () => {
 			};
 
 			mockConsultationService = {
-				listConsultaitons: vi.fn().mockResolvedValue(mockData),
+				listConsultations: vi.fn().mockResolvedValue(mockData),
 			};
 			vi.mocked(ConsultationService).mockImplementation(() => mockConsultationService);
 
@@ -168,7 +168,7 @@ describe('Consultations API', () => {
 
 			// アサーション
 			expect(data.data).toBeDefined();
-			expect(mockConsultationService.listConsultaitons).toHaveBeenCalledWith({
+			expect(mockConsultationService.listConsultations).toHaveBeenCalledWith({
 				userId: undefined, // userIdが指定されていない場合はundefined（全ユーザー）
 				draft: false,
 				solved: undefined,
@@ -206,7 +206,7 @@ describe('Consultations API', () => {
 			};
 
 			mockConsultationService = {
-				listConsultaitons: vi.fn().mockResolvedValue(mockData),
+				listConsultations: vi.fn().mockResolvedValue(mockData),
 			};
 			vi.mocked(ConsultationService).mockImplementation(() => mockConsultationService);
 
@@ -216,7 +216,7 @@ describe('Consultations API', () => {
 
 			// アサーション
 			expect(data.data).toBeDefined();
-			expect(mockConsultationService.listConsultaitons).toHaveBeenCalledWith({
+			expect(mockConsultationService.listConsultations).toHaveBeenCalledWith({
 				userId: undefined, // userIdが指定されていない場合はundefined（全ユーザー）
 				draft: true,
 				solved: undefined,
@@ -254,7 +254,7 @@ describe('Consultations API', () => {
 			};
 
 			mockConsultationService = {
-				listConsultaitons: vi.fn().mockResolvedValue(mockData),
+				listConsultations: vi.fn().mockResolvedValue(mockData),
 			};
 			vi.mocked(ConsultationService).mockImplementation(() => mockConsultationService);
 
@@ -264,7 +264,7 @@ describe('Consultations API', () => {
 
 			// アサーション
 			expect(data.data).toBeDefined();
-			expect(mockConsultationService.listConsultaitons).toHaveBeenCalledWith({
+			expect(mockConsultationService.listConsultations).toHaveBeenCalledWith({
 				userId: undefined, // userIdが指定されていない場合はundefined（全ユーザー）
 				draft: undefined,
 				solved: true,
@@ -302,7 +302,7 @@ describe('Consultations API', () => {
 			};
 
 			mockConsultationService = {
-				listConsultaitons: vi.fn().mockResolvedValue(mockData),
+				listConsultations: vi.fn().mockResolvedValue(mockData),
 			};
 			vi.mocked(ConsultationService).mockImplementation(() => mockConsultationService);
 
@@ -312,7 +312,7 @@ describe('Consultations API', () => {
 
 			// アサーション
 			expect(data.data).toBeDefined();
-			expect(mockConsultationService.listConsultaitons).toHaveBeenCalledWith({
+			expect(mockConsultationService.listConsultations).toHaveBeenCalledWith({
 				userId: undefined, // userIdが指定されていない場合はundefined（全ユーザー）
 				draft: undefined,
 				solved: false,
@@ -363,7 +363,7 @@ describe('Consultations API', () => {
 			};
 
 			mockConsultationService = {
-				listConsultaitons: vi.fn().mockResolvedValue(mockData),
+				listConsultations: vi.fn().mockResolvedValue(mockData),
 			};
 			vi.mocked(ConsultationService).mockImplementation(() => mockConsultationService);
 
@@ -373,7 +373,7 @@ describe('Consultations API', () => {
 
 			// アサーション
 			expect(data.data).toBeDefined();
-			expect(mockConsultationService.listConsultaitons).toHaveBeenCalledWith({
+			expect(mockConsultationService.listConsultations).toHaveBeenCalledWith({
 				userId: 1,
 				draft: undefined,
 				solved: undefined,
@@ -413,7 +413,7 @@ describe('Consultations API', () => {
 			};
 
 			mockConsultationService = {
-				listConsultaitons: vi.fn().mockResolvedValue(mockData),
+				listConsultations: vi.fn().mockResolvedValue(mockData),
 			};
 			vi.mocked(ConsultationService).mockImplementation(() => mockConsultationService);
 
@@ -423,7 +423,7 @@ describe('Consultations API', () => {
 
 			// アサーション
 			expect(data.data).toBeDefined();
-			expect(mockConsultationService.listConsultaitons).toHaveBeenCalledWith({
+			expect(mockConsultationService.listConsultations).toHaveBeenCalledWith({
 				userId: 1,
 				draft: false,
 				solved: false,
@@ -468,7 +468,7 @@ describe('Consultations API', () => {
 			};
 
 			mockConsultationService = {
-				listConsultaitons: vi.fn().mockResolvedValue(mockData),
+				listConsultations: vi.fn().mockResolvedValue(mockData),
 			};
 			vi.mocked(ConsultationService).mockImplementation(() => mockConsultationService);
 
@@ -477,7 +477,7 @@ describe('Consultations API', () => {
 			const data: any = await response.json();
 
 			// アサーション
-			expect(mockConsultationService.listConsultaitons).toHaveBeenCalledWith({
+			expect(mockConsultationService.listConsultations).toHaveBeenCalledWith({
 				userId: undefined, // userIdが指定されていない場合はundefined（全ユーザー）
 				draft: undefined,
 				solved: undefined,

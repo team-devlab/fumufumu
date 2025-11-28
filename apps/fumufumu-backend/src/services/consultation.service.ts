@@ -2,6 +2,7 @@
 import type { ConsultationRepository } from "@/repositories/consultation.repository";
 import type { ConsultationFilters } from "@/types/consultation.types";
 import type { ConsultationResponse, ConsultationListResponse } from "@/types/consultation.response";
+import type { ConsultationEntity } from "@/types/consultation.types";
 
 export class ConsultationService {
 	constructor(private repository: ConsultationRepository) {}
@@ -10,15 +11,15 @@ export class ConsultationService {
 		const entities = await this.repository.findAll(filters);
 
 		const responses: ConsultationResponse[] = entities
-			.map(({ consultations, author }) => ({
-				id: consultations.id,
-				title: consultations.title,
-				body_preview: consultations.body.substring(0, 100),
-				draft: consultations.draft,
-				hidden_at: consultations.hiddenAt?.toISOString() ?? null,
-				solved_at: consultations.solvedAt?.toISOString() ?? null,
-				created_at: consultations.createdAt.toISOString(),
-				updated_at: consultations.updatedAt.toISOString(),
+			.map(({ ConsultationsEntity, author }) => ({
+				id: ConsultationsEntity.id,
+				title: ConsultationsEntity.title,
+				body_preview: ConsultationsEntity.body.substring(0, 100),
+				draft: ConsultationsEntity.draft,
+				hidden_at: ConsultationsEntity.hiddenAt?.toISOString() ?? null,
+				solved_at: ConsultationsEntity.solvedAt?.toISOString() ?? null,
+				created_at: ConsultationsEntity.createdAt.toISOString(),
+				updated_at: ConsultationsEntity.updatedAt.toISOString(),
 				author: author === null ? null : {
 					id: author.id, 
 					name: author.name,
