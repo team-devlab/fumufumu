@@ -125,7 +125,7 @@ jobs:
         fi
     # --- 【ステップ 4: Workerの削除（クリーンアップ）】 ---
     - name: Delete Preview Worker (Cleanup)
-      if: always() # 後のステップで失敗しても、必ず実行する
+      if: always() # 後のステップで失敗しても、必ず実行する 
       run: |
         set +e
         # ステップ 2 で使用した Worker 名を再構築
