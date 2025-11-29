@@ -135,16 +135,29 @@ jobs:
         
         # wrangler delete を実行
         # --force フラグで確認プロンプトをスキップ
-        npx wrangler delete "$WORKER_NAME" \
-          --force || true # <-- 成功/失敗に関わらずステップを成功させる
+        DEPLOY_OUTPUT=$(npx wrangler delete \
+          --name="$WORKER_NAME" \
+          --force 2>&1)
         
-        # 削除コマンドの成功/失敗に関わらず、CI自体は失敗させない
-        if [ $? -eq 0 ]; then
+        EXIT_CODE=$?
+        echo "$DEPLOY_OUTPUT" # 出力をログに表示
+        
+        # 3. 終了コードが0の場合は成功
+        if [ $EXIT_CODE -eq 0 ]; then
           echo "✅ Successfully deleted Worker: $WORKER_NAME"
-        else
-          # 削除に失敗しても、Workerが既に存在しない場合もあるため警告に留める
-          echo "⚠️ Could not delete Worker (it may not exist or an error occurred): $WORKER_NAME"
+          exit 0
         fi
+        
+        # 4. 終了コードが0でない場合、特定の「Worker not exist」エラーコードをチェック
+        # Workerが存在しない場合 (Code 10090) は、クリーンアップの目的は達成されているので成功 (exit 0)
+        if echo "$DEPLOY_OUTPUT" | grep -q "Code: 10090"; then
+          echo "⚠️ Deletion failed because Worker was not found (Code 10090). Cleanup goal achieved."
+          exit 0
+        fi
+        
+        # 5. それ以外のエラー（パーミッションエラーなど）の場合は、CIステップを失敗させる (exit 1)
+        echo "::error::Deletion failed with an unexpected error. Exit code: $EXIT_CODE"
+        exit 1
       env:
         CF_API_TOKEN: ${{ secrets.CLOUDFLARE_API_TOKEN }}
         CF_ACCOUNT_ID: ${{ secrets.CLOUDFLARE_ACCOUNT_ID }}
