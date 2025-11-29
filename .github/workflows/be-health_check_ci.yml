@@ -123,3 +123,42 @@ jobs:
           echo "::error::Health check failed. Worker or D1 connection is down."
           exit 1
         fi
+    # --- 【ステップ 4: Workerの削除（クリーンアップ）】 ---
+    - name: Delete Preview Worker (Cleanup)
+      if: always() # 後のステップで失敗しても、必ず実行する 
+      run: |
+        set +e
+        # ステップ 2 で使用した Worker 名を再構築
+        BRANCH_NAME="${{ github.head_ref || github.ref_name }}"
+        WORKER_NAME=$(echo "$BRANCH_NAME" | tr '/' '-' | tr '[:upper:]' '[:lower:]')-ci-test
+              
+        echo "Attempting to delete preview Worker: $WORKER_NAME"
+        
+        # wrangler delete を実行
+        # --force フラグで確認プロンプトをスキップ
+        DEPLOY_OUTPUT=$(npx wrangler delete \
+          --name="$WORKER_NAME" \
+          --force 2>&1)
+        
+        EXIT_CODE=$?
+        echo "$DEPLOY_OUTPUT" # 出力をログに表示
+        
+        # 3. 終了コードが0の場合は成功
+        if [ $EXIT_CODE -eq 0 ]; then
+          echo "✅ Successfully deleted Worker: $WORKER_NAME"
+          exit 0
+        fi
+        
+        # 4. 終了コードが0でない場合、特定の「Worker not exist」エラーコードをチェック
+        # Workerが存在しない場合 (Code 10090) は、クリーンアップの目的は達成されているので成功 (exit 0)
+        if echo "$DEPLOY_OUTPUT" | grep -q "Code: 10090"; then
+          echo "⚠️ Deletion failed because Worker was not found (Code 10090). Cleanup goal achieved."
+          exit 0
+        fi
+        
+        # 5. それ以外のエラー（パーミッションエラーなど）の場合は、CIステップを失敗させる (exit 1)
+        echo "::error::Deletion failed with an unexpected error. Exit code: $EXIT_CODE"
+        exit 1
+      env:
+        CF_API_TOKEN: ${{ secrets.CLOUDFLARE_API_TOKEN }}
+        CF_ACCOUNT_ID: ${{ secrets.CLOUDFLARE_ACCOUNT_ID }}
