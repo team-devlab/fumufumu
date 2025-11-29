@@ -136,8 +136,7 @@ jobs:
         # wrangler delete を実行
         # --force フラグで確認プロンプトをスキップ
         npx wrangler delete "$WORKER_NAME" \
-          --env ci \
-          --force
+          --force || true # <-- 成功/失敗に関わらずステップを成功させる
         
         # 削除コマンドの成功/失敗に関わらず、CI自体は失敗させない
         if [ $? -eq 0 ]; then
