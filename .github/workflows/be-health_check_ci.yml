@@ -123,3 +123,29 @@ jobs:
           echo "::error::Health check failed. Worker or D1 connection is down."
           exit 1
         fi
+    # --- 【ステップ 4: Workerの削除（クリーンアップ）】 ---
+    - name: Delete Preview Worker (Cleanup)
+      if: always() # 後のステップで失敗しても、必ず実行する
+      run: |
+        # ステップ 2 で使用した Worker 名を再構築
+        BRANCH_NAME="${{ github.head_ref || github.ref_name }}"
+        WORKER_NAME=$(echo "$BRANCH_NAME" | tr '/' '-' | tr '[:upper:]' '[:lower:]')-ci-test
+              
+        echo "Attempting to delete preview Worker: $WORKER_NAME"
+        
+        # wrangler delete を実行
+        # --force フラグで確認プロンプトをスキップ
+        npx wrangler delete "$WORKER_NAME" \
+          --env ci \
+          --force
+        
+        # 削除コマンドの成功/失敗に関わらず、CI自体は失敗させない
+        if [ $? -eq 0 ]; then
+          echo "✅ Successfully deleted Worker: $WORKER_NAME"
+        else
+          # 削除に失敗しても、Workerが既に存在しない場合もあるため警告に留める
+          echo "⚠️ Could not delete Worker (it may not exist or an error occurred): $WORKER_NAME"
+        fi
+      env:
+        CF_API_TOKEN: ${{ secrets.CLOUDFLARE_API_TOKEN }}
+        CF_ACCOUNT_ID: ${{ secrets.CLOUDFLARE_ACCOUNT_ID }}
