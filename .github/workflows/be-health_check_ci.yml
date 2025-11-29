@@ -127,6 +127,7 @@ jobs:
     - name: Delete Preview Worker (Cleanup)
       if: always() # 後のステップで失敗しても、必ず実行する
       run: |
+        set +e
         # ステップ 2 で使用した Worker 名を再構築
         BRANCH_NAME="${{ github.head_ref || github.ref_name }}"
         WORKER_NAME=$(echo "$BRANCH_NAME" | tr '/' '-' | tr '[:upper:]' '[:lower:]')-ci-test
