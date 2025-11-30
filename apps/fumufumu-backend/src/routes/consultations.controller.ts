@@ -1,30 +1,30 @@
 // Presentation層: 相談関連ルート
-import { Hono } from "hono";
-import type { Context } from "hono";
+import { Hono, type Context } from "hono";
+import { zValidator } from "@hono/zod-validator";
+import type { Env, Variables } from "@/index";
 import { ConsultationRepository } from "@/repositories/consultation.repository";
 import { ConsultationService } from "@/services/consultation.service";
 import { authGuard } from "@/middlewares/authGuard.middleware";
 import type { ConsultationFilters } from "@/types/consultation.types";
+import { listConsultationsQuerySchema, type ListConsultationsQuery } from "@/validators/consultation.validator";
 
-export const consultationsRoute = new Hono();
+export const consultationsRoute = new Hono<{ Bindings: Env; Variables: Variables }>();
 
 // 認証ミドルウェアを適用
 consultationsRoute.use("/*", authGuard);
 
-export const listConsultations = async (c: Context) => {
+export const listConsultations = async (c: Context<{ Bindings: Env; Variables: Variables }>) => {
 	try {
-		// クエリパラメータを取得
-		const userId = c.req.query("userId");
-		const draft = c.req.query("draft");
-		const solved = c.req.query("solved");
+		// バリデーション済みのクエリパラメータを取得
+		const validatedQuery = (c.req as any).valid("query") as ListConsultationsQuery;
 
 		// フィルタオブジェクトを構築
 		// userIdが指定されていない場合はundefined（全ユーザーの相談を取得）
 		// プロフィール画面などで自身の相談のみを取得する場合は、明示的にuserIdを指定する
 		const filters: ConsultationFilters = {
-			userId: userId ? Number(userId) : undefined,
-			draft: draft !== undefined ? draft === "true" : undefined,
-			solved: solved !== undefined ? solved === "true" : undefined,
+			userId: validatedQuery.userId,
+			draft: validatedQuery.draft,
+			solved: validatedQuery.solved,
 		};
 
 		const db = c.get("db");
@@ -46,6 +46,10 @@ export const listConsultations = async (c: Context) => {
 };
 
 // ルーティング登録
-consultationsRoute.get("/", listConsultations);
+consultationsRoute.get(
+	"/",
+	zValidator("query", listConsultationsQuerySchema),
+	listConsultations
+);
 
 
