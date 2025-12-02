@@ -11,12 +11,12 @@ const VALIDATION_MESSAGES = {
 
 /**
  * 正の整数文字列スキーマ
- * 文字列 "123" -> 数値 123 に変換
- */
-const positiveIntegerStringSchema = z
-	.string()
-	.regex(/^\d+$/, { message: VALIDATION_MESSAGES.POSITIVE_INTEGER })
-	.transform(Number);
+ * 文字列 "123" -> 数値 123 に変換し、1以上を保証
+ */ 
+const positiveIntegerStringSchema = z.coerce
+	.number({ invalid_type_error: VALIDATION_MESSAGES.POSITIVE_INTEGER })
+	.int({ message: VALIDATION_MESSAGES.POSITIVE_INTEGER })
+	.positive({ message: VALIDATION_MESSAGES.POSITIVE_INTEGER });
 
 /**
  * boolean文字列スキーマ
