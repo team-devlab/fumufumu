@@ -27,6 +27,12 @@ describe('Consultations API', () => {
 			}),
 			req: {
 				query: vi.fn(() => undefined),
+				// zValidatorでバリデーション済みのクエリパラメータを返す
+				valid: vi.fn(() => ({
+					userId: undefined,
+					draft: undefined,
+					solved: undefined,
+				})),
 			},
 			json: vi.fn((data: any) => {
 				return {
@@ -123,10 +129,11 @@ describe('Consultations API', () => {
 
 		it('draft=false: 公開済みの相談のみを取得できる', async () => {
 			// クエリパラメータのモック設定
-			mockContext.req.query = vi.fn((key: string) => {
-				if (key === 'draft') return 'false';
-				return undefined;
-			});
+			mockContext.req.valid = vi.fn(() => ({
+				userId: undefined,
+				draft: false,
+				solved: undefined,
+			}));
 
 			// モックデータの準備（draft=falseのみ）
 			const mockData = {
@@ -182,10 +189,11 @@ describe('Consultations API', () => {
 
 		it('draft=true: 下書きの相談のみを取得できる', async () => {
 			// クエリパラメータのモック設定
-			mockContext.req.query = vi.fn((key: string) => {
-				if (key === 'draft') return 'true';
-				return undefined;
-			});
+			mockContext.req.valid = vi.fn(() => ({
+				userId: undefined,
+				draft: true,
+				solved: undefined,
+			}));
 
 			// モックデータの準備（draft=trueのみ）
 			const mockData = {
@@ -230,10 +238,11 @@ describe('Consultations API', () => {
 
 		it('solved=true: 解決済みの相談のみを取得できる', async () => {
 			// クエリパラメータのモック設定
-			mockContext.req.query = vi.fn((key: string) => {
-				if (key === 'solved') return 'true';
-				return undefined;
-			});
+			mockContext.req.valid = vi.fn(() => ({
+				userId: undefined,
+				draft: undefined,
+				solved: true,
+			}));
 
 			// モックデータの準備（solved_at !== null）
 			const mockData = {
@@ -278,10 +287,11 @@ describe('Consultations API', () => {
 
 		it('solved=false: 未解決の相談のみを取得できる', async () => {
 			// クエリパラメータのモック設定
-			mockContext.req.query = vi.fn((key: string) => {
-				if (key === 'solved') return 'false';
-				return undefined;
-			});
+			mockContext.req.valid = vi.fn(() => ({
+				userId: undefined,
+				draft: undefined,
+				solved: false,
+			}));
 
 			// モックデータの準備（solved_at === null）
 			const mockData = {
@@ -328,10 +338,11 @@ describe('Consultations API', () => {
 			const userId = 1;
 
 			// クエリパラメータのモック設定
-			mockContext.req.query = vi.fn((key: string) => {
-				if (key === 'userId') return String(userId);
-				return undefined;
-			});
+			mockContext.req.valid = vi.fn(() => ({
+				userId: userId,
+				draft: undefined,
+				solved: undefined,
+			}));
 
 			// モックデータの準備（userId = 1のみ）
 			const mockData = {
@@ -387,12 +398,11 @@ describe('Consultations API', () => {
 
 		it('複合フィルタ: userId + draft + solvedの組み合わせでフィルタできる', async () => {
 			// クエリパラメータのモック設定
-			mockContext.req.query = vi.fn((key: string) => {
-				if (key === 'userId') return '1';
-				if (key === 'draft') return 'false';
-				if (key === 'solved') return 'false';
-				return undefined;
-			});
+			mockContext.req.valid = vi.fn(() => ({
+				userId: 1,
+				draft: false,
+				solved: false,
+			}));
 
 			// モックデータの準備（複合条件）
 			const mockData = {

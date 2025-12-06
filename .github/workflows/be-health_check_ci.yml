@@ -132,6 +132,29 @@ jobs:
         BRANCH_NAME="${{ github.head_ref || github.ref_name }}"
         WORKER_NAME=$(echo "$BRANCH_NAME" | tr '/' '-' | tr '[:upper:]' '[:lower:]')-ci-test
               
+        echo "Checking if Worker exists: $WORKER_NAME"
+        
+        # 1. Workerの存在確認（Cloudflare APIを使用）
+        CHECK_OUTPUT=$(curl -s -X GET \
+          "https://api.cloudflare.com/client/v4/accounts/$CF_ACCOUNT_ID/workers/services/$WORKER_NAME" \
+          -H "Authorization: Bearer $CF_API_TOKEN" \
+          -H "Content-Type: application/json")
+        
+        # APIレスポンスからsuccessフラグを確認
+        IS_SUCCESS=$(echo "$CHECK_OUTPUT" | jq -r '.success')
+        
+        if [ "$IS_SUCCESS" != "true" ]; then
+          # Workerが存在しない場合
+          ERROR_CODE=$(echo "$CHECK_OUTPUT" | jq -r '.errors[0].code // empty')
+          if [ "$ERROR_CODE" = "10090" ]; then
+            echo "ℹ️ Worker '$WORKER_NAME' does not exist. Skipping deletion."
+            exit 0
+          fi
+          echo "⚠️ Unexpected API response during existence check:"
+          echo "$CHECK_OUTPUT"
+        fi
+        
+        # 2. Workerが存在する場合は削除を実行
         echo "Attempting to delete preview Worker: $WORKER_NAME"
         
         # wrangler delete を実行
