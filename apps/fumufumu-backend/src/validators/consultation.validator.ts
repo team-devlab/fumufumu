@@ -14,18 +14,16 @@ const VALIDATION_MESSAGES = {
  * 文字列 "123" -> 数値 123 に変換し、1以上を保証
  */ 
 const positiveIntegerStringSchema = z.coerce
-	.number({ invalid_type_error: VALIDATION_MESSAGES.POSITIVE_INTEGER })
-	.int({ message: VALIDATION_MESSAGES.POSITIVE_INTEGER })
-	.positive({ message: VALIDATION_MESSAGES.POSITIVE_INTEGER });
+	.number({ error: VALIDATION_MESSAGES.POSITIVE_INTEGER })
+	.int({ error: VALIDATION_MESSAGES.POSITIVE_INTEGER })
+	.positive({ error: VALIDATION_MESSAGES.POSITIVE_INTEGER });
 
 /**
  * boolean文字列スキーマ
  * 文字列 "true"/"false" -> boolean true/false に変換
  */
 const booleanStringSchema = z
-	.enum(["true", "false"], {
-		errorMap: () => ({ message: VALIDATION_MESSAGES.BOOLEAN_STRING }),
-	})
+	.enum(["true", "false"], { error: VALIDATION_MESSAGES.BOOLEAN_STRING })
 	.transform((val) => val === "true");
 
 /**
