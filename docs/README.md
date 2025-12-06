@@ -6,6 +6,40 @@
 - **guidelines/**: 開発ガイドライン・ベストプラクティス
 - **verification/**: APIテスト結果と動作確認記録
 
+---
+
+## 🧔 設計原則（Kent Beck's Advice）
+
+### コントローラー層の設計
+
+> *「Controller層はHTTPの薄いラッパーであるべき。ビジネスロジックのテストはService層で行う。」*
+
+#### 推奨パターン
+
+```typescript
+// ✅ シンプルなインラインハンドラ（Hono公式推奨）
+consultationsRoute.get(
+  "/",
+  zValidator("query", schema),
+  async (c) => {
+    const query = c.req.valid("query"); // 型推論が自動で効く
+    // ...
+  }
+);
+```
+
+#### テスト戦略
+
+| レイヤー | テスト方法 | 優先度 |
+|---------|----------|-------|
+| Controller | 統合テスト（`app.request()`） | 中 |
+| Service | ユニットテスト | **高** |
+| Repository | ユニットテスト | 中 |
+
+詳細は [hono-handler-design-decision.md](./guidelines/hono-handler-design-decision.md) を参照。
+
+---
+
 ### テスト方針
 
 このプロジェクトでは **実際のAPIテスト（E2Eテスト）** を主要なテスト手法として採用しています。
