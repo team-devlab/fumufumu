@@ -2,12 +2,12 @@
 
 ## 1. メタ情報
 
-- **ドキュメントバージョン**: v1.1
+- **ドキュメントバージョン**: v1.2
 - **対象ドメイン**: Consultations
 - **認証方法**: Bearer Token (JWT)
 - **共通データ形式**: JSON (UTF-8)
-- **更新日**: 2025-11-28
-- **更新内容**: RQB移行、著者退会対応、実装詳細の追記
+- **更新日**: 2025-11-30
+- **更新内容**: zodによるクエリパラメータバリデーション実装
 
 ## 2. 個別API定義
 
@@ -18,8 +18,9 @@
 相談の一覧を取得します。
 
 - **認証:** ✅ 必須（authGuardミドルウェアで実装済み）
+- **バリデーション:** ✅ 実装済み（zod + @hono/zod-validator）
 - **タグ:** consultations, list
-- **エラーハンドリング:** ✅ 実装済み（500 Internal Server Error対応）
+- **エラーハンドリング:** ✅ 実装済み（400 Bad Request, 500 Internal Server Error対応）
 
 #### パス/クエリパラメータ (Parameters)
 
@@ -109,23 +110,58 @@ data: array of ref # Consultationオブジェクトの配列（schemas.md参照�
 
 ##### 🔴 400 Bad Request
 
-パラメータの形式や制約違反（❌ バリデーション未実装）。
+パラメータの形式や制約違反（✅ zod実装済み）。
+
+**バリデーションルール:**
+- `userId`: 正の整数のみ許可（文字列 → 数値に自動変換）
+- `draft`: "true" または "false" の文字列のみ許可（文字列 → boolean に自動変換）
+- `solved`: "true" または "false" の文字列のみ許可（文字列 → boolean に自動変換）
+
+**zodエラーレスポンス例（userId が無効な場合）:**
 
 ```json
 {
-  "title": "Bad Request",
-  "status": 400,
-  "detail": "パラメータの形式が不正です。",
-  "invalid_params": [
-    {
-      "name": "userId",
-      "reason": "整数値を指定してください。"
-    }
-  ]
+  "success": false,
+  "error": {
+    "issues": [
+      {
+        "validation": "regex",
+        "code": "invalid_string",
+        "message": "userId must be a positive integer",
+        "path": [
+          "userId"
+        ]
+      }
+    ],
+    "name": "ZodError"
+  }
 }
 ```
 
-**TODO**: 次のPRでzod + @hono/zod-validatorによるバリデーション実装予定
+**zodエラーレスポンス例（draft が無効な場合）:**
+
+```json
+{
+  "success": false,
+  "error": {
+    "issues": [
+      {
+        "received": "invalid_value",
+        "code": "invalid_enum_value",
+        "options": [
+          "true",
+          "false"
+        ],
+        "path": [
+          "draft"
+        ],
+        "message": "draft must be \"true\" or \"false\""
+      }
+    ],
+    "name": "ZodError"
+  }
+}
+```
 
 ##### 🔴 401 Unauthorized
 
@@ -213,7 +249,37 @@ author: consultation.author ? {
 - `author`フィールドは`null`または`Author`オブジェクト
 - フロントエンド側で「退会済みユーザー」として表示可能
 
-#### 3. クエリパラメータのデフォルト動作
+#### 3. zodによるバリデーション（✅ 実装済み）
+```typescript
+// validators/consultation.validator.ts
+export const listConsultationsQuerySchema = z.object({
+  userId: z
+    .string()
+    .regex(/^\d+$/, { message: "userId must be a positive integer" })
+    .transform(Number)
+    .optional(),
+  draft: z
+    .enum(["true", "false"], {
+      errorMap: () => ({ message: 'draft must be "true" or "false"' }),
+    })
+    .transform((val) => val === "true")
+    .optional(),
+  solved: z
+    .enum(["true", "false"], {
+      errorMap: () => ({ message: 'solved must be "true" or "false"' }),
+    })
+    .transform((val) => val === "true")
+    .optional(),
+});
+```
+
+**実装ポイント**:
+- `@hono/zod-validator`を使用してミドルウェアとして適用
+- クエリパラメータの型変換を自動実行（文字列 → 数値/boolean）
+- バリデーションエラー時は自動的に400 Bad Requestを返却
+- エラーメッセージはzodのデフォルト形式（`ZodError`）
+
+#### 4. クエリパラメータのデフォルト動作
 - `userId`未指定時: 全ユーザーの相談を取得（`undefined`）
 - `draft`未指定時: 下書き・公開両方を取得
 - `solved`未指定時: 解決済み・未解決両方を取得
@@ -226,10 +292,10 @@ author: consultation.author ? {
 
 ## 4. 今後の拡張予定
 
-### バリデーション（次のPR）
-- zod + @hono/zod-validatorの導入
-- クエリパラメータの型検証
-- 無効なパラメータに対する400エラー
+### ✅ バリデーション（実装完了）
+- ✅ zod + @hono/zod-validatorの導入
+- ✅ クエリパラメータの型検証
+- ✅ 無効なパラメータに対する400エラー
 
 ### ソート機能（将来）
 - `sortBy`パラメータ（created_at, updated_at）
