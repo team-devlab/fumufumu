@@ -7,9 +7,13 @@
   },
   "files": {
     "ignoreUnknown": true,
-    "includes": ["**", "!node_modules", "!.next", "!dist", "!build"],
-    "ignore": [
-      "**/tsconfig.json"
+    "includes": [
+      "**",
+      "!node_modules",
+      "!.next",
+      "!dist",
+      "!build",
+      "!**/tsconfig.json"
     ]
   },
   "formatter": {
