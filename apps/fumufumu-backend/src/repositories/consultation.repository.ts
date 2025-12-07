@@ -39,6 +39,7 @@ export class ConsultationRepository {
 			where: whereConditions.length > 0 
 				? and(...whereConditions) 
 				: undefined,
+			orderBy: (fields, { desc }) => [desc(fields.createdAt)],
 			with: {
 				author: true,
 			},
