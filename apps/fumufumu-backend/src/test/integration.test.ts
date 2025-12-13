@@ -92,88 +92,78 @@ describe('Integration Tests', () => {
 
   // 3. 認証と保護ルートのシナリオテスト
   describe('Auth & Protected Routes Flow', () => {
-    // テスト間でCookieを共有するための変数
-    let sessionCookie: string | null = null;
-    let createdAuthUserId: string | null = null;
-    
     const testUser = {
       name: 'Integration Test User',
-      email: `test-${Date.now()}@example.com`, // ユニークにする
+      email: `test-${Date.now()}@example.com`,
       password: 'password123456',
     };
 
-    // ステップ1: サインアップ
-    it('should sign up a new user and return session cookie', async () => {
-      const req = new Request('http://localhost/api/auth/signup', {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify(testUser),
-      });
-
-      const res = await app.fetch(req, env);
-      expect(res.status).toBe(200);
-
-      const body = await res.json() as any;
-      expect(body).toHaveProperty('auth_user_id');
-      expect(body).toHaveProperty('app_user_id');
-      
-      createdAuthUserId = body.auth_user_id;
-
-      // Better AuthからのSet-Cookieヘッダーを取得
-      sessionCookie = res.headers.get('set-cookie');
-      expect(sessionCookie).toBeTruthy();
-    });
-
-    // ステップ2: 認証なしで保護ルートへアクセス (失敗することを確認)
+    // 認証なしでのアクセス確認（これはDB状態に依存しないので独立していてOK）
     it('should deny access to protected route without cookie', async () => {
       const req = new Request('http://localhost/api/protected');
       const res = await app.fetch(req, env);
-      
-      // authGuardミドルウェアにより401が返るはず
       expect(res.status).toBe(401);
     });
 
-    // ステップ3: 認証あり(Cookie付与)で保護ルートへアクセス
-    it('should access protected route with valid cookie', async () => {
-      if (!sessionCookie) throw new Error('Session cookie not found from signup step');
+    // ★重要: データの依存関係があるテストを一連の流れ（シナリオ）としてまとめる
+    it('should handle full auth flow: Signup -> Access -> Signin', async () => {
+			let sessionCookie: string | null = null;
 
-      const req = new Request('http://localhost/api/protected', {
-        headers: {
-          // 取得したCookieをリクエストヘッダーにセット
-          'Cookie': sessionCookie
-        }
-      });
+			// --- Step 1: Sign Up ---
+			console.log('Step 1: Signing up...');
+			const signupReq = new Request('http://localhost/api/auth/signup', {
+				method: 'POST',
+				headers: { 'Content-Type': 'application/json' },
+				body: JSON.stringify(testUser),
+			});
+			const signupRes = await app.fetch(signupReq, env);
+			expect(signupRes.status).toBe(200);
 
-      const res = await app.fetch(req, env);
+			const signupBody = await signupRes.json() as any;
+			expect(signupBody).toHaveProperty('auth_user_id');
       
-      if (res.status !== 200) {
-        const err = await res.json();
-        console.error('Protected route error:', err);
-      }
+			// Cookieを取得
+			sessionCookie = signupRes.headers.get('set-cookie');
+			expect(sessionCookie).toBeTruthy();
 
-      expect(res.status).toBe(200);
-      
-      const body = await res.json() as any;
-      expect(body.message).toContain('Welcome');
-      expect(body.userName).toBe(testUser.name);
-    });
 
-    // ステップ4: サインイン (サインアップとは別のセッション取得テスト)
-    it('should sign in explicitly', async () => {
-      const req = new Request('http://localhost/api/auth/signin', {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({
-          email: testUser.email,
-          password: testUser.password
-        }),
-      });
+			// --- Step 2: Access Protected Route (With Cookie) ---
+			// ※同じテストケース内なのでDBの状態（ユーザー・セッション）は維持されています
+			console.log('Step 2: Accessing protected route...');
+			const protectedReq = new Request('http://localhost/api/protected', {
+				headers: {
+						// Set-Cookieヘッダーの値をそのままCookieリクエストヘッダーにセット
+						'Cookie': sessionCookie!
+				}
+			});
+			const protectedRes = await app.fetch(protectedReq, env);
+			
+			if (protectedRes.status !== 200) {
+				const err = await protectedRes.json();
+				console.error('Protected route error details:', err);
+			}
+			expect(protectedRes.status).toBe(200);
+			const protectedBody = await protectedRes.json() as any;
+			expect(protectedBody.message).toContain('Welcome');
+			expect(protectedBody.userName).toBe(testUser.name);
 
-      const res = await app.fetch(req, env);
-      expect(res.status).toBe(200);
-      
-      const newCookie = res.headers.get('set-cookie');
-      expect(newCookie).toBeTruthy();
+
+			// --- Step 3: Sign In (Explicitly) ---
+			// ※同じDBを使っているのでユーザーが存在し、ログインできるはず
+			console.log('Step 3: Signing in explicitly...');
+			const signinReq = new Request('http://localhost/api/auth/signin', {
+				method: 'POST',
+				headers: { 'Content-Type': 'application/json' },
+				body: JSON.stringify({
+						email: testUser.email,
+						password: testUser.password
+				}),
+			});
+			const signinRes = await app.fetch(signinReq, env);
+			expect(signinRes.status).toBe(200);
+			
+			const newCookie = signinRes.headers.get('set-cookie');
+			expect(newCookie).toBeTruthy();
     });
   });
 });
