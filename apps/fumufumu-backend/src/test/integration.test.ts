@@ -1,9 +1,6 @@
-// src/test/integration.test.ts
 import { env, applyD1Migrations } from 'cloudflare:test';
 import { describe, it, expect, beforeAll } from 'vitest';
 import app from '../index';
-import path from 'path';
-import fs from 'fs';
 
 // DBの型定義エラーを回避するためのインターフェース再定義
 // worker-configuration.d.ts の内容に合わせています
@@ -64,9 +61,9 @@ function getMigrations(): D1Migration[] {
 }
 
 describe('Integration Tests', () => {
-	// 1. テスト実行前のDBセットアップ
+	// テスト実行前のDBセットアップ
 	beforeAll(async () => {
-		// fsを使わず、Vite経由で読み込んだマイグレーションデータを使用
+		// Vite経由で読み込んだマイグレーションデータを使用
 		const migrations = getMigrations();
 
 		try {
@@ -77,7 +74,7 @@ describe('Integration Tests', () => {
 		}
 	});
 
-	// 2. Health Check APIテスト
+	// Health Check APIテスト
 	describe('GET /health', () => {
 		it('should return 200 OK and confirm DB connection', async () => {
 			const req = new Request('http://localhost/health');
@@ -90,7 +87,7 @@ describe('Integration Tests', () => {
 		});
 	});
 
-	// 3. 認証と保護ルートのシナリオテスト
+	// 認証と保護ルートのシナリオテスト
 	describe('Auth & Protected Routes Flow', () => {
 		const testUser = {
 			name: 'Integration Test User',
@@ -105,7 +102,7 @@ describe('Integration Tests', () => {
 			expect(res.status).toBe(401);
 		});
 
-		// ★重要: データの依存関係があるテストを一連の流れ（シナリオ）としてまとめる
+		// データの依存関係があるテストを一連の流れ（シナリオ）としてまとめる
 		it('should handle full auth flow: Signup -> Access -> Signin', async () => {
 			let sessionCookie: string | null = null;
 
