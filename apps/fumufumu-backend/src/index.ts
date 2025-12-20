@@ -97,20 +97,6 @@ app.get('/health', async (c) => {
   }
 })
 
-app.get('/api/user/me', async (c) => {
-  const auth = c.get('auth');
-  const session = await auth.api.getSession({
-    headers: c.req.raw.headers // ヘッダーを渡してセッション検証
-  });
-  
-  if (!session) {
-    return c.json({ error: 'Unauthorized' }, 401);
-  }
-  
-  return c.json({ user: session.user });
-});
-
-
 // --- APIルーター（/api配下） ---
 const api = new Hono<{ Bindings: Env, Variables: Variables }>();
 
