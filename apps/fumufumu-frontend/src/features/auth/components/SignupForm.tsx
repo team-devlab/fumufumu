@@ -1,13 +1,13 @@
 "use client";
 
-import { useState } from "react";
 import Link from "next/link";
+import { useState } from "react";
 import { Button } from "@/components/ui/Button";
 import { useAuth } from "../hooks/useAuth";
 
 export const SignupForm = () => {
   const { signup, isLoading, error } = useAuth();
-  
+
   // 入力ステート
   const [name, setName] = useState("");
   const [email, setEmail] = useState("");
@@ -22,7 +22,7 @@ export const SignupForm = () => {
   return (
     <div className="text-center">
       <h1 className="text-3xl font-bold text-gray-800 mb-6">アカウント作成</h1>
-      
+
       {/* エラー表示エリア */}
       {error && (
         <div className="mb-4 p-3 bg-red-100 text-red-700 rounded-lg text-sm">

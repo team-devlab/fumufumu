@@ -1,5 +1,5 @@
-import { SignupForm } from "@/features/auth/components/SignupForm";
 import type { Metadata } from "next";
+import { SignupForm } from "@/features/auth/components/SignupForm";
 
 export const metadata: Metadata = {
   title: "サインアップ | Fumufumu App",

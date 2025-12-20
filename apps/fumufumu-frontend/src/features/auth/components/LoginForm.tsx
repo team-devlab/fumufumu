@@ -1,7 +1,7 @@
 "use client";
 
-import { useState } from "react";
 import Link from "next/link";
+import { useState } from "react";
 import { Button } from "@/components/ui/Button";
 import { useAuth } from "../hooks/useAuth";
 
@@ -18,7 +18,7 @@ export const LoginForm = () => {
   return (
     <div className="text-center">
       <h1 className="text-3xl font-bold text-gray-800 mb-6">ログイン</h1>
-      
+
       {error && (
         <div className="mb-4 p-3 bg-red-100 text-red-700 rounded-lg text-sm">
           {error}

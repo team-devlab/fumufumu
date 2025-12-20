@@ -1,14 +1,17 @@
-const API_URL = process.env.NEXT_PUBLIC_API_URL || 'http://localhost:8787';
+const API_URL = process.env.NEXT_PUBLIC_API_URL || "http://localhost:8787";
 
 type ApiOptions = RequestInit & {
   // 必要に応じて拡張
 };
 
-export async function apiClient<T>(endpoint: string, options: ApiOptions = {}): Promise<T> {
-  const url = `${API_URL}${endpoint.startsWith('/') ? endpoint : `/${endpoint}`}`;
+export async function apiClient<T>(
+  endpoint: string,
+  options: ApiOptions = {},
+): Promise<T> {
+  const url = `${API_URL}${endpoint.startsWith("/") ? endpoint : `/${endpoint}`}`;
 
   const defaultHeaders = {
-    'Content-Type': 'application/json',
+    "Content-Type": "application/json",
   };
 
   const config: RequestInit = {
@@ -18,7 +21,7 @@ export async function apiClient<T>(endpoint: string, options: ApiOptions = {}): 
       ...options.headers,
     },
     // これが最重要：異なるドメイン間でCookie（セッションID）を自動送受信する設定
-    credentials: 'include', 
+    credentials: "include",
   };
 
   try {
@@ -33,7 +36,7 @@ export async function apiClient<T>(endpoint: string, options: ApiOptions = {}): 
     // レスポンスが空の場合はnullを返す等の処理も可能
     return response.json() as Promise<T>;
   } catch (error) {
-    console.error('API Request Failed:', error);
+    console.error("API Request Failed:", error);
     throw error;
   }
 }
