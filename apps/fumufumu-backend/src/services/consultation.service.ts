@@ -44,14 +44,6 @@ export class ConsultationService {
 	 * @returns 作成された相談のレスポンス
 	 * @throws {Error} 作成失敗時
 	 */
-	// TODO: ここに createConsultation() メソッドを実装してください
-	// 実装のポイント:
-	// 1. Repository層の create() を呼び出す
-	// 2. 戻り値が null の場合はエラーをスロー
-	// 3. body_preview を生成（body.substring(0, 100)）
-	// 4. 日時をISO文字列に変換（toISOString()）
-	// 5. authorを整形（listConsultationsと同じパターン）
-	// 6. ConsultationResponse型で返す
 	async createConsultation(
 		data: {
 			title: string;
