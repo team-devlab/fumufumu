@@ -8,7 +8,7 @@ import { ConsultationRepository } from "@/repositories/consultation.repository";
 import { ConsultationService } from "@/services/consultation.service";
 import { authGuard } from "@/middlewares/authGuard.middleware";
 import type { ConsultationFilters } from "@/types/consultation.types";
-import { listConsultationsQuerySchema } from "@/validators/consultation.validator";
+import { listConsultationsQuerySchema, createConsultationSchema } from "@/validators/consultation.validator";
 
 // ファクトリを作成（型安全なハンドラ生成用）
 const factory = createFactory<{ Bindings: Env; Variables: Variables }>();
@@ -71,4 +71,56 @@ consultationsRoute.use("/*", authGuard);
 // ルーティング登録
 consultationsRoute.get("/", ...listConsultationsHandlers);
 
+// ============================================================
+// 相談作成エンドポイント (POST /api/consultations)
+// ============================================================
 
+/**
+ * 相談作成ハンドラのContext型定義
+ * - in: 入力型（HTTPリクエストのJSON）
+ * - out: 変換後の型（zodで検証・変換された型）
+ */
+type CreateConsultationContext = Context<
+	{ Bindings: Env; Variables: Variables },
+	string,
+	{ in: { json: unknown }; out: { json: z.output<typeof createConsultationSchema> } }
+>;
+
+/**
+ * 相談作成ハンドラ関数
+ */
+export async function createConsultation(c: CreateConsultationContext) {
+	try {
+		const validatedBody = c.req.valid("json");
+		const authorId = c.get("appUserId");
+
+		const db = c.get("db");
+		const repository = new ConsultationRepository(db);
+		const service = new ConsultationService(repository);
+		const result = await service.createConsultation(validatedBody, authorId);
+
+		return c.json(result, 201);
+	} catch (error) {
+		console.error('[createConsultation] 相談の作成に失敗しました:', error);
+		return c.json(
+			{
+				error: 'Internal server error',
+				message: '相談の作成に失敗しました',
+			},
+			500
+		);
+	}
+}
+
+/**
+ * 相談作成ハンドラ（createHandlers版）
+ */
+export const createConsultationHandlers = factory.createHandlers(
+	zValidator("json", createConsultationSchema),
+	async (c) => {
+		return createConsultation(c);
+	}
+);
+
+// POSTルーティング登録
+consultationsRoute.post("/", ...createConsultationHandlers);
