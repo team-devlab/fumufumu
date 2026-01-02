@@ -71,24 +71,14 @@ consultationsRoute.use("/*", authGuard);
 // ルーティング登録
 consultationsRoute.get("/", ...listConsultationsHandlers);
 
-// ============================================================
-// 相談作成エンドポイント (POST /api/consultations)
-// ============================================================
-
-/**
- * 相談作成ハンドラのContext型定義
- * - in: 入力型（HTTPリクエストのJSON）
- * - out: 変換後の型（zodで検証・変換された型）
- */
+// 相談作成用のContext型定義
 type CreateConsultationContext = Context<
 	{ Bindings: Env; Variables: Variables },
 	string,
 	{ in: { json: unknown }; out: { json: z.output<typeof createConsultationSchema> } }
 >;
 
-/**
- * 相談作成ハンドラ関数
- */
+// 相談作成ハンドラ関数
 export async function createConsultation(c: CreateConsultationContext) {
 	try {
 		const validatedBody = c.req.valid("json");
@@ -112,9 +102,7 @@ export async function createConsultation(c: CreateConsultationContext) {
 	}
 }
 
-/**
- * 相談作成ハンドラ（createHandlers版）
- */
+// 相談作成ハンドラ（createHandlers版）
 export const createConsultationHandlers = factory.createHandlers(
 	zValidator("json", createConsultationSchema),
 	async (c) => {
