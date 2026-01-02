@@ -45,5 +45,40 @@ export class ConsultationRepository {
 			},
 		});
 	}
+
+	/**
+	 * 相談を新規作成する
+	 * 
+	 * @param data - 作成する相談データ
+	 * @param data.title - 相談タイトル
+	 * @param data.body - 相談本文
+	 * @param data.draft - 下書きフラグ（true: 下書き, false: 公開）
+	 * @param data.authorId - 投稿者ID（認証ユーザー）
+	 * @returns 作成された相談データ（authorリレーション含む）
+	 * @throws {Error} データベースエラー（上位層で処理）
+	 */
+	async create(data: {
+		title: string;
+		body: string;
+		draft: boolean;
+		authorId: number;
+	}) {
+		const [inserted] = await this.db
+			.insert(consultations)
+			.values({
+				title: data.title,
+				body: data.body,
+				draft: data.draft,
+				authorId: data.authorId,
+			})
+			.returning();
+
+		return await this.db.query.consultations.findFirst({
+			where: eq(consultations.id, inserted.id),
+			with: {
+				author: true,
+			},
+		});
+	}
 }
 
