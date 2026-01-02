@@ -52,14 +52,14 @@ DB (D1 Database)
 
 ## 実装の流れ
 
-### フェーズ1: バリデーションスキーマの作成 ⏳
+### フェーズ1: バリデーションスキーマの作成 ✅
 
 **ファイル**: `src/validators/consultation.validator.ts`
 
-- [ ] `createConsultationSchema` の実装
-  - [ ] `title`: 1〜100文字（必須）
-  - [ ] `body`: 10〜10,000文字（必須）
-  - [ ] `draft`: boolean型（任意、デフォルト: false）
+- [x] `createConsultationSchema` の実装
+  - [x] `title`: 1〜100文字（必須）
+  - [x] `body`: 10〜10,000文字（必須）
+  - [x] `draft`: boolean型（任意、デフォルト: false）
 
 **実装コード例:**
 
@@ -77,14 +77,14 @@ export type CreateConsultationInput = z.infer<typeof createConsultationSchema>;
 
 ---
 
-### フェーズ2: Repository層の実装 ⏳
+### フェーズ2: Repository層の実装 ✅
 
 **ファイル**: `src/repositories/consultation.repository.ts`
 
-- [ ] `create()` メソッドの実装
-  - [ ] drizzle-orm の `insert()` を使用
-  - [ ] `.returning()` で作成されたレコードを取得
-  - [ ] author リレーションも取得
+- [x] `create()` メソッドの実装
+  - [x] drizzle-orm の `insert()` を使用
+  - [x] `.returning()` で作成されたレコードを取得
+  - [x] author リレーションも取得
 
 **実装コード例:**
 
@@ -117,14 +117,14 @@ async create(data: {
 
 ---
 
-### フェーズ3: Service層の実装 ⏳
+### フェーズ3: Service層の実装 ✅
 
 **ファイル**: `src/services/consultation.service.ts`
 
-- [ ] `createConsultation()` メソッドの実装
-  - [ ] Repository層の `create()` を呼び出し
-  - [ ] `body_preview` を生成（最初の100文字）
-  - [ ] レスポンス形式に整形
+- [x] `createConsultation()` メソッドの実装
+  - [x] Repository層の `create()` を呼び出し
+  - [x] `body_preview` を生成（最初の100文字）
+  - [x] レスポンス形式に整形
 
 **実装コード例:**
 
@@ -165,16 +165,16 @@ async createConsultation(
 
 ---
 
-### フェーズ4: Controller層の実装 ⏳
+### フェーズ4: Controller層の実装 ✅
 
 **ファイル**: `src/routes/consultations.controller.ts`
 
-- [ ] POST `/` エンドポイントの実装
-  - [ ] `zValidator` でバリデーション
-  - [ ] `c.get('appUserId')` で認証ユーザーID取得
-  - [ ] Service層の `createConsultation()` を呼び出し
-  - [ ] 201 Created を返却
-  - [ ] エラーハンドリング（500 Internal Server Error）
+- [x] POST `/` エンドポイントの実装
+  - [x] `zValidator` でバリデーション
+  - [x] `c.get('appUserId')` で認証ユーザーID取得
+  - [x] Service層の `createConsultation()` を呼び出し
+  - [x] 201 Created を返却
+  - [x] エラーハンドリング（500 Internal Server Error）
 
 **実装コード例:**
 
@@ -214,15 +214,15 @@ consultationsRoute.post(
 ```
 ---
 
-### フェーズ5: 動作確認 ⏳
+### フェーズ5: 動作確認 ✅
 
-- [ ] ローカルサーバー起動（`pnpm dev`）
-- [ ] 認証トークンの取得
-- [ ] curlでAPIテスト
-  - [ ] 公開状態で作成
-  - [ ] 下書き状態で作成
-  - [ ] バリデーションエラーの確認
-  - [ ] 作成した相談がGET APIで取得できることを確認
+- [x] ローカルサーバー起動（`pnpm dev`）
+- [x] 認証トークンの取得
+- [x] curlでAPIテスト
+  - [x] 公開状態で作成
+  - [x] 下書き状態で作成
+  - [x] バリデーションエラーの確認
+  - [x] 作成した相談がGET APIで取得できることを確認
 
 **curlコマンド例:**
 
@@ -264,16 +264,16 @@ curl -X POST http://localhost:8787/api/consultations \
 
 ### 必須実装
 
-- [ ] バリデーションスキーマ作成
-- [ ] Repository層に `create()` メソッド追加
-- [ ] Service層に `createConsultation()` メソッド追加
-- [ ] Controller層に POST エンドポイント追加
-- [ ] エラーハンドリング実装
+- [x] バリデーションスキーマ作成
+- [x] Repository層に `create()` メソッド追加
+- [x] Service層に `createConsultation()` メソッド追加
+- [x] Controller層に POST エンドポイント追加
+- [x] エラーハンドリング実装
 
 ### ドキュメント
 
-- [ ] API設計書の更新（実装完了マーク）
-- [ ] 動作確認手順の記録
+- [x] API設計書の更新（実装完了マーク）
+- [x] 動作確認手順の記録
 
 ---
 
