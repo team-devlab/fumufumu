@@ -27,8 +27,8 @@
 
 ```text
 # フィールド名: 型 (必須/任意) # 説明
-title: string (必須) # 相談タイトル
-body: string (必須) # 相談本文
+title: string (必須) # 相談タイトル（1〜100文字）
+body: string (必須) # 相談本文（10〜10,000文字）
 draft: boolean (任意) # 下書き状態フラグ。true: 下書き、false: 公開。デフォルト: false
 ```
 
@@ -56,8 +56,8 @@ draft: boolean (任意) # 下書き状態フラグ。true: 下書き、false: �
 - `id`: 自動採番
 - `authorId`: 認証情報（`c.get('appUserId')`）から自動取得
 - `created_at` / `updated_at`: DB側で自動生成
-- `hidden_at`: デフォルト`null`
-- `solved_at`: デフォルト`null`
+- `hidden_at`: デフォルト`null`（モデレーターが非表示にするためのフィールド、作成時は常にnull）
+- `solved_at`: デフォルト`null`（解決時に設定される）
 
 #### レスポンス (Responses)
 
@@ -100,11 +100,30 @@ author: ref # Authorオブジェクト（作成者情報）
 
 ##### 🔴 400 Bad Request
 
-(TODO)
+リクエストボディのバリデーションエラー。
+
+**バリデーションルール:**
+- `title`: 1〜100文字（必須）
+- `body`: 10〜10,000文字（必須）
+- `draft`: boolean型（任意、デフォルト: false）
+
+**想定されるエラーケース:**
+- `title`が空文字または未指定
+- `title`が100文字を超過
+- `body`が10文字未満または未指定
+- `body`が10,000文字を超過
+- `draft`がboolean以外の値
+
 
 ##### 🔴 401 Unauthorized
 
-(TODO)
+認証エラー。有効なセッションが存在しない、またはトークンが無効。
+
+```json
+{
+  "error": "Unauthorized. Session invalid or missing."
+}
+```
 
 ##### 🔴 500 Internal Server Error
 
@@ -150,11 +169,16 @@ const authorId = c.get('appUserId');  // authGuardミドルウェアが設定
 ```typescript
 // validators/consultation.validator.ts (予定)
 export const createConsultationSchema = z.object({
-  title: z.string().min(1).max(100),  // TODO: 制限値を決定
-  body: z.string().min(1).max(5000),  // TODO: 制限値を決定
+  title: z.string().min(1).max(100),
+  body: z.string().min(10).max(10000),
   draft: z.boolean().optional().default(false),
 });
 ```
+
+**バリデーション仕様:**
+- `title`: 1〜100文字（空文字不可）
+- `body`: 10〜10,000文字（最低10文字は必要）
+- `draft`: boolean型、省略時は`false`（公開状態）
 
 #### 3. Repository層でのINSERT
 
@@ -201,50 +225,71 @@ async createConsultation(data, authorId) {
 
 ---
 
-## 4. 未決定事項・検討中の項目
+## 4. 決定事項
 
-### バリデーション制限値の決定
+### ✅ バリデーション制限値
 
 **title の文字数制限:**
-- 最小文字数: 未決定（候補: 5文字以上）
-- 最大文字数: 未決定（候補: 100文字以下）
+- 最小文字数: 1文字
+- 最大文字数: 100文字
 
 **body の文字数制限:**
-- 最小文字数: 未決定（候補: 10文字以上）
-- 最大文字数: 未決定（候補: 5000文字以下）
+- 最小文字数: 10文字（簡潔すぎる相談を防ぐ）
+- 最大文字数: 10,000文字（コード例を含む技術相談にも対応可能）
 
-### レスポンス設計の詳細化
+**技術的背景:**
+- SQLite TEXT型の制限: 約1GB（実質的に無制限）
+- Cloudflare D1/Workers: メモリ制限128MB（10,000文字≈30KBは余裕）
+- 実用上の妥当性: Stack Overflowは30,000文字、Qiitaは制限なし
 
-現在は作成した相談の全情報（Consultationオブジェクト）を返す設計になっていますが、以下の選択肢も検討可能：
+### ✅ レスポンス設計
 
-**選択肢A（現在の設計）: 全情報を返す**
-- メリット: フロントエンドが作成後すぐに画面表示できる
-- デメリット: レスポンスサイズが大きい
+**作成した相談の全情報を返す仕様**
 
-**選択肢B: IDのみ返す**
-- メリット: レスポンスが軽量
-- デメリット: 詳細表示には別途取得APIが必要
+作成成功時（201 Created）は、作成した相談の完全なConsultationオブジェクトを返します。
 
-**選択肢C: IDと最小限の情報**
-- 中間案
+**採用理由:**
+- フロントエンドが作成後すぐに画面表示できる（追加のAPI呼び出し不要）
+- ユーザー体験の向上（作成→即座に内容確認）
+- list APIと同じ形式で統一性がある
 
-### hidden_at（非公開機能）の仕様
+### ✅ draftとhidden_atの仕様
 
-**検討事項:**
-- `draft`（下書き）と`hidden_at`（非公開）の違いは何か？
-- 相談作成時に`hidden_at`を設定する必要があるか？
-- 現在の想定: 作成時は常に`null`（デフォルト）
+**draft（下書きフラグ）:**
+- デフォルト: `false`（公開状態）
+- 相談作成時に`draft: true`を指定すると下書き保存
+- 投稿者自身のみが閲覧可能な状態
 
-**想定される使い分け:**
-- `draft=true`: 作成者のみ閲覧可能（未公開）
-- `draft=false` + `hidden_at=null`: 全員が閲覧可能（公開）
-- `draft=false` + `hidden_at!=null`: 一度公開したが後で非公開にした
+**hidden_at（非表示日時）:**
+- デフォルト: `null`（表示状態）
+- **モデレーターが非表示にするためのフィールド**（治安維持目的）
+- 相談作成APIでは常に`null`で作成される
+- 後から別のAPI（モデレーション機能）で設定される想定
+- `null`許容型（nullable）
 
-→ 作成APIでは`hidden_at`は常に`null`で問題ない可能性が高い
+**使い分け:**
+- `draft=true`: 投稿者による下書き保存（未公開）
+- `draft=false` + `hidden_at=null`: 通常の公開状態
+- `draft=false` + `hidden_at!=null`: モデレーターにより非表示にされた状態
 
-### エラーレスポンスの詳細化
+---
 
-400 Bad Request、401 Unauthorized、500 Internal Server Errorの具体的なレスポンス形式は実装時に決定。
+## 5. 今後の実装予定
+
+### モデレーション機能（将来実装）
+
+**hidden_at の更新API:**
+- モデレーターが不適切な相談を非表示にする機能
+- `PATCH /api/consultations/:id/hide` などのエンドポイント
+- `hidden_at`に現在日時を設定
+
+### 下書きの仕様補足
+
+現在の相談作成API（POST /api/consultations）では：
+- `draft: false`（デフォルト）で公開状態として作成
+- `draft: true`を指定すると下書き保存
+
+将来的に、下書きから公開への変更は更新API（PATCH）で対応する想定。
 
 -----
 
