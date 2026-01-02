@@ -32,5 +32,58 @@ export class ConsultationService {
 			data: responses
 		};
 	}
+
+	/**
+	 * 相談を新規作成する
+	 * 
+	 * @param data - 作成する相談データ
+	 * @param data.title - 相談タイトル
+	 * @param data.body - 相談本文
+	 * @param data.draft - 下書きフラグ（true: 下書き, false: 公開）
+	 * @param authorId - 投稿者ID（認証ユーザー）
+	 * @returns 作成された相談のレスポンス
+	 * @throws {Error} 作成失敗時
+	 */
+	// TODO: ここに createConsultation() メソッドを実装してください
+	// 実装のポイント:
+	// 1. Repository層の create() を呼び出す
+	// 2. 戻り値が null の場合はエラーをスロー
+	// 3. body_preview を生成（body.substring(0, 100)）
+	// 4. 日時をISO文字列に変換（toISOString()）
+	// 5. authorを整形（listConsultationsと同じパターン）
+	// 6. ConsultationResponse型で返す
+	async createConsultation(
+		data: {
+			title: string;
+			body: string;
+			draft: boolean
+		},
+		authorId: number
+	): Promise<ConsultationResponse> {
+		const createdConsultation = await this.repository.create({
+			...data,
+			authorId,
+		});
+
+		if (!createdConsultation) {
+			throw new Error("作成に失敗しました");
+		}
+
+		return {
+			id: createdConsultation.id,
+			title: createdConsultation.title,
+			body_preview: createdConsultation.body.substring(0, 100),
+			draft: createdConsultation.draft,
+			hidden_at: createdConsultation.hiddenAt?.toISOString() ?? null,
+			solved_at: createdConsultation.solvedAt?.toISOString() ?? null,
+			created_at: createdConsultation.createdAt.toISOString(),
+			updated_at: createdConsultation.updatedAt.toISOString(),
+			author: createdConsultation.author ? {
+				id: createdConsultation.author.id,
+				name: createdConsultation.author.name,
+				disabled: createdConsultation.author.disabled,
+			} : null
+		};
+	}
 }
 
