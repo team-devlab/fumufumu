@@ -3,20 +3,19 @@ import { Hono, type Context } from "hono";
 import { createFactory } from "hono/factory";
 import { zValidator } from "@hono/zod-validator";
 import type { z } from "zod";
-import type { Env, Variables } from "@/index";
-import { ConsultationRepository } from "@/repositories/consultation.repository";
-import { ConsultationService } from "@/services/consultation.service";
+import type { AppBindings } from "@/index";
 import { authGuard } from "@/middlewares/authGuard.middleware";
+import { injectConsultationService } from "@/middlewares/injectService.middleware";
 import type { ConsultationFilters } from "@/types/consultation.types";
 import { listConsultationsQuerySchema, createConsultationSchema } from "@/validators/consultation.validator";
 
 // ファクトリを作成（型安全なハンドラ生成用）
-const factory = createFactory<{ Bindings: Env; Variables: Variables }>();
+const factory = createFactory<AppBindings>();
 
 // zValidatorを通過した後のContext型
 // in: 入力型（HTTPリクエストの生の文字列）, out: 変換後の型（zodで変換された型）
 type ListConsultationsContext = Context<
-	{ Bindings: Env; Variables: Variables },
+	AppBindings,
 	string,
 	{ in: { query: unknown }; out: { query: z.output<typeof listConsultationsQuerySchema> } }
 >;
@@ -36,9 +35,8 @@ export async function listConsultations(c: ListConsultationsContext) {
 			solved: validatedQuery.solved,
 		};
 
-		const db = c.get("db");
-		const repository = new ConsultationRepository(db);
-		const service = new ConsultationService(repository);
+		// DIされたサービスを取得
+		const service = c.get("consultationService");
 		const result = await service.listConsultations(filters);
 
 		return c.json(result, 200);
@@ -63,17 +61,18 @@ export const listConsultationsHandlers = factory.createHandlers(
 );
 
 // ルーター作成
-export const consultationsRoute = new Hono<{ Bindings: Env; Variables: Variables }>();
+export const consultationsRoute = new Hono<AppBindings>();
 
-// 認証ミドルウェアを適用
+// ミドルウェアを適用（認証 → サービス注入の順）
 consultationsRoute.use("/*", authGuard);
+consultationsRoute.use("/*", injectConsultationService);
 
 // ルーティング登録
 consultationsRoute.get("/", ...listConsultationsHandlers);
 
 // 相談作成用のContext型定義
 type CreateConsultationContext = Context<
-	{ Bindings: Env; Variables: Variables },
+	AppBindings,
 	string,
 	{ in: { json: unknown }; out: { json: z.output<typeof createConsultationSchema> } }
 >;
@@ -84,9 +83,8 @@ export async function createConsultation(c: CreateConsultationContext) {
 		const validatedBody = c.req.valid("json");
 		const authorId = c.get("appUserId");
 
-		const db = c.get("db");
-		const repository = new ConsultationRepository(db);
-		const service = new ConsultationService(repository);
+		// DIされたサービスを取得
+		const service = c.get("consultationService");
 		const result = await service.createConsultation(validatedBody, authorId);
 
 		return c.json(result, 201);

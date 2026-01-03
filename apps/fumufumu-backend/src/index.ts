@@ -11,6 +11,7 @@ import * as consultationsSchema from '@/db/schema/consultations';
 import { authRouter } from '@/routes/auth.routes';
 import { consultationsRoute } from '@/routes/consultations.controller';
 import { protectedRouter } from '@/routes/protected.routes';
+import type { ConsultationService } from '@/services/consultation.service';
 
 // Drizzle ORMのスキーマを統合
 const schema = {
@@ -32,9 +33,16 @@ export interface Variables {
   auth: AuthInstance;
   appUserId: number;
   db: DbInstance;
+  consultationService: ConsultationService;
 }
 
-const app = new Hono<{ Bindings: Env, Variables: Variables }>()
+// Hono Bindingsの型定義（他のファイルで使用）
+export type AppBindings = {
+  Bindings: Env;
+  Variables: Variables;
+};
+
+const app = new Hono<AppBindings>()
 
 // --- 依存性注入 (DI) ミドルウェア ---
 app.use('*', async (c, next) => {
@@ -82,7 +90,7 @@ app.get('/health', async (c) => {
 
 
 // --- APIルーター（/api配下） ---
-const api = new Hono<{ Bindings: Env, Variables: Variables }>();
+const api = new Hono<AppBindings>();
 
 // カスタム認証エンドポイント（/api/auth/signup, /api/auth/signinなど）
 api.route('/auth', authRouter);
