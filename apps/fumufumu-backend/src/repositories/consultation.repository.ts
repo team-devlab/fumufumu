@@ -1,4 +1,5 @@
 import { consultations } from "@/db/schema/consultations";
+import { users } from "@/db/schema/user";
 import type { DbInstance } from "@/index";
 import { eq, and, isNull, isNotNull, type SQL } from "drizzle-orm";
 import type { ConsultationFilters } from "@/types/consultation.types";
@@ -63,6 +64,7 @@ export class ConsultationRepository {
 		draft: boolean;
 		authorId: number;
 	}) {
+		// 1. 相談データをINSERT
 		const [inserted] = await this.db
 			.insert(consultations)
 			.values({
@@ -77,18 +79,16 @@ export class ConsultationRepository {
 			throw new Error("相談の作成に失敗しました: insert操作がデータを返しませんでした");
 		}
 
-		const createdConsultation = await this.db.query.consultations.findFirst({
-			where: eq(consultations.id, inserted.id),
-			with: {
-				author: true,
-			},
+		// 2. author情報を別クエリで取得
+		const author = await this.db.query.users.findFirst({
+			where: eq(users.id, data.authorId),
 		});
 
-		if (!createdConsultation) {
-			throw new Error(`作成された相談の取得に失敗しました: id=${inserted.id}`);
-		}
-
-		return createdConsultation;
+		// 3. inserted データと author を合成して返す
+		return {
+			...inserted,
+			author: author || null,
+		};
 	}
 }
 
