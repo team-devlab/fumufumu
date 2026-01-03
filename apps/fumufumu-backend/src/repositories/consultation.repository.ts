@@ -55,7 +55,7 @@ export class ConsultationRepository {
 	 * @param data.draft - 下書きフラグ（true: 下書き, false: 公開）
 	 * @param data.authorId - 投稿者ID（認証ユーザー）
 	 * @returns 作成された相談データ（authorリレーション含む）
-	 * @throws {Error} データベースエラー（上位層で処理）
+	 * @throws {Error} データベースエラー、作成失敗時
 	 */
 	async create(data: {
 		title: string;
@@ -73,12 +73,22 @@ export class ConsultationRepository {
 			})
 			.returning();
 
-		return await this.db.query.consultations.findFirst({
+		if (!inserted) {
+			throw new Error("相談の作成に失敗しました: insert操作がデータを返しませんでした");
+		}
+
+		const createdConsultation = await this.db.query.consultations.findFirst({
 			where: eq(consultations.id, inserted.id),
 			with: {
 				author: true,
 			},
 		});
+
+		if (!createdConsultation) {
+			throw new Error(`作成された相談の取得に失敗しました: id=${inserted.id}`);
+		}
+
+		return createdConsultation;
 	}
 }
 
