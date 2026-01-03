@@ -36,6 +36,15 @@ export function createBetterAuth(db: DbInstance, env: Env) {
 		},
 		secret: env.BETTER_AUTH_SECRET,
 		baseURL: env.BETTER_AUTH_URL,
+		// セキュリティ設定（重要）
+		advanced: {
+            // クロスドメインでCookieを有効にする設定
+            defaultCookieAttributes: {
+                sameSite: "none", // 異なるドメイン間で送受信するため必須
+                secure: true,     // HTTPS必須
+                httpOnly: true    // JSからのアクセス禁止（セキュリティ確保）
+            }
+        },
 	});
 }
 

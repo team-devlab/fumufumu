@@ -1,4 +1,5 @@
 import { Hono } from 'hono'
+import { cors } from 'hono/cors';
 import { drizzle, DrizzleD1Database } from 'drizzle-orm/d1';
 
 import { createBetterAuth, type AuthInstance } from '@/auth';
@@ -25,6 +26,7 @@ export interface Env {
   DB: D1Database;
   BETTER_AUTH_SECRET: string;
   BETTER_AUTH_URL: string;
+  COOKIE_DOMAIN?: string;
 }
 
 // Hono Context (Variables) の拡張
@@ -50,6 +52,21 @@ app.use('*', async (c, next) => {
   await next();
 });
 
+// 1. CORSミドルウェアの設定 (Authの前に配置)
+app.use('/api/*', cors({
+  origin: (origin) => {
+    // 許可するフロントエンドのドメインを指定
+    // 開発環境と本番環境(Vercel)の両方を許可
+    return origin.endsWith('.vercel.app') || origin.includes('localhost') 
+      ? origin 
+      : 'https://fumufumu-phi.vercel.app'; // フォールバック
+  },
+  allowHeaders: ['Content-Type', 'Authorization', 'Cookie'],
+  allowMethods: ['POST', 'GET', 'OPTIONS', 'PUT', 'DELETE'],
+  exposeHeaders: ['Set-Cookie'],
+  maxAge: 600,
+  credentials: true, // Cookieをやり取りするために必須
+}));
 
 app.get('/', (c) => {
   return c.text('Hello Hono!')
@@ -79,7 +96,6 @@ app.get('/health', async (c) => {
     }, 503);
   }
 })
-
 
 // --- APIルーター（/api配下） ---
 const api = new Hono<{ Bindings: Env, Variables: Variables }>();
