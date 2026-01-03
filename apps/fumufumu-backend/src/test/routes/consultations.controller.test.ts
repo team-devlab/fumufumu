@@ -1,6 +1,5 @@
 import { describe, it, expect, vi, beforeEach } from 'vitest';
-import { listConsultations, createConsultation } from '../../routes/consultations.controller';
-import type { Context } from 'hono';
+import { listConsultations, createConsultation } from '@/routes/consultations.controller';
 
 describe('Consultations API', () => {
 	let mockContext: any;
