@@ -9,10 +9,28 @@ export class ConsultationService {
 
 	constructor(private repository: ConsultationRepository) {}
 
-	async listConsultations(filters?: ConsultationFilters): Promise<ConsultationListResponse> {
-		const consultationList = await this.repository.findAll(filters);
-
-		const responses: ConsultationResponse[] = consultationList.map((consultation) => ({
+	/**
+	 * 相談データをレスポンス形式に変換する
+	 * 
+	 * @param consultation - Repository層から取得した相談データ
+	 * @returns API レスポンス形式の相談データ
+	 */
+	private toConsultationResponse(consultation: {
+		id: number;
+		title: string;
+		body: string;
+		draft: boolean;
+		hiddenAt: Date | null;
+		solvedAt: Date | null;
+		createdAt: Date;
+		updatedAt: Date;
+		author: {
+			id: number;
+			name: string;
+			disabled: boolean;
+		} | null;
+	}): ConsultationResponse {
+		return {
 			id: consultation.id,
 			title: consultation.title,
 			body_preview: consultation.body.substring(0, ConsultationService.BODY_PREVIEW_LENGTH),
@@ -26,7 +44,12 @@ export class ConsultationService {
 				name: consultation.author.name,
 				disabled: consultation.author.disabled,
 			} : null
-		}));
+		};
+	}
+
+	async listConsultations(filters?: ConsultationFilters): Promise<ConsultationListResponse> {
+		const consultationList = await this.repository.findAll(filters);
+		const responses = consultationList.map(consultation => this.toConsultationResponse(consultation));
 
 		return { 
 			meta: { 
@@ -56,21 +79,7 @@ export class ConsultationService {
 			authorId,
 		});
 
-		return {
-			id: createdConsultation.id,
-			title: createdConsultation.title,
-			body_preview: createdConsultation.body.substring(0, ConsultationService.BODY_PREVIEW_LENGTH),
-			draft: createdConsultation.draft,
-			hidden_at: createdConsultation.hiddenAt?.toISOString() ?? null,
-			solved_at: createdConsultation.solvedAt?.toISOString() ?? null,
-			created_at: createdConsultation.createdAt.toISOString(),
-			updated_at: createdConsultation.updatedAt.toISOString(),
-			author: createdConsultation.author ? {
-				id: createdConsultation.author.id,
-				name: createdConsultation.author.name,
-				disabled: createdConsultation.author.disabled,
-			} : null
-		};
+		return this.toConsultationResponse(createdConsultation);
 	}
 }
 
