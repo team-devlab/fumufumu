@@ -9,8 +9,9 @@ import { injectConsultationService } from "@/middlewares/injectService.middlewar
 import type { ConsultationFilters } from "@/types/consultation.types";
 import { listConsultationsQuerySchema, createConsultationSchema } from "@/validators/consultation.validator";
 
-// ファクトリを作成（型安全なハンドラ生成用）
-const factory = createFactory<AppBindings>();
+// ============================================
+// 型定義
+// ============================================
 
 // zValidatorを通過した後のContext型
 // in: 入力型（HTTPリクエストの生の文字列）, out: 変換後の型（zodで変換された型）
@@ -20,7 +21,28 @@ type ListConsultationsContext = Context<
 	{ in: { query: unknown }; out: { query: z.output<typeof listConsultationsQuerySchema> } }
 >;
 
-// 相談一覧取得ハンドラ関数（テスト用にエクスポート）
+type CreateConsultationContext = Context<
+	AppBindings,
+	string,
+	{ in: { json: unknown }; out: { json: z.output<typeof createConsultationSchema> } }
+>;
+
+// ============================================
+// ファクトリ作成
+// ============================================
+
+const factory = createFactory<AppBindings>();
+
+// ============================================
+// ハンドラー関数
+// ============================================
+
+/**
+ * 相談一覧取得ハンドラ
+ * 
+ * @param c - Honoコンテキスト（バリデーション済みクエリパラメータを含む）
+ * @returns 相談一覧のJSONレスポンス
+ */
 export async function listConsultations(c: ListConsultationsContext) {
 	try {
 		// バリデーション済みのクエリパラメータを取得
@@ -52,32 +74,12 @@ export async function listConsultations(c: ListConsultationsContext) {
 	}
 }
 
-// 相談一覧取得ハンドラ（createHandlers版）
-export const listConsultationsHandlers = factory.createHandlers(
-	zValidator("query", listConsultationsQuerySchema),
-	async (c) => {
-		return listConsultations(c);
-	}
-);
-
-// ルーター作成
-export const consultationsRoute = new Hono<AppBindings>();
-
-// ミドルウェアを適用（認証 → サービス注入の順）
-consultationsRoute.use("/*", authGuard);
-consultationsRoute.use("/*", injectConsultationService);
-
-// ルーティング登録
-consultationsRoute.get("/", ...listConsultationsHandlers);
-
-// 相談作成用のContext型定義
-type CreateConsultationContext = Context<
-	AppBindings,
-	string,
-	{ in: { json: unknown }; out: { json: z.output<typeof createConsultationSchema> } }
->;
-
-// 相談作成ハンドラ関数
+/**
+ * 相談作成ハンドラ
+ * 
+ * @param c - Honoコンテキスト（バリデーション済みリクエストボディを含む）
+ * @returns 作成された相談のJSONレスポンス
+ */
 export async function createConsultation(c: CreateConsultationContext) {
 	try {
 		const validatedBody = c.req.valid("json");
@@ -100,13 +102,30 @@ export async function createConsultation(c: CreateConsultationContext) {
 	}
 }
 
-// 相談作成ハンドラ（createHandlers版）
-export const createConsultationHandlers = factory.createHandlers(
-	zValidator("json", createConsultationSchema),
-	async (c) => {
-		return createConsultation(c);
-	}
+// ============================================
+// ハンドラー（createHandlers版）
+// ============================================
+
+export const listConsultationsHandlers = factory.createHandlers(
+	zValidator("query", listConsultationsQuerySchema),
+	async (c) => listConsultations(c)
 );
 
-// POSTルーティング登録
+export const createConsultationHandlers = factory.createHandlers(
+	zValidator("json", createConsultationSchema),
+	async (c) => createConsultation(c)
+);
+
+// ============================================
+// ルーター設定
+// ============================================
+
+export const consultationsRoute = new Hono<AppBindings>();
+
+// ミドルウェア適用（認証 → サービス注入の順）
+consultationsRoute.use("/*", authGuard);
+consultationsRoute.use("/*", injectConsultationService);
+
+// ルーティング登録
+consultationsRoute.get("/", ...listConsultationsHandlers);
 consultationsRoute.post("/", ...createConsultationHandlers);
