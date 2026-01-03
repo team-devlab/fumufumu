@@ -1,10 +1,6 @@
 import { describe, it, expect, vi, beforeEach } from 'vitest';
-import { listConsultations } from '../../routes/consultations.controller';
-import { ConsultationService } from '@/services/consultation.service';
+import { listConsultations, createConsultation } from '../../routes/consultations.controller';
 import type { Context } from 'hono';
-
-// ConsultationServiceをモック化
-vi.mock('@/services/consultation.service');
 
 describe('Consultations API', () => {
 	let mockContext: any;
@@ -14,6 +10,12 @@ describe('Consultations API', () => {
 		// モックのリセット
 		vi.clearAllMocks();
 
+		// モックサービスの作成
+		mockConsultationService = {
+			listConsultations: vi.fn(),
+			createConsultation: vi.fn(),
+		};
+
 		// Contextのモック作成
 		mockContext = {
 			get: vi.fn((key: string) => {
@@ -22,6 +24,9 @@ describe('Consultations API', () => {
 				}
 				if (key === 'appUserId') {
 					return 1; // authGuard通過後のログインユーザーID
+				}
+				if (key === 'consultationService') {
+					return mockConsultationService; // DIされたサービスのモック
 				}
 				return undefined;
 			}),
@@ -34,10 +39,10 @@ describe('Consultations API', () => {
 					solved: undefined,
 				})),
 			},
-			json: vi.fn((data: any) => {
+			json: vi.fn((data: any, status?: number) => {
 				return {
 					json: async () => data,
-					status: 200,
+					status: status || 200,
 				};
 			}),
 		};
@@ -83,10 +88,7 @@ describe('Consultations API', () => {
 			};
 
 			// ConsultationServiceのモック設定
-			mockConsultationService = {
-				listConsultations: vi.fn().mockResolvedValue(mockData),
-			};
-			vi.mocked(ConsultationService).mockImplementation(() => mockConsultationService);
+			mockConsultationService.listConsultations.mockResolvedValue(mockData);
 
 			// テスト実行
 			const response = await listConsultations(mockContext);
@@ -164,10 +166,7 @@ describe('Consultations API', () => {
 				],
 			};
 
-			mockConsultationService = {
-				listConsultations: vi.fn().mockResolvedValue(mockData),
-			};
-			vi.mocked(ConsultationService).mockImplementation(() => mockConsultationService);
+			mockConsultationService.listConsultations.mockResolvedValue(mockData);
 
 			// テスト実行
 			const response = await listConsultations(mockContext);
@@ -213,10 +212,7 @@ describe('Consultations API', () => {
 				],
 			};
 
-			mockConsultationService = {
-				listConsultations: vi.fn().mockResolvedValue(mockData),
-			};
-			vi.mocked(ConsultationService).mockImplementation(() => mockConsultationService);
+			mockConsultationService.listConsultations.mockResolvedValue(mockData);
 
 			// テスト実行
 			const response = await listConsultations(mockContext);
@@ -262,10 +258,7 @@ describe('Consultations API', () => {
 				],
 			};
 
-			mockConsultationService = {
-				listConsultations: vi.fn().mockResolvedValue(mockData),
-			};
-			vi.mocked(ConsultationService).mockImplementation(() => mockConsultationService);
+			mockConsultationService.listConsultations.mockResolvedValue(mockData);
 
 			// テスト実行
 			const response = await listConsultations(mockContext);
@@ -311,10 +304,7 @@ describe('Consultations API', () => {
 				],
 			};
 
-			mockConsultationService = {
-				listConsultations: vi.fn().mockResolvedValue(mockData),
-			};
-			vi.mocked(ConsultationService).mockImplementation(() => mockConsultationService);
+			mockConsultationService.listConsultations.mockResolvedValue(mockData);
 
 			// テスト実行
 			const response = await listConsultations(mockContext);
@@ -373,10 +363,7 @@ describe('Consultations API', () => {
 				],
 			};
 
-			mockConsultationService = {
-				listConsultations: vi.fn().mockResolvedValue(mockData),
-			};
-			vi.mocked(ConsultationService).mockImplementation(() => mockConsultationService);
+			mockConsultationService.listConsultations.mockResolvedValue(mockData);
 
 			// テスト実行
 			const response = await listConsultations(mockContext);
@@ -422,10 +409,7 @@ describe('Consultations API', () => {
 				],
 			};
 
-			mockConsultationService = {
-				listConsultations: vi.fn().mockResolvedValue(mockData),
-			};
-			vi.mocked(ConsultationService).mockImplementation(() => mockConsultationService);
+			mockConsultationService.listConsultations.mockResolvedValue(mockData);
 
 			// テスト実行
 			const response = await listConsultations(mockContext);
@@ -477,10 +461,7 @@ describe('Consultations API', () => {
 				],
 			};
 
-			mockConsultationService = {
-				listConsultations: vi.fn().mockResolvedValue(mockData),
-			};
-			vi.mocked(ConsultationService).mockImplementation(() => mockConsultationService);
+			mockConsultationService.listConsultations.mockResolvedValue(mockData);
 
 			// テスト実行
 			const response = await listConsultations(mockContext);
@@ -501,10 +482,7 @@ describe('Consultations API', () => {
 
 		it('エラー処理: Serviceが失敗した場合に500エラーを返す', async () => {
 			// Serviceが例外をスローするようにモック設定
-			mockConsultationService = {
-					listConsultations: vi.fn().mockRejectedValue(new Error('DB connection failed')),
-			};
-			vi.mocked(ConsultationService).mockImplementation(() => mockConsultationService);
+			mockConsultationService.listConsultations.mockRejectedValue(new Error('DB connection failed'));
 
 			// Honoのjsonメソッドをスパイ
 			const jsonSpy = vi.spyOn(mockContext, 'json');
@@ -516,6 +494,129 @@ describe('Consultations API', () => {
 			expect(jsonSpy).toHaveBeenCalledWith(
 					expect.objectContaining({ error: 'Internal server error' }),
 					500
+			);
+		});
+	});
+
+	describe('POST /api/consultations', () => {
+		beforeEach(() => {
+			// リクエストボディのモック設定
+			mockContext.req.valid = vi.fn(() => ({
+				title: 'Test Consultation',
+				body: 'This is a test consultation body with more than 10 characters.',
+				draft: false,
+			}));
+		});
+
+		it('相談作成: 新しい相談を作成できる', async () => {
+			// モックデータの準備
+			const mockData = {
+				id: 1,
+				title: 'Test Consultation',
+				body_preview: 'This is a test consultation body with more than 10 characters.',
+				draft: false,
+				hidden_at: null,
+				solved_at: null,
+				created_at: '2025-11-01T09:00:00Z',
+				updated_at: '2025-11-01T09:00:00Z',
+				author: {
+					id: 1,
+					name: 'Test User',
+					disabled: false,
+				},
+			};
+
+			// ConsultationServiceのモック設定
+			mockConsultationService.createConsultation.mockResolvedValue(mockData);
+
+			// テスト実行
+			const response = await createConsultation(mockContext);
+			const data: any = await response.json();
+
+			// アサーション
+			expect(mockConsultationService.createConsultation).toHaveBeenCalledWith(
+				{
+					title: 'Test Consultation',
+					body: 'This is a test consultation body with more than 10 characters.',
+					draft: false,
+				},
+				1 // appUserId
+			);
+
+			expect(data).toHaveProperty('id');
+			expect(data).toHaveProperty('title');
+			expect(data).toHaveProperty('body_preview');
+			expect(data).toHaveProperty('draft');
+			expect(data).toHaveProperty('hidden_at');
+			expect(data).toHaveProperty('solved_at');
+			expect(data).toHaveProperty('created_at');
+			expect(data).toHaveProperty('updated_at');
+			expect(data).toHaveProperty('author');
+			expect(data.title).toBe('Test Consultation');
+			expect(data.draft).toBe(false);
+			expect(response.status).toBe(201);
+		});
+
+		it('下書き作成: draft=trueで相談を作成できる', async () => {
+			// リクエストボディのモック設定
+			mockContext.req.valid = vi.fn(() => ({
+				title: 'Draft Consultation',
+				body: 'This is a draft consultation body.',
+				draft: true,
+			}));
+
+			// モックデータの準備
+			const mockData = {
+				id: 2,
+				title: 'Draft Consultation',
+				body_preview: 'This is a draft consultation body.',
+				draft: true,
+				hidden_at: null,
+				solved_at: null,
+				created_at: '2025-11-01T09:00:00Z',
+				updated_at: '2025-11-01T09:00:00Z',
+				author: {
+					id: 1,
+					name: 'Test User',
+					disabled: false,
+				},
+			};
+
+			mockConsultationService.createConsultation.mockResolvedValue(mockData);
+
+			// テスト実行
+			const response = await createConsultation(mockContext);
+			const data: any = await response.json();
+
+			// アサーション
+			expect(mockConsultationService.createConsultation).toHaveBeenCalledWith(
+				{
+					title: 'Draft Consultation',
+					body: 'This is a draft consultation body.',
+					draft: true,
+				},
+				1
+			);
+			expect(data.draft).toBe(true);
+		});
+
+		it('エラー処理: Serviceが失敗した場合に500エラーを返す', async () => {
+			// Serviceが例外をスローするようにモック設定
+			mockConsultationService.createConsultation.mockRejectedValue(new Error('DB insert failed'));
+
+			// Honoのjsonメソッドをスパイ
+			const jsonSpy = vi.spyOn(mockContext, 'json');
+
+			// テスト実行
+			await createConsultation(mockContext);
+
+			// アサーション: jsonが500ステータスで呼ばれていることを確認
+			expect(jsonSpy).toHaveBeenCalledWith(
+				expect.objectContaining({
+					error: 'Internal server error',
+					message: '相談の作成に失敗しました',
+				}),
+				500
 			);
 		});
 	});
