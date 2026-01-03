@@ -8,6 +8,7 @@ import { authGuard } from "@/middlewares/authGuard.middleware";
 import { injectConsultationService } from "@/middlewares/injectService.middleware";
 import type { ConsultationFilters } from "@/types/consultation.types";
 import { listConsultationsQuerySchema, createConsultationSchema } from "@/validators/consultation.validator";
+import { AppError } from "@/errors/AppError";
 
 // ============================================
 // 型定義
@@ -64,6 +65,19 @@ export async function listConsultations(c: ListConsultationsContext) {
 		return c.json(result, 200);
 	} catch (error) {
 		console.error('[listConsultations] Failed to fetch consultations:', error);
+		
+		// AppErrorの場合は適切なステータスコードを返す
+		if (error instanceof AppError) {
+			return c.json(
+				{
+					error: error.name,
+					message: error.message,
+				},
+				error.statusCode as any
+			);
+		}
+
+		// 予期しないエラー
 		return c.json(
 			{
 				error: 'Internal server error',
@@ -92,6 +106,19 @@ export async function createConsultation(c: CreateConsultationContext) {
 		return c.json(result, 201);
 	} catch (error) {
 		console.error('[createConsultation] 相談の作成に失敗しました:', error);
+		
+		// AppErrorの場合は適切なステータスコードを返す
+		if (error instanceof AppError) {
+			return c.json(
+				{
+					error: error.name,
+					message: error.message,
+				},
+				error.statusCode as any
+			);
+		}
+
+		// 予期しないエラー
 		return c.json(
 			{
 				error: 'Internal server error',
