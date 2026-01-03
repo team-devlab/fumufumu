@@ -2,8 +2,11 @@
 import type { ConsultationRepository } from "@/repositories/consultation.repository";
 import type { ConsultationFilters } from "@/types/consultation.types";
 import type { ConsultationResponse, ConsultationListResponse } from "@/types/consultation.response";
+import type { CreateConsultationInput } from "@/validators/consultation.validator";
 
 export class ConsultationService {
+	private static readonly BODY_PREVIEW_LENGTH = 100;
+
 	constructor(private repository: ConsultationRepository) {}
 
 	async listConsultations(filters?: ConsultationFilters): Promise<ConsultationListResponse> {
@@ -12,7 +15,7 @@ export class ConsultationService {
 		const responses: ConsultationResponse[] = consultationList.map((consultation) => ({
 			id: consultation.id,
 			title: consultation.title,
-			body_preview: consultation.body.substring(0, 100),
+			body_preview: consultation.body.substring(0, ConsultationService.BODY_PREVIEW_LENGTH),
 			draft: consultation.draft,
 			hidden_at: consultation.hiddenAt?.toISOString() ?? null,
 			solved_at: consultation.solvedAt?.toISOString() ?? null,
@@ -45,11 +48,7 @@ export class ConsultationService {
 	 * @throws {Error} 作成失敗時
 	 */
 	async createConsultation(
-		data: {
-			title: string;
-			body: string;
-			draft: boolean
-		},
+		data: CreateConsultationInput ,
 		authorId: number
 	): Promise<ConsultationResponse> {
 		const createdConsultation = await this.repository.create({
@@ -57,14 +56,10 @@ export class ConsultationService {
 			authorId,
 		});
 
-		if (!createdConsultation) {
-			throw new Error("作成に失敗しました");
-		}
-
 		return {
 			id: createdConsultation.id,
 			title: createdConsultation.title,
-			body_preview: createdConsultation.body.substring(0, 100),
+			body_preview: createdConsultation.body.substring(0, ConsultationService.BODY_PREVIEW_LENGTH),
 			draft: createdConsultation.draft,
 			hidden_at: createdConsultation.hiddenAt?.toISOString() ?? null,
 			solved_at: createdConsultation.solvedAt?.toISOString() ?? null,
