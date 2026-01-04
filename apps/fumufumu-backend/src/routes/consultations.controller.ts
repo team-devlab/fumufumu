@@ -150,8 +150,7 @@ export const createConsultationHandlers = factory.createHandlers(
 export const consultationsRoute = new Hono<AppBindings>();
 
 // ミドルウェア適用（認証 → サービス注入の順）
-consultationsRoute.use("/*", authGuard);
-consultationsRoute.use("/*", injectConsultationService);
+consultationsRoute.use("/*", authGuard, injectConsultationService);
 
 // ルーティング登録
 consultationsRoute.get("/", ...listConsultationsHandlers);
