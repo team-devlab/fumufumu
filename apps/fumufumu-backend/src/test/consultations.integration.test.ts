@@ -1,0 +1,337 @@
+import { env, applyD1Migrations } from 'cloudflare:test';
+import { describe, it, expect, beforeAll } from 'vitest';
+import app from '../index';
+
+// DBの型定義
+interface CloudflareBindings {
+	DB: D1Database;
+	BETTER_AUTH_SECRET: string;
+	BETTER_AUTH_URL: string;
+}
+
+// マイグレーション型定義
+interface D1Migration {
+	name: string;
+	queries: string[];
+}
+
+// Vite の import.meta.glob 型定義を追加
+declare global {
+	interface ImportMeta {
+		glob<T = any>(
+			pattern: string | string[],
+			options?: {
+				eager?: boolean;
+				import?: string;
+				query?: string;
+				as?: string;
+			}
+		): Record<string, T>;
+	}
+}
+
+// マイグレーションヘルパー
+function getMigrations(): D1Migration[] {
+	const journalGlobs = import.meta.glob('../../drizzle/meta/_journal.json', { eager: true });
+	const journalPath = Object.keys(journalGlobs)[0];
+	const journal = journalGlobs[journalPath] as { entries: { tag: string }[] };
+
+	if (!journal) {
+		throw new Error('Migration journal not found');
+	}
+
+	const sqlGlobs = import.meta.glob('../../drizzle/*.sql', {
+		eager: true,
+		query: '?raw',
+		import: 'default'
+	});
+
+	return journal.entries.map((entry) => {
+		const sqlKey = `../../drizzle/${entry.tag}.sql`;
+		const sqlContent = sqlGlobs[sqlKey] as string;
+
+		if (!sqlContent) {
+			throw new Error(`Migration file not found for: ${entry.tag}`);
+		}
+
+		const queries = sqlContent
+			.split('--> statement-breakpoint')
+			.map((q) => q.trim())
+			.filter((q) => q.length > 0);
+
+		return {
+			name: entry.tag,
+			queries: queries,
+		};
+	});
+}
+
+describe('Consultations API Integration Tests', () => {
+	let sessionCookie: string | null = null;
+
+	// テスト実行前のセットアップ
+	beforeAll(async () => {
+		// マイグレーション実行
+		const migrations = getMigrations();
+		await applyD1Migrations((env as unknown as CloudflareBindings).DB, migrations);
+
+		// テストユーザーを作成してログイン
+		const testUser = {
+			name: 'Test User for Consultations',
+			email: `consultation-test-${Date.now()}@example.com`,
+			password: 'password123456',
+		};
+
+		const signupReq = new Request('http://localhost/api/auth/signup', {
+			method: 'POST',
+			headers: { 'Content-Type': 'application/json' },
+			body: JSON.stringify(testUser),
+		});
+
+		const signupRes = await app.fetch(signupReq, env);
+		expect(signupRes.status).toBe(200);
+
+		sessionCookie = signupRes.headers.get('set-cookie');
+		expect(sessionCookie).toBeTruthy();
+	});
+
+	describe('POST /api/consultations', () => {
+		it('相談作成: 新しい相談を作成できる', async () => {
+			const req = new Request('http://localhost/api/consultations', {
+				method: 'POST',
+				headers: {
+					'Content-Type': 'application/json',
+					'Cookie': sessionCookie!,
+				},
+				body: JSON.stringify({
+					title: '統合テスト相談',
+					body: 'これは統合テストで作成された相談です。実際のDBを使用しています。',
+					draft: false,
+				}),
+			});
+
+			const res = await app.fetch(req, env);
+			expect(res.status).toBe(201);
+
+			const data = await res.json() as any;
+			expect(data).toHaveProperty('id');
+			expect(data.title).toBe('統合テスト相談');
+			expect(data.draft).toBe(false);
+			expect(data).toHaveProperty('created_at');
+			expect(data).toHaveProperty('updated_at');
+			expect(data).toHaveProperty('author');
+			expect(data.author).toHaveProperty('name');
+		});
+
+		it('下書き作成: draft=trueで相談を作成できる', async () => {
+			const req = new Request('http://localhost/api/consultations', {
+				method: 'POST',
+				headers: {
+					'Content-Type': 'application/json',
+					'Cookie': sessionCookie!,
+				},
+				body: JSON.stringify({
+					title: '下書き相談',
+					body: 'これは下書きです。本文を10文字以上にします。',
+					draft: true,
+				}),
+			});
+
+			const res = await app.fetch(req, env);
+			
+			// エラー時はレスポンスボディを出力
+			if (res.status !== 201) {
+				const error = await res.json();
+				console.error('Error response:', error);
+			}
+			
+			expect(res.status).toBe(201);
+
+			const data = await res.json() as any;
+			expect(data.draft).toBe(true);
+		});
+
+		it('draftを指定しない場合、デフォルトでfalseになる', async () => {
+			const req = new Request('http://localhost/api/consultations', {
+				method: 'POST',
+				headers: {
+					'Content-Type': 'application/json',
+					'Cookie': sessionCookie!,
+				},
+				body: JSON.stringify({
+					title: 'デフォルト相談',
+					body: 'draftを指定していません。',
+					// draft を指定しない
+				}),
+			});
+
+			const res = await app.fetch(req, env);
+			expect(res.status).toBe(201);
+
+			const data = await res.json() as any;
+			expect(data.draft).toBe(false); // デフォルト値
+		});
+
+		it('body_previewが100文字に切り出される', async () => {
+			const longBody = 'A'.repeat(200); // 200文字
+			const req = new Request('http://localhost/api/consultations', {
+				method: 'POST',
+				headers: {
+					'Content-Type': 'application/json',
+					'Cookie': sessionCookie!,
+				},
+				body: JSON.stringify({
+					title: '長文テスト',
+					body: longBody,
+				}),
+			});
+
+			const res = await app.fetch(req, env);
+			expect(res.status).toBe(201);
+
+			const data = await res.json() as any;
+			expect(data.body_preview).toBe('A'.repeat(100)); // 100文字に切り出されている
+			expect(data.body_preview.length).toBe(100);
+		});
+
+		it('created_atとupdated_atが自動生成される', async () => {
+			const req = new Request('http://localhost/api/consultations', {
+				method: 'POST',
+				headers: {
+					'Content-Type': 'application/json',
+					'Cookie': sessionCookie!,
+				},
+				body: JSON.stringify({
+					title: 'タイムスタンプテスト',
+					body: 'created_atとupdated_atの自動生成を確認',
+				}),
+			});
+
+			const res = await app.fetch(req, env);
+			expect(res.status).toBe(201);
+
+			const data = await res.json() as any;
+			expect(data.created_at).toBeDefined();
+			expect(data.updated_at).toBeDefined();
+
+			// 有効な日付フォーマットか確認
+			const createdAt = new Date(data.created_at);
+			expect(createdAt).toBeInstanceOf(Date);
+			expect(createdAt.getTime()).not.toBeNaN();
+
+			// 現在時刻に近いか確認（5秒以内）
+			const now = Date.now();
+			const createdTime = createdAt.getTime();
+			expect(Math.abs(now - createdTime)).toBeLessThan(5000);
+		});
+
+		it('hidden_atとsolved_atがnullで初期化される', async () => {
+			const req = new Request('http://localhost/api/consultations', {
+				method: 'POST',
+				headers: {
+					'Content-Type': 'application/json',
+					'Cookie': sessionCookie!,
+				},
+				body: JSON.stringify({
+					title: 'null初期化テスト',
+					body: 'hidden_atとsolved_atがnullで初期化されることを確認',
+				}),
+			});
+
+			const res = await app.fetch(req, env);
+			expect(res.status).toBe(201);
+
+			const data = await res.json() as any;
+			expect(data.hidden_at).toBeNull();
+			expect(data.solved_at).toBeNull();
+		});
+
+		it('タイトルが空の場合400エラーを返す', async () => {
+			const req = new Request('http://localhost/api/consultations', {
+				method: 'POST',
+				headers: {
+					'Content-Type': 'application/json',
+					'Cookie': sessionCookie!,
+				},
+				body: JSON.stringify({
+					title: '', // 空
+					body: '本文はあります',
+				}),
+			});
+
+			const res = await app.fetch(req, env);
+			expect(res.status).toBe(400); // zodバリデーションエラー
+		});
+
+		it('本文が10文字未満の場合400エラーを返す', async () => {
+			const req = new Request('http://localhost/api/consultations', {
+				method: 'POST',
+				headers: {
+					'Content-Type': 'application/json',
+					'Cookie': sessionCookie!,
+				},
+				body: JSON.stringify({
+					title: 'テスト',
+					body: 'short', // 5文字（10文字未満）
+				}),
+			});
+
+			const res = await app.fetch(req, env);
+			expect(res.status).toBe(400);
+		});
+
+		it('タイトルが100文字超の場合400エラーを返す', async () => {
+			const req = new Request('http://localhost/api/consultations', {
+				method: 'POST',
+				headers: {
+					'Content-Type': 'application/json',
+					'Cookie': sessionCookie!,
+				},
+				body: JSON.stringify({
+					title: 'A'.repeat(101), // 101文字
+					body: 'これはテスト本文です。',
+				}),
+			});
+
+			const res = await app.fetch(req, env);
+			expect(res.status).toBe(400);
+		});
+
+		it('認証なしの場合401エラーを返す', async () => {
+			const req = new Request('http://localhost/api/consultations', {
+				method: 'POST',
+				headers: {
+					'Content-Type': 'application/json',
+					// Cookieなし
+				},
+				body: JSON.stringify({
+					title: 'テスト',
+					body: '認証なしテスト',
+				}),
+			});
+
+			const res = await app.fetch(req, env);
+			expect(res.status).toBe(401); // 認証エラー
+		});
+	});
+
+	describe('GET /api/consultations', () => {
+		it('相談一覧を取得できる', async () => {
+			const req = new Request('http://localhost/api/consultations', {
+				headers: {
+					'Cookie': sessionCookie!,
+				},
+			});
+
+			const res = await app.fetch(req, env);
+			expect(res.status).toBe(200);
+
+			const data = await res.json() as any;
+			expect(data).toHaveProperty('meta');
+			expect(data).toHaveProperty('data');
+			expect(data.meta).toHaveProperty('total');
+			expect(Array.isArray(data.data)).toBe(true);
+		});
+	});
+});
+

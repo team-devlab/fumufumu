@@ -11,6 +11,7 @@ export default defineWorkersConfig({
     include: [
       'src/test/index.test.ts',
       'src/test/integration.test.ts',
+      'src/test/consultations.integration.test.ts',
     ],
     poolOptions: {
       workers: {
