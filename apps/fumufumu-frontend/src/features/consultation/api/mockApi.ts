@@ -50,8 +50,7 @@ const MOCK_DATA: Consultation[] = [
   },
 ];
 
-// 戻り値の型も ConsultationListResponse に変更
-export const fetchConsultations = async (): Promise<ConsultationListResponse> => {
+export const fetchConsultationsMock = async (): Promise<ConsultationListResponse> => {
   return new Promise((resolve) => {
     setTimeout(() => {
       resolve({
