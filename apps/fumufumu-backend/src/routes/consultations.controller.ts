@@ -139,8 +139,25 @@ export const listConsultationsHandlers = factory.createHandlers(
 );
 
 export const createConsultationHandlers = factory.createHandlers(
-	zValidator("json", createConsultationSchema),
-	async (c) => createConsultation(c)
+  // 第3引数にフックを追加して、明示的にエラーをthrowさせる必要があります
+  zValidator("json", createConsultationSchema, (result, c) => {
+    if (!result.success) {
+      // ここで throw することで、app.onError が呼ばれるようになります
+      throw result.error;
+    }
+  }),
+  async (c) => {
+    // 1. バリデーション済みのデータを取得
+    const validatedBody = c.req.valid("json");
+    
+    // 2. コンテキストから依存を取得
+    const authorId = c.get("appUserId");
+    const service = c.get("consultationService");
+
+    // 3. サービス実行
+    const result = await service.createConsultation(validatedBody, authorId);
+    return c.json(result, 201);
+  }
 );
 
 // ============================================
