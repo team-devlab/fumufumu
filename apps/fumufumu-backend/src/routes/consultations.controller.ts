@@ -82,47 +82,6 @@ export async function listConsultations(c: ListConsultationsContext) {
 	}
 }
 
-/**
- * 相談作成ハンドラ
- * 
- * @param c - Honoコンテキスト（バリデーション済みリクエストボディを含む）
- * @returns 作成された相談のJSONレスポンス
- */
-export async function createConsultation(c: CreateConsultationContext) {
-	try {
-		const validatedBody = c.req.valid("json");
-		const authorId = c.get("appUserId");
-
-		// DIされたサービスを取得
-		const service = c.get("consultationService");
-		const result = await service.createConsultation(validatedBody, authorId);
-
-		return c.json(result, 201);
-	} catch (error) {
-		console.error('[createConsultation] 相談の作成に失敗しました:', error);
-		
-		// AppErrorの場合は適切なステータスコードを返す
-		if (error instanceof AppError) {
-			return c.json(
-				{
-					error: error.name,
-					message: error.message,
-				},
-				error.statusCode as any
-			);
-		}
-
-		// 予期しないエラー
-		return c.json(
-			{
-				error: 'Internal server error',
-				message: '相談の作成に失敗しました',
-			},
-			500
-		);
-	}
-}
-
 // ============================================
 // ハンドラー（createHandlers版）
 // ============================================
