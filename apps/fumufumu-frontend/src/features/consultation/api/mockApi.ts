@@ -1,3 +1,4 @@
+import "server-only";
 import { Consultation, ConsultationListResponse } from "../types";
 
 // Backendの形式に合わせたモックデータ
