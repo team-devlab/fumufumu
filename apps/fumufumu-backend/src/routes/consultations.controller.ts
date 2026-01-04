@@ -22,12 +22,6 @@ type ListConsultationsContext = Context<
 	{ in: { query: unknown }; out: { query: z.output<typeof listConsultationsQuerySchema> } }
 >;
 
-type CreateConsultationContext = Context<
-	AppBindings,
-	string,
-	{ in: { json: unknown }; out: { json: z.output<typeof createConsultationSchema> } }
->;
-
 // ============================================
 // ファクトリ作成
 // ============================================
