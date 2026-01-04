@@ -9,7 +9,7 @@ export class AppError extends Error {
 		public readonly statusCode: number
 	) {
 		super(message);
-		this.name = this.constructor.name;
+		this.name = "AppError";
 	}
 }
 
@@ -19,6 +19,7 @@ export class AppError extends Error {
 export class DatabaseError extends AppError {
 	constructor(message: string) {
 		super(message, 500);
+		this.name = "DatabaseError";
 	}
 }
 
@@ -28,6 +29,7 @@ export class DatabaseError extends AppError {
 export class NotFoundError extends AppError {
 	constructor(message: string) {
 		super(message, 404);
+		this.name = "NotFoundError";
 	}
 }
 
@@ -37,6 +39,7 @@ export class NotFoundError extends AppError {
 export class ConflictError extends AppError {
 	constructor(message: string) {
 		super(message, 409);
+		this.name = "ConflictError";
 	}
 }
 
@@ -46,6 +49,7 @@ export class ConflictError extends AppError {
 export class ForbiddenError extends AppError {
 	constructor(message: string) {
 		super(message, 403);
+		this.name = "ForbiddenError";
 	}
 }
 
@@ -55,6 +59,7 @@ export class ForbiddenError extends AppError {
 export class ValidationError extends AppError {
 	constructor(message: string) {
 		super(message, 400);
+		this.name = "ValidationError";
 	}
 }
 
