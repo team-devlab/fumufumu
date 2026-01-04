@@ -1,5 +1,5 @@
 import "server-only";
-import { cookies } from "next/headers"; // 👈 追加
+import { cookies } from "next/headers";
 import { apiClient } from "@/lib/api/client";
 import { ConsultationListResponse } from "../types";
 
@@ -10,7 +10,6 @@ export const fetchConsultationsApi = async (): Promise<ConsultationListResponse>
   return apiClient<ConsultationListResponse>("/api/consultations", {
     method: "GET",
     headers: {
-      // 取得したCookieを文字列としてヘッダーにセット（これでバックエンドに認証情報が渡る）
       Cookie: cookieStore.toString(), 
     },
     cache: "no-store", 

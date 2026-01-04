@@ -1,30 +1,34 @@
-/**
- * 投稿者情報 (Author)
- */
 export interface Author {
-  id: number; // Backend実装の authorId: number から推測
+  id: number;
   name: string;
   disabled: boolean;
 }
 
-/**
- * 相談 (Consultation) - APIレスポンス形式
- */
 export interface Consultation {
-  id: number; // DBのID型に合わせる（通常SQLならnumberが多いですが、Backendの実装依存。一旦numberとします）
+  id: number;
   title: string;
-  body_preview: string; // 一覧用はプレビューのみ
+  /**
+   * 一覧表示用にトリミングされた本文（全文ではない点に注意）
+   */
+  body_preview: string;
   draft: boolean;
-  hidden_at: string | null; // ISO String
-  solved_at: string | null; // これが入っていれば「解決済み」
+  /**
+   * ISO 8601 format (e.g. "2026-01-04T10:00:00Z")
+   */
+  hidden_at: string | null;
+  /**
+   * 解決日時 (ISO 8601 format)
+   * ※この値が存在する場合「解決済み」として扱う
+   */
+  solved_at: string | null;
   created_at: string;
   updated_at: string;
+  /**
+   * 退会済み、または削除されたユーザーの場合は null
+   */
   author: Author | null;
 }
 
-/**
- * 一覧取得時のAPIレスポンス構造
- */
 export interface ConsultationListResponse {
   meta: {
     total: number;

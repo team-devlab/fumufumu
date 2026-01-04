@@ -6,9 +6,10 @@ type Props = {
 };
 
 export const ConsultationItem: React.FC<Props> = ({ consultation }) => {
-  const timeAgo = "2時間前"; // ここは一旦固定のまま（別途日付ライブラリで created_at から計算推奨）
+  // TODO: 日付フォーマット用のライブラリ(date-fns等)を導入して動的に計算する
+  const timeAgo = "2時間前";
   
-  // Backendには status フィールドがないため、solved_at の有無で判定
+  // Backendには status フィールドがないため、solved_at(解決日時)の有無で判定している
   const isResolved = !!consultation.solved_at;
 
   return (
@@ -17,6 +18,7 @@ export const ConsultationItem: React.FC<Props> = ({ consultation }) => {
       <div className="flex items-center justify-between mb-3">
         <div className="flex items-center space-x-3">
           <div className="w-10 h-10 rounded-full bg-teal-100 flex items-center justify-center text-teal-600 font-bold">
+            {/* ユーザーアイコン（仮） */}
             <svg
               className="w-6 h-6"
               fill="none"
@@ -39,7 +41,7 @@ export const ConsultationItem: React.FC<Props> = ({ consultation }) => {
           </div>
         </div>
         
-        {/* Status Badge: solved_at があれば解決済み */}
+        {/* Status Badge */}
         {isResolved && (
           <span className="bg-teal-600 text-white text-xs px-3 py-1 rounded-full font-medium">
             解決済み
@@ -52,7 +54,7 @@ export const ConsultationItem: React.FC<Props> = ({ consultation }) => {
         <h3 className="text-lg font-bold text-gray-800 mb-2">
           {consultation.title}
         </h3>
-        {/* body ではなく body_preview を表示 */}
+        {/* 一覧画面のため、全文ではなくプレビュー用テキストを表示 */}
         <p className="text-gray-600 text-sm leading-relaxed">
           {consultation.body_preview}
         </p>
@@ -60,14 +62,14 @@ export const ConsultationItem: React.FC<Props> = ({ consultation }) => {
 
       {/* Footer */}
       <div className="flex items-center justify-between">
-        <div className="flex space-x-2">
-           <span className="px-3 py-1 bg-gray-100 text-gray-600 text-xs rounded-full">
-             キャリア
-           </span>
+        <div className="flex items-center justify-between">
+          <div className="flex space-x-2">
+            {/* TODO: タグ機能はBackend未実装のためハードコードで表示 */}
+            <span className="px-3 py-1 bg-gray-100 text-gray-600 text-xs rounded-full">
+              キャリア
+            </span>
+          </div>
         </div>
-        
-        {/* コメント数などはBackendレスポンスに含まれていないため、一旦非表示または仮置き */}
-        {/* 必要であればConsultationResponseにcomment_countを追加するようBackendに依頼する */}
       </div>
     </div>
   );
