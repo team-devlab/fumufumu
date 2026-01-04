@@ -1,5 +1,5 @@
-import React from "react";
-import { Consultation } from "../types";
+import type React from "react";
+import type { Consultation } from "../types";
 
 type Props = {
   consultation: Consultation;
@@ -8,7 +8,7 @@ type Props = {
 export const ConsultationItem: React.FC<Props> = ({ consultation }) => {
   // TODO: 日付フォーマット用のライブラリ(date-fns等)を導入して動的に計算する
   const timeAgo = "2時間前";
-  
+
   // Backendには status フィールドがないため、solved_at(解決日時)の有無で判定している
   const isResolved = !!consultation.solved_at;
 
@@ -24,6 +24,8 @@ export const ConsultationItem: React.FC<Props> = ({ consultation }) => {
               fill="none"
               stroke="currentColor"
               viewBox="0 0 24 24"
+              role="img"
+              aria-label="ユーザーアイコン"
             >
               <path
                 strokeLinecap="round"
@@ -40,7 +42,7 @@ export const ConsultationItem: React.FC<Props> = ({ consultation }) => {
             <span className="text-xs text-gray-400">{timeAgo}</span>
           </div>
         </div>
-        
+
         {/* Status Badge */}
         {isResolved && (
           <span className="bg-teal-600 text-white text-xs px-3 py-1 rounded-full font-medium">

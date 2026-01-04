@@ -1,5 +1,5 @@
-import { ConsultationList } from "@/features/consultation/components/ConsultationList";
 import { fetchConsultations } from "@/features/consultation/api";
+import { ConsultationList } from "@/features/consultation/components/ConsultationList";
 
 export default async function ConsultationListPage() {
   const response = await fetchConsultations();

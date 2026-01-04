@@ -1,4 +1,4 @@
-import { Consultation } from "../types";
+import type { Consultation } from "../types";
 import { ConsultationItem } from "./ConsultationItem";
 
 type Props = {
@@ -7,7 +7,9 @@ type Props = {
 
 export const ConsultationList = ({ consultations }: Props) => {
   if (!consultations.length) {
-    return <div className="p-8 text-center text-gray-500">相談が見つかりません</div>;
+    return (
+      <div className="p-8 text-center text-gray-500">相談が見つかりません</div>
+    );
   }
 
   return (
