@@ -17,21 +17,7 @@ export class ConsultationService {
 	 * @param consultation - Repository層から取得した相談データ
 	 * @returns API レスポンス形式の相談データ
 	 */
-	private toConsultationResponse(consultation: {
-		id: number;
-		title: string;
-		body: string;
-		draft: boolean;
-		hiddenAt: Date | null;
-		solvedAt: Date | null;
-		createdAt: Date;
-		updatedAt: Date;
-		author: {
-			id: number;
-			name: string;
-			disabled: boolean;
-		} | null;
-	}): ConsultationResponse {
+	private toConsultationResponse(consultation: ConsultationEntity): ConsultationResponse {
 		return {
 			id: consultation.id,
 			title: consultation.title,
