@@ -1,7 +1,7 @@
-export default function ConsultationPage() {
+export default function ConsultationListPage() {
   return (
     <div className="">
-      consultation page
+      consultation list page
       <br />
       ・gawa
     </div>
