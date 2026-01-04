@@ -49,5 +49,15 @@ export const listConsultationsQuerySchema = z.object({
 	solved: booleanStringSchema.optional(),
 });
 
-export type ListConsultationsQuery = z.infer<typeof listConsultationsQuerySchema>;
+export const createConsultationSchema = z.object({
+	title: z.string()
+		.min(1, "タイトルを入力してください")
+		.max(100, "タイトルは100文字以内で入力してください"),
+	body: z.string()
+		.min(10, "本文は10文字以上入力してください")
+		.max(10000, "本文は10,000文字以内で入力してください"),
+	draft: z.boolean().optional().default(false),
+});
 
+export type ListConsultationsQuery = z.infer<typeof listConsultationsQuerySchema>;
+export type CreateConsultationInput = z.infer<typeof createConsultationSchema>;

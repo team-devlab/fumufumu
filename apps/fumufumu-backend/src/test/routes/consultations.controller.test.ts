@@ -1,10 +1,5 @@
 import { describe, it, expect, vi, beforeEach } from 'vitest';
-import { listConsultations } from '../../routes/consultations.controller';
-import { ConsultationService } from '@/services/consultation.service';
-import type { Context } from 'hono';
-
-// ConsultationServiceをモック化
-vi.mock('@/services/consultation.service');
+import { listConsultations } from '@/routes/consultations.controller';
 
 describe('Consultations API', () => {
 	let mockContext: any;
@@ -14,6 +9,12 @@ describe('Consultations API', () => {
 		// モックのリセット
 		vi.clearAllMocks();
 
+		// モックサービスの作成
+		mockConsultationService = {
+			listConsultations: vi.fn(),
+			createConsultation: vi.fn(),
+		};
+
 		// Contextのモック作成
 		mockContext = {
 			get: vi.fn((key: string) => {
@@ -22,6 +23,9 @@ describe('Consultations API', () => {
 				}
 				if (key === 'appUserId') {
 					return 1; // authGuard通過後のログインユーザーID
+				}
+				if (key === 'consultationService') {
+					return mockConsultationService; // DIされたサービスのモック
 				}
 				return undefined;
 			}),
@@ -34,10 +38,10 @@ describe('Consultations API', () => {
 					solved: undefined,
 				})),
 			},
-			json: vi.fn((data: any) => {
+			json: vi.fn((data: any, status?: number) => {
 				return {
 					json: async () => data,
-					status: 200,
+					status: status || 200,
 				};
 			}),
 		};
@@ -83,10 +87,7 @@ describe('Consultations API', () => {
 			};
 
 			// ConsultationServiceのモック設定
-			mockConsultationService = {
-				listConsultations: vi.fn().mockResolvedValue(mockData),
-			};
-			vi.mocked(ConsultationService).mockImplementation(() => mockConsultationService);
+			mockConsultationService.listConsultations.mockResolvedValue(mockData);
 
 			// テスト実行
 			const response = await listConsultations(mockContext);
@@ -164,10 +165,7 @@ describe('Consultations API', () => {
 				],
 			};
 
-			mockConsultationService = {
-				listConsultations: vi.fn().mockResolvedValue(mockData),
-			};
-			vi.mocked(ConsultationService).mockImplementation(() => mockConsultationService);
+			mockConsultationService.listConsultations.mockResolvedValue(mockData);
 
 			// テスト実行
 			const response = await listConsultations(mockContext);
@@ -213,10 +211,7 @@ describe('Consultations API', () => {
 				],
 			};
 
-			mockConsultationService = {
-				listConsultations: vi.fn().mockResolvedValue(mockData),
-			};
-			vi.mocked(ConsultationService).mockImplementation(() => mockConsultationService);
+			mockConsultationService.listConsultations.mockResolvedValue(mockData);
 
 			// テスト実行
 			const response = await listConsultations(mockContext);
@@ -262,10 +257,7 @@ describe('Consultations API', () => {
 				],
 			};
 
-			mockConsultationService = {
-				listConsultations: vi.fn().mockResolvedValue(mockData),
-			};
-			vi.mocked(ConsultationService).mockImplementation(() => mockConsultationService);
+			mockConsultationService.listConsultations.mockResolvedValue(mockData);
 
 			// テスト実行
 			const response = await listConsultations(mockContext);
@@ -311,10 +303,7 @@ describe('Consultations API', () => {
 				],
 			};
 
-			mockConsultationService = {
-				listConsultations: vi.fn().mockResolvedValue(mockData),
-			};
-			vi.mocked(ConsultationService).mockImplementation(() => mockConsultationService);
+			mockConsultationService.listConsultations.mockResolvedValue(mockData);
 
 			// テスト実行
 			const response = await listConsultations(mockContext);
@@ -373,10 +362,7 @@ describe('Consultations API', () => {
 				],
 			};
 
-			mockConsultationService = {
-				listConsultations: vi.fn().mockResolvedValue(mockData),
-			};
-			vi.mocked(ConsultationService).mockImplementation(() => mockConsultationService);
+			mockConsultationService.listConsultations.mockResolvedValue(mockData);
 
 			// テスト実行
 			const response = await listConsultations(mockContext);
@@ -422,10 +408,7 @@ describe('Consultations API', () => {
 				],
 			};
 
-			mockConsultationService = {
-				listConsultations: vi.fn().mockResolvedValue(mockData),
-			};
-			vi.mocked(ConsultationService).mockImplementation(() => mockConsultationService);
+			mockConsultationService.listConsultations.mockResolvedValue(mockData);
 
 			// テスト実行
 			const response = await listConsultations(mockContext);
@@ -477,10 +460,7 @@ describe('Consultations API', () => {
 				],
 			};
 
-			mockConsultationService = {
-				listConsultations: vi.fn().mockResolvedValue(mockData),
-			};
-			vi.mocked(ConsultationService).mockImplementation(() => mockConsultationService);
+			mockConsultationService.listConsultations.mockResolvedValue(mockData);
 
 			// テスト実行
 			const response = await listConsultations(mockContext);
@@ -501,10 +481,7 @@ describe('Consultations API', () => {
 
 		it('エラー処理: Serviceが失敗した場合に500エラーを返す', async () => {
 			// Serviceが例外をスローするようにモック設定
-			mockConsultationService = {
-					listConsultations: vi.fn().mockRejectedValue(new Error('DB connection failed')),
-			};
-			vi.mocked(ConsultationService).mockImplementation(() => mockConsultationService);
+			mockConsultationService.listConsultations.mockRejectedValue(new Error('DB connection failed'));
 
 			// Honoのjsonメソッドをスパイ
 			const jsonSpy = vi.spyOn(mockContext, 'json');

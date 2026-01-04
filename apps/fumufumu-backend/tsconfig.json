@@ -11,8 +11,7 @@
     ],
     "types": [
       "@cloudflare/workers-types",
-      "@cloudflare/vitest-pool-workers",
-      "vite/client"
+      "@cloudflare/vitest-pool-workers"
     ],
     "jsx": "react-jsx",
     "jsxImportSource": "hono/jsx",
