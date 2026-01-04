@@ -46,6 +46,48 @@ export type AppBindings = {
 
 const app = new Hono<AppBindings>()
 
+import { AppError } from "@/errors/AppError";
+import { ZodError } from "zod";
+
+// ============================================
+// グローバルエラーハンドリング
+// ============================================
+app.onError((err, c) => {
+  // 1. AppError (意図的に投げた既知のエラー) の場合
+  if (err instanceof AppError) {
+    return c.json(
+      {
+        error: err.name,
+        message: err.message,
+      },
+      // AppErrorが持っている statusCode をそのまま使う
+      err.statusCode as any 
+    );
+  }
+
+  // 2. ZodError (手動でparseした場合など) の場合
+  if (err instanceof ZodError) {
+    return c.json(
+      {
+        error: "ValidationError",
+        message: "入力内容に誤りがあります",
+        details: err.issues,
+      },
+      400
+    );
+  }
+
+  // 3. それ以外の予期せぬエラー (バグ、DB接続断など)
+  console.error("Unhandled Error:", err); // ログに残す
+  return c.json(
+    {
+      error: "InternalServerError",
+      message: "予期せぬエラーが発生しました",
+    },
+    500
+  );
+});
+
 // --- 依存性注入 (DI) ミドルウェア ---
 app.use('*', async (c, next) => {
   const env = c.env;
