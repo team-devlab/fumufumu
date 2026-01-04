@@ -4,6 +4,8 @@ import type { ConsultationFilters } from "@/types/consultation.types";
 import type { ConsultationResponse, ConsultationListResponse } from "@/types/consultation.response";
 import type { CreateConsultationInput } from "@/validators/consultation.validator";
 
+type ConsultationEntity = Awaited<ReturnType<ConsultationRepository["findAll"]>>[number];
+
 export class ConsultationService {
 	private static readonly BODY_PREVIEW_LENGTH = 100;
 
