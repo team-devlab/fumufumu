@@ -1,7 +1,7 @@
 import "server-only";
 import { cookies } from "next/headers";
-import { apiClient } from "@/lib/api/client";
 import type { ConsultationListResponse } from "@/features/consultation/types";
+import { apiClient } from "@/lib/api/client";
 
 export const fetchConsultationsApi =
   async (): Promise<ConsultationListResponse> => {

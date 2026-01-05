@@ -1,5 +1,8 @@
 import "server-only";
-import type { Consultation, ConsultationListResponse } from "@/features/consultation/types";
+import type {
+  Consultation,
+  ConsultationListResponse,
+} from "@/features/consultation/types";
 
 // Backendの形式に合わせたモックデータ
 const MOCK_DATA: Consultation[] = [
