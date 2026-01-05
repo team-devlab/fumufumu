@@ -1,7 +1,7 @@
 import "server-only";
-import type { ConsultationListResponse } from "../types";
-import { fetchConsultationsApi } from "./consultationApi";
-import { fetchConsultationsMock } from "./mockApi";
+import type { ConsultationListResponse } from "@/features/consultation/types";
+import { fetchConsultationsApi } from "@/features/consultation/api/consultationApi";
+import { fetchConsultationsMock } from "@/features/consultation/api/mockApi";
 
 /**
  * 相談一覧を取得する

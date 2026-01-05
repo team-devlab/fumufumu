@@ -1,5 +1,5 @@
 import type React from "react";
-import type { Consultation } from "../types";
+import type { Consultation } from "@/features/consultation/types";
 
 type Props = {
   consultation: Consultation;

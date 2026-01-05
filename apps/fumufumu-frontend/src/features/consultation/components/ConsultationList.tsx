@@ -1,5 +1,5 @@
-import type { Consultation } from "../types";
-import { ConsultationItem } from "./ConsultationItem";
+import type { Consultation } from "@/features/consultation/types";
+import { ConsultationItem } from "@/features/consultation/components/ConsultationItem";
 
 type Props = {
   consultations: Consultation[];
