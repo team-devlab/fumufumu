@@ -61,7 +61,7 @@ export const listConsultationsQuerySchema = z.object({
 	solved: booleanStringSchema.optional(),
 });
 
-export const consultationLoadSchema = z.object({
+export const consultationBodySchema = z.object({
 	title: consultationTitleSchema,
 	body: consultationBodySchema,
 	draft: consultationDraftSchema
