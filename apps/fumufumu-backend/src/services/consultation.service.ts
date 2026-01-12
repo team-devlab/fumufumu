@@ -1,8 +1,8 @@
 // Business層: 相談ビジネスロジック
 import type { ConsultationRepository } from "@/repositories/consultation.repository";
 import type { ConsultationFilters } from "@/types/consultation.types";
-import type { ConsultationResponse, ConsultationListResponse } from "@/types/consultation.response";
-import type { CreateConsultationInput } from "@/validators/consultation.validator";
+import type { ConsultationResponse, ConsultationListResponse, ConsultationSavedResponse } from "@/types/consultation.response";
+import type { ConsultationLoadInput } from "@/validators/consultation.validator";
 
 type ConsultationEntity = Awaited<ReturnType<ConsultationRepository["findAll"]>>[number];
 
@@ -35,6 +35,18 @@ export class ConsultationService {
 		};
 	}
 
+	private toConsultationSavedResponse(consultation: {
+		id: number;
+		draft: boolean;
+		updated_at: string;
+	}): ConsultationSavedResponse {
+		return {
+			id: consultation.id,
+			draft: consultation.draft,
+			updated_at: consultation.updated_at,
+		};
+	}
+
 	async listConsultations(filters?: ConsultationFilters): Promise<ConsultationListResponse> {
 		const consultationList = await this.repository.findAll(filters);
 		const responses = consultationList.map(consultation => this.toConsultationResponse(consultation));
@@ -59,7 +71,7 @@ export class ConsultationService {
 	 * @throws {Error} 作成失敗時
 	 */
 	async createConsultation(
-		data: CreateConsultationInput ,
+		data: ConsultationLoadInput,
 		authorId: number
 	): Promise<ConsultationResponse> {
 		const createdConsultation = await this.repository.create({
@@ -68,6 +80,35 @@ export class ConsultationService {
 		});
 
 		return this.toConsultationResponse(createdConsultation);
+	}
+
+	/**
+	 * 相談を更新する
+	 * 
+	 * @param data - 更新する相談データ
+	 * @param data.id - 更新する相談ID
+	 * @param data.title - 相談タイトル
+	 * @param data.body - 相談本文
+	 * @param data.draft - 下書きフラグ（true: 下書き, false: 公開）
+	 * @returns 更新された相談のレスポンス
+	 * @throws {Error} 更新失敗時
+	 */
+	async updateConsultation(
+		id: number,
+		data: ConsultationLoadInput,
+		authorId: number
+	): Promise<ConsultationSavedResponse> {
+		const updatedConsultation = await this.repository.update({
+			id,
+			...data,
+			authorId,
+		});
+
+		return this.toConsultationSavedResponse({
+			id: updatedConsultation.id,
+			draft: updatedConsultation.draft,
+			updated_at: updatedConsultation.updatedAt.toISOString(),
+		});
 	}
 }
 
