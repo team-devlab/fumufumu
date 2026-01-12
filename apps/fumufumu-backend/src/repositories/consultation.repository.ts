@@ -8,6 +8,12 @@ import { DatabaseError, ConflictError, NotFoundError } from "@/errors/AppError";
 export class ConsultationRepository {
 	constructor(private db: DbInstance) {}
 
+	async findFirstById(id: number) {
+		return await this.db.query.consultations.findFirst({
+			where: eq(consultations.id, id),
+		});
+	}
+
 	/**
 	 * 相談一覧を取得する（RQB使用）
 	 * 

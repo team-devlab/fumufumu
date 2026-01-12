@@ -2,7 +2,7 @@
 import type { ConsultationRepository } from "@/repositories/consultation.repository";
 import type { ConsultationFilters } from "@/types/consultation.types";
 import type { ConsultationResponse, ConsultationListResponse, ConsultationSavedResponse } from "@/types/consultation.response";
-import type { ConsultationLoadInput } from "@/validators/consultation.validator";
+import type { ConsultationBody } from "@/validators/consultation.validator";
 
 type ConsultationEntity = Awaited<ReturnType<ConsultationRepository["findAll"]>>[number];
 
@@ -71,7 +71,7 @@ export class ConsultationService {
 	 * @throws {Error} 作成失敗時
 	 */
 	async createConsultation(
-		data: ConsultationLoadInput,
+		data: ConsultationBody,
 		authorId: number
 	): Promise<ConsultationResponse> {
 		const createdConsultation = await this.repository.create({
@@ -95,12 +95,12 @@ export class ConsultationService {
 	 */
 	async updateConsultation(
 		id: number,
-		data: ConsultationLoadInput,
+		data: ConsultationBody,
 		requestUserId: number
 	): Promise<ConsultationSavedResponse> {
 		// 1. まず更新対象のデータを取得する
     	// findById がない場合は、repository に追加するか、findFirst 等で代用
-    	const existingConsultation = await this.repository.findById(id);
+    	const existingConsultation = await this.repository.findFirstById(id);
 
     	// 2. データが存在しない場合は 404 エラー
     	if (!existingConsultation) {
@@ -116,7 +116,7 @@ export class ConsultationService {
 		const updatedConsultation = await this.repository.update({
 			id,
 			...data,
-			authorId,
+			authorId: existingConsultation.authorId ?? requestUserId,
 		});
 
 		return this.toConsultationSavedResponse({
