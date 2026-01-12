@@ -152,10 +152,10 @@ export class ConsultationRepository {
 			)
 			.returning();
 
-			if (!updated) {
-				throw new DatabaseError(`相談の更新に失敗しました: id=${data.id}`);
-			}
+		if (!updated) {
+			throw new DatabaseError(`相談の更新に失敗しました: id=${data.id}`);
+		}
 
-			return updated;
+		return updated;
 	}
 }
