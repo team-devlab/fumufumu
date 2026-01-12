@@ -26,6 +26,18 @@ const booleanStringSchema = z
 	.enum(["true", "false"], { error: VALIDATION_MESSAGES.BOOLEAN_STRING })
 	.transform((val) => val === "true");
 
+const consultationTitleSchema = z
+	.string()
+	.min(1, "タイトルを入力してください")
+	.max(100, "タイトルは100文字以内で入力してください");
+
+const consultationBodySchema = z
+	.string()
+	.min(10, "本文は10文字以上入力してください")
+	.max(10000, "本文は10,000文字以内で入力してください");
+
+const consultationDraftSchema = z.boolean().optional().default(false);
+
 /**
  * 相談一覧取得のクエリパラメータバリデーションスキーマ
  */
@@ -49,15 +61,11 @@ export const listConsultationsQuerySchema = z.object({
 	solved: booleanStringSchema.optional(),
 });
 
-export const createConsultationSchema = z.object({
-	title: z.string()
-		.min(1, "タイトルを入力してください")
-		.max(100, "タイトルは100文字以内で入力してください"),
-	body: z.string()
-		.min(10, "本文は10文字以上入力してください")
-		.max(10000, "本文は10,000文字以内で入力してください"),
-	draft: z.boolean().optional().default(false),
+export const consultationLoadSchema = z.object({
+	title: consultationTitleSchema,
+	body: consultationBodySchema,
+	draft: consultationDraftSchema
 });
 
 export type ListConsultationsQuery = z.infer<typeof listConsultationsQuerySchema>;
-export type CreateConsultationInput = z.infer<typeof createConsultationSchema>;
+export type ConsultationLoadInput = z.infer<typeof consultationLoadSchema>;
