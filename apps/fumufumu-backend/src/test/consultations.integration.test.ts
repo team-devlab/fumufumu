@@ -333,5 +333,85 @@ describe('Consultations API Integration Tests', () => {
 			expect(Array.isArray(data.data)).toBe(true);
 		});
 	});
+
+	describe('PUT /api/consultations/:id', () => {
+		let consultationId: number;
+	
+		beforeAll(async () => {
+			// 下書き相談を1件作成
+			const req = new Request('http://localhost/api/consultations', {
+				method: 'POST',
+				headers: {
+					'Content-Type': 'application/json',
+					'Cookie': sessionCookie!,
+				},
+				body: JSON.stringify({
+					title: '更新用下書き',
+					body: '更新前の本文です。10文字以上あります。',
+					draft: true,
+				}),
+			});
+	
+			const res = await app.fetch(req, env);
+			expect(res.status).toBe(201);
+	
+			const data = await res.json() as any;
+			consultationId = data.id;
+		});
+
+		it('更新用の下書き相談が作成されている', () => {
+			expect(consultationId).toBeDefined();
+		});
+
+		it('下書き状態の相談を再度下書き更新できる', async () => {
+			const req = new Request(
+				`http://localhost/api/consultations/${consultationId}`,
+				{
+					method: 'PUT',
+					headers: {
+						'Content-Type': 'application/json',
+						'Cookie': sessionCookie!,
+					},
+					body: JSON.stringify({
+						title: '下書き更新後タイトル',
+						body: '下書き更新後の本文です。10文字以上あります。',
+						draft: true,
+					}),
+				}
+			);
+	
+			const res = await app.fetch(req, env);
+			expect(res.status).toBe(200);
+	
+			const data = await res.json() as any;
+			expect(data.id).toBe(consultationId);
+			expect(data.draft).toBe(true);
+			expect(data.updated_at).toBeDefined();
+		});
+		it('下書き状態から公開状態に変更できる', async () => {
+			const req = new Request(
+				`http://localhost/api/consultations/${consultationId}`,
+				{
+					method: 'PUT',
+					headers: {
+						'Content-Type': 'application/json',
+						'Cookie': sessionCookie!,
+					},
+					body: JSON.stringify({
+						title: '公開タイトル',
+						body: '公開用の本文です。10文字以上あります。',
+						draft: false,
+					}),
+				}
+			);
+	
+			const res = await app.fetch(req, env);
+			expect(res.status).toBe(200);
+	
+			const data = await res.json() as any;
+			expect(data.id).toBe(consultationId);
+			expect(data.draft).toBe(false);
+		});	
+	});
 });
 
