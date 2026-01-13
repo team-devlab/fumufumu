@@ -98,21 +98,17 @@ export class ConsultationService {
 		data: ConsultationBody,
 		requestUserId: number
 	): Promise<ConsultationSavedResponse> {
-		// 1. まず更新対象のデータを取得する
-    	// findById がない場合は、repository に追加するか、findFirst 等で代用
     	const existingConsultation = await this.repository.findFirstById(id);
 
-    	// 2. データが存在しない場合は 404 エラー
     	if (!existingConsultation) {
-       		// AppError 等、適切なエラークラスを使用
        		throw new Error('Consultation not found'); 
     	}
 
-    	// 3. 【重要】データ所有者とリクエストユーザーが一致するかチェック
+    	// データ所有者とリクエストユーザーが一致するかチェック
     	if (existingConsultation.authorId !== requestUserId) {
-       		// 一致しない場合は 403 Forbidden
        		throw new Error('You do not have permission to update this consultation.');
     	}
+    	
 		const updatedConsultation = await this.repository.update({
 			id,
 			...data,
