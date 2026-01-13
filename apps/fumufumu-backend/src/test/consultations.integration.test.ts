@@ -68,6 +68,7 @@ function getMigrations(): D1Migration[] {
 
 describe('Consultations API Integration Tests', () => {
 	let sessionCookie: string | null = null;
+	let attackerCookie: string | null = null;
 
 	// テスト実行前のセットアップ
 	beforeAll(async () => {
@@ -93,6 +94,30 @@ describe('Consultations API Integration Tests', () => {
 
 		sessionCookie = signupRes.headers.get('set-cookie');
 		expect(sessionCookie).toBeTruthy();
+		// Set-Cookie は属性付きで返ることがあるので "key=value" だけ抜き出す
+		const setCookieA = signupRes.headers.get('set-cookie');
+		expect(setCookieA).toBeTruthy();
+		sessionCookie = (setCookieA as string).split(';')[0];
+
+		// User B（攻撃者）を作成（別セッションCookie取得）
+		const attacker = {
+			name: 'Attacker',
+			email: `attacker-${Date.now()}@example.com`,
+			password: 'password123456',
+		};
+
+		const attackerSignupReq = new Request('http://localhost/api/auth/signup', {
+			method: 'POST',
+			headers: { 'Content-Type': 'application/json' },
+			body: JSON.stringify(attacker),
+		});
+
+		const attackerSignupRes = await app.fetch(attackerSignupReq, env);
+		expect(attackerSignupRes.status).toBe(200);
+
+		const setCookieB = attackerSignupRes.headers.get('set-cookie');
+		expect(setCookieB).toBeTruthy();
+		attackerCookie = (setCookieB as string).split(';')[0];
 	});
 
 	describe('POST /api/consultations', () => {
@@ -332,6 +357,137 @@ describe('Consultations API Integration Tests', () => {
 			expect(data.meta).toHaveProperty('total');
 			expect(Array.isArray(data.data)).toBe(true);
 		});
+	});
+
+	describe('PUT /api/consultations/:id', () => {
+		let consultationId: number;
+	
+		beforeAll(async () => {
+			// 下書き相談を1件作成
+			const req = new Request('http://localhost/api/consultations', {
+				method: 'POST',
+				headers: {
+					'Content-Type': 'application/json',
+					'Cookie': sessionCookie!,
+				},
+				body: JSON.stringify({
+					title: '更新用下書き',
+					body: '更新前の本文です。10文字以上あります。',
+					draft: true,
+				}),
+			});
+	
+			const res = await app.fetch(req, env);
+			expect(res.status).toBe(201);
+	
+			const data = await res.json() as any;
+			consultationId = data.id;
+		});
+
+		it('更新用の下書き相談が作成されている', () => {
+			expect(consultationId).toBeDefined();
+		});
+
+		it('下書き状態の相談を再度下書き更新できる', async () => {
+			const req = new Request(
+				`http://localhost/api/consultations/${consultationId}`,
+				{
+					method: 'PUT',
+					headers: {
+						'Content-Type': 'application/json',
+						'Cookie': sessionCookie!,
+					},
+					body: JSON.stringify({
+						title: '下書き更新後タイトル',
+						body: '下書き更新後の本文です。10文字以上あります。',
+						draft: true,
+					}),
+				}
+			);
+	
+			const res = await app.fetch(req, env);
+			expect(res.status).toBe(200);
+	
+			const data = await res.json() as any;
+			expect(data.id).toBe(consultationId);
+			expect(data.draft).toBe(true);
+			expect(data.updated_at).toBeDefined();
+		});
+		it('下書き状態から公開状態に変更できる', async () => {
+			const req = new Request(
+				`http://localhost/api/consultations/${consultationId}`,
+				{
+					method: 'PUT',
+					headers: {
+						'Content-Type': 'application/json',
+						'Cookie': sessionCookie!,
+					},
+					body: JSON.stringify({
+						title: '公開タイトル',
+						body: '公開用の本文です。10文字以上あります。',
+						draft: false,
+					}),
+				}
+			);
+	
+			const res = await app.fetch(req, env);
+			expect(res.status).toBe(200);
+	
+			const data = await res.json() as any;
+			expect(data.id).toBe(consultationId);
+			expect(data.draft).toBe(false);
+		});	
+		it('【403 Forbidden】他人の相談データは更新できない', async () => {
+            // シナリオ: 別の有効なユーザー（攻撃者）になりすましてリクエストを送る
+            const req = new Request(
+                `http://localhost/api/consultations/${consultationId}`, // 存在するID（User Aのもの）
+                {
+                    method: 'PUT',
+                    headers: {
+                        'Content-Type': 'application/json',
+                        'Cookie': attackerCookie!,
+                    },
+                    body: JSON.stringify({
+                        title: '乗っ取りタイトル',
+                        body: '他人のデータを書き換えようとしています',
+                        draft: true,
+                    }),
+                }
+            );
+
+            const res = await app.fetch(req, env);
+            
+            // Service層で明示的にチェックしているため、権限エラー(403)を期待します
+            expect(res.status).toBe(403);
+            
+            // レスポンスボディのエラーメッセージも検証すると尚良し
+            // const data = await res.json() as any;
+            // expect(data.error).toContain('permission');
+        });
+        it('【404 Not Found】存在しないIDを更新しようとするとエラーになる', async () => {
+            const nonExistentId = 999999; // DBに存在しないID
+
+            const req = new Request(
+                `http://localhost/api/consultations/${nonExistentId}`,
+                {
+                    method: 'PUT',
+                    headers: {
+                        'Content-Type': 'application/json',
+                        'Cookie': sessionCookie!, // 自分のCookieでも対象がなければエラー
+                    },
+                    body: JSON.stringify({
+                        title: '更新不可',
+                        body: '本文は10文字以上必要です。',
+                        draft: true,
+                    }),
+                }
+            );
+
+            const res = await app.fetch(req, env);
+            
+            // Service層の `!existingConsultation` チェックで弾かれ、404を期待します
+            expect(res.status).toBe(404);
+        });
 	});
 });
 

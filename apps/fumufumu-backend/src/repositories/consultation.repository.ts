@@ -8,6 +8,18 @@ import { DatabaseError, ConflictError, NotFoundError } from "@/errors/AppError";
 export class ConsultationRepository {
 	constructor(private db: DbInstance) {}
 
+	async findFirstById(id: number) {
+		const consultation = await this.db.query.consultations.findFirst({
+			where: eq(consultations.id, id),
+		});
+
+		if (!consultation) {
+			throw new NotFoundError(`相談が見つかりません: id=${id}`);
+		}
+
+		return consultation;
+	}
+
 	/**
 	 * 相談一覧を取得する（RQB使用）
 	 * 
@@ -118,5 +130,44 @@ export class ConsultationRepository {
 			throw new DatabaseError(`データベースエラーが発生しました: ${errorMessage}`);
 		}
 	}
-}
 
+	/**
+	 * 相談を更新する
+	 * @param data - 更新する相談データ
+	 * @param data.id - 更新する相談ID
+	 * @param data.title - 相談タイトル
+	 * @param data.body - 相談本文
+	 * @param data.draft - 下書きフラグ（true: 下書き, false: 公開）
+	 * @returns 更新された相談データ
+	 * @throws {Error} データベースエラー、更新失敗時
+	 */
+	async update(data:
+	{
+		id: number;
+		title: string;
+		body: string;
+		draft: boolean;
+		authorId: number;
+	}) {
+		const [updated] = await this.db
+			.update(consultations)
+			.set({
+				title: data.title,
+				body: data.body,
+				draft: data.draft,
+			})
+			.where(
+				and(
+					eq(consultations.id, data.id),
+					eq(consultations.authorId, data.authorId),
+				)
+			)
+			.returning();
+
+		if (!updated) {
+			throw new DatabaseError(`相談の更新に失敗しました: id=${data.id}`);
+		}
+
+		return updated;
+	}
+}

@@ -2,12 +2,12 @@
 import { Hono, type Context } from "hono";
 import { createFactory } from "hono/factory";
 import { zValidator } from "@hono/zod-validator";
-import type { z } from "zod";
+import { z } from "zod";
 import type { AppBindings } from "@/index";
 import { authGuard } from "@/middlewares/authGuard.middleware";
 import { injectConsultationService } from "@/middlewares/injectService.middleware";
 import type { ConsultationFilters } from "@/types/consultation.types";
-import { listConsultationsQuerySchema, createConsultationSchema } from "@/validators/consultation.validator";
+import { listConsultationsQuerySchema, consultationBodySchema } from "@/validators/consultation.validator";
 import { AppError } from "@/errors/AppError";
 
 // ============================================
@@ -21,6 +21,11 @@ type ListConsultationsContext = Context<
 	string,
 	{ in: { query: unknown }; out: { query: z.output<typeof listConsultationsQuerySchema> } }
 >;
+
+const consultationIdParamSchema = z.object({
+  id: z.coerce.number().int().positive(),
+});
+
 
 // ============================================
 // ファクトリ作成
@@ -93,7 +98,7 @@ export const listConsultationsHandlers = factory.createHandlers(
 
 export const createConsultationHandlers = factory.createHandlers(
   // 第3引数にフックを追加して、明示的にエラーをthrowさせる必要があります
-  zValidator("json", createConsultationSchema, (result, c) => {
+  zValidator("json", consultationBodySchema, (result, c) => {
     if (!result.success) {
       // ここで throw することで、app.onError が呼ばれるようになります
       throw result.error;
@@ -113,6 +118,24 @@ export const createConsultationHandlers = factory.createHandlers(
   }
 );
 
+export const updateConsultationHandlers = factory.createHandlers(
+  zValidator("param", consultationIdParamSchema, (result) => {
+    if (!result.success) throw result.error;
+  }),
+  zValidator("json", consultationBodySchema, (result) => {
+    if (!result.success) throw result.error;
+  }),
+	async (c) => {
+		const { id } = c.req.valid("param");
+		const validatedBody = c.req.valid("json");
+		const authorId = c.get("appUserId");
+		const service = c.get("consultationService");
+
+		const result = await service.updateConsultation(id, validatedBody, authorId);
+		return c.json(result, 200);
+	}
+);
+
 // ============================================
 // ルーター設定
 // ============================================
@@ -125,3 +148,4 @@ consultationsRoute.use("/*", authGuard, injectConsultationService);
 // ルーティング登録
 consultationsRoute.get("/", ...listConsultationsHandlers);
 consultationsRoute.post("/", ...createConsultationHandlers);
+consultationsRoute.put("/:id", ...updateConsultationHandlers);

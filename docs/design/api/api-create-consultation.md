@@ -283,13 +283,5 @@ async createConsultation(data, authorId) {
 - `PATCH /api/consultations/:id/hide` などのエンドポイント
 - `hidden_at`に現在日時を設定
 
-### 下書きの仕様補足
-
-現在の相談作成API（POST /api/consultations）では：
-- `draft: false`（デフォルト）で公開状態として作成
-- `draft: true`を指定すると下書き保存
-
-将来的に、下書きから公開への変更は更新API（PATCH）で対応する想定。
-
 -----
 

@@ -21,3 +21,10 @@ export type ConsultationListResponse = {
 	data: ConsultationResponse[];
 };
 
+// 相談更新レスポンス
+export type ConsultationSavedResponse = {
+	id: number;
+	draft: boolean;
+	updated_at: string;
+};
+
