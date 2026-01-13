@@ -3,6 +3,7 @@ import type { ConsultationRepository } from "@/repositories/consultation.reposit
 import type { ConsultationFilters } from "@/types/consultation.types";
 import type { ConsultationResponse, ConsultationListResponse, ConsultationSavedResponse } from "@/types/consultation.response";
 import type { ConsultationBody } from "@/validators/consultation.validator";
+import { ForbiddenError, NotFoundError } from "@/errors/AppError";
 
 type ConsultationEntity = Awaited<ReturnType<ConsultationRepository["findAll"]>>[number];
 
@@ -91,7 +92,7 @@ export class ConsultationService {
 	 * @param data.body - 相談本文
 	 * @param data.draft - 下書きフラグ（true: 下書き, false: 公開）
 	 * @returns 更新された相談のレスポンス
-	 * @throws {Error} 更新失敗時
+	 * @throws {ForbiddenError} 相談の所有者ではない場合
 	 */
 	async updateConsultation(
 		id: number,
@@ -100,13 +101,9 @@ export class ConsultationService {
 	): Promise<ConsultationSavedResponse> {
     	const existingConsultation = await this.repository.findFirstById(id);
 
-    	if (!existingConsultation) {
-       		throw new Error('Consultation not found'); 
-    	}
-
     	// データ所有者とリクエストユーザーが一致するかチェック
     	if (existingConsultation.authorId !== requestUserId) {
-       		throw new Error('You do not have permission to update this consultation.');
+       		throw new ForbiddenError('相談の所有者ではないため、更新できません。');
     	}
     	
 		const updatedConsultation = await this.repository.update({

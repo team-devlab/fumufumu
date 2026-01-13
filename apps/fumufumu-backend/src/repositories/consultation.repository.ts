@@ -9,9 +9,15 @@ export class ConsultationRepository {
 	constructor(private db: DbInstance) {}
 
 	async findFirstById(id: number) {
-		return await this.db.query.consultations.findFirst({
+		const consultation = await this.db.query.consultations.findFirst({
 			where: eq(consultations.id, id),
 		});
+
+		if (!consultation) {
+			throw new NotFoundError(`相談が見つかりません: id=${id}`);
+		}
+
+		return consultation;
 	}
 
 	/**

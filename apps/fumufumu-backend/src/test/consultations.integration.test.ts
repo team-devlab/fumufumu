@@ -68,6 +68,7 @@ function getMigrations(): D1Migration[] {
 
 describe('Consultations API Integration Tests', () => {
 	let sessionCookie: string | null = null;
+	let attackerCookie: string | null = null;
 
 	// テスト実行前のセットアップ
 	beforeAll(async () => {
@@ -93,6 +94,30 @@ describe('Consultations API Integration Tests', () => {
 
 		sessionCookie = signupRes.headers.get('set-cookie');
 		expect(sessionCookie).toBeTruthy();
+		// Set-Cookie は属性付きで返ることがあるので "key=value" だけ抜き出す
+		const setCookieA = signupRes.headers.get('set-cookie');
+		expect(setCookieA).toBeTruthy();
+		sessionCookie = (setCookieA as string).split(';')[0];
+
+		// User B（攻撃者）を作成（別セッションCookie取得）
+		const attacker = {
+			name: 'Attacker',
+			email: `attacker-${Date.now()}@example.com`,
+			password: 'password123456',
+		};
+
+		const attackerSignupReq = new Request('http://localhost/api/auth/signup', {
+			method: 'POST',
+			headers: { 'Content-Type': 'application/json' },
+			body: JSON.stringify(attacker),
+		});
+
+		const attackerSignupRes = await app.fetch(attackerSignupReq, env);
+		expect(attackerSignupRes.status).toBe(200);
+
+		const setCookieB = attackerSignupRes.headers.get('set-cookie');
+		expect(setCookieB).toBeTruthy();
+		attackerCookie = (setCookieB as string).split(';')[0];
 	});
 
 	describe('POST /api/consultations', () => {
@@ -414,17 +439,13 @@ describe('Consultations API Integration Tests', () => {
 		});	
 		it('【403 Forbidden】他人の相談データは更新できない', async () => {
             // シナリオ: 別の有効なユーザー（攻撃者）になりすましてリクエストを送る
-            // ※ テスト環境で「User B」の有効なセッションCookieが必要です。
-            // ※ もし用意が難しい場合は、Mock等でコンテキストのuserIdを偽装する必要があります。
-            const attackerCookie = 'valid-session-cookie-for-another-user'; 
-
             const req = new Request(
                 `http://localhost/api/consultations/${consultationId}`, // 存在するID（User Aのもの）
                 {
                     method: 'PUT',
                     headers: {
                         'Content-Type': 'application/json',
-                        'Cookie': attackerCookie, 
+                        'Cookie': attackerCookie!,
                     },
                     body: JSON.stringify({
                         title: '乗っ取りタイトル',
@@ -456,7 +477,7 @@ describe('Consultations API Integration Tests', () => {
                     },
                     body: JSON.stringify({
                         title: '更新不可',
-                        body: '本文',
+                        body: '本文は10文字以上必要です。',
                         draft: true,
                     }),
                 }
