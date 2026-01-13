@@ -412,6 +412,61 @@ describe('Consultations API Integration Tests', () => {
 			expect(data.id).toBe(consultationId);
 			expect(data.draft).toBe(false);
 		});	
+		it('【403 Forbidden】他人の相談データは更新できない', async () => {
+            // シナリオ: 別の有効なユーザー（攻撃者）になりすましてリクエストを送る
+            // ※ テスト環境で「User B」の有効なセッションCookieが必要です。
+            // ※ もし用意が難しい場合は、Mock等でコンテキストのuserIdを偽装する必要があります。
+            const attackerCookie = 'valid-session-cookie-for-another-user'; 
+
+            const req = new Request(
+                `http://localhost/api/consultations/${consultationId}`, // 存在するID（User Aのもの）
+                {
+                    method: 'PUT',
+                    headers: {
+                        'Content-Type': 'application/json',
+                        'Cookie': attackerCookie, 
+                    },
+                    body: JSON.stringify({
+                        title: '乗っ取りタイトル',
+                        body: '他人のデータを書き換えようとしています',
+                        draft: true,
+                    }),
+                }
+            );
+
+            const res = await app.fetch(req, env);
+            
+            // Service層で明示的にチェックしているため、権限エラー(403)を期待します
+            expect(res.status).toBe(403);
+            
+            // レスポンスボディのエラーメッセージも検証すると尚良し
+            // const data = await res.json() as any;
+            // expect(data.error).toContain('permission');
+        });
+        it('【404 Not Found】存在しないIDを更新しようとするとエラーになる', async () => {
+            const nonExistentId = 999999; // DBに存在しないID
+
+            const req = new Request(
+                `http://localhost/api/consultations/${nonExistentId}`,
+                {
+                    method: 'PUT',
+                    headers: {
+                        'Content-Type': 'application/json',
+                        'Cookie': sessionCookie!, // 自分のCookieでも対象がなければエラー
+                    },
+                    body: JSON.stringify({
+                        title: '更新不可',
+                        body: '本文',
+                        draft: true,
+                    }),
+                }
+            );
+
+            const res = await app.fetch(req, env);
+            
+            // Service層の `!existingConsultation` チェックで弾かれ、404を期待します
+            expect(res.status).toBe(404);
+        });
 	});
 });
 
