@@ -12,6 +12,7 @@ import * as consultationsSchema from '@/db/schema/consultations';
 import { authRouter } from '@/routes/auth.routes';
 import { consultationsRoute } from '@/routes/consultations.controller';
 import { protectedRouter } from '@/routes/protected.routes';
+import { userRoute } from '@/routes/user.controller';
 import type { ConsultationService } from '@/services/consultation.service';
 
 // Drizzle ORMのスキーマを統合
@@ -158,6 +159,9 @@ api.route('/protected', protectedRouter);
 
 // 相談API（/api/consultations）
 api.route('/consultations', consultationsRoute);
+
+// ユーザーAPI（/api/user）
+api.route('/users', userRoute);
 
 // メインアプリにAPIルーターをマウント
 app.route('/api', api);
