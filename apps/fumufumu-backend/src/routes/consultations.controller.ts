@@ -27,12 +27,6 @@ const consultationIdParamSchema = z.object({
   id: z.coerce.number().int().positive(),
 });
 
-type GetConsultationContext = Context<
-	AppBindings,
-	string,
-	{ in: { param: unknown }; out: { param: z.output<typeof consultationIdParamSchema> } }
->
-
 // ============================================
 // ファクトリ作成
 // ============================================
