@@ -1,3 +1,5 @@
+import { CONSULTATION_RULES } from "@/features/consultation/config/constants";
+
 type Props = {
   title: string;
   body: string;
@@ -11,8 +13,6 @@ export const ConsultationForm = ({
   onChangeTitle,
   onChangeBody,
 }: Props) => {
-  const TITLE_MAX_LENGTH = 60;
-  const BODY_MAX_LENGTH = 800;
 
   return (
     <div className="space-y-8 bg-white p-8 rounded-xl shadow-sm border border-gray-100">
@@ -30,7 +30,7 @@ export const ConsultationForm = ({
             タイトル
           </label>
           <span className="text-sm text-gray-500 font-mono">
-            {title.length} / {TITLE_MAX_LENGTH}
+            {title.length} / {CONSULTATION_RULES.TITLE_MAX_LENGTH}
           </span>
         </div>
         <input
@@ -40,7 +40,7 @@ export const ConsultationForm = ({
           onChange={(e) => onChangeTitle(e.target.value)}
           placeholder="例）エンジニア3年目：技術スペシャリストかマネジメント、どちらを目指すべき？"
           className="w-full p-4 bg-gray-50 border border-gray-200 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent outline-none transition-all"
-          maxLength={TITLE_MAX_LENGTH}
+          maxLength={CONSULTATION_RULES.TITLE_MAX_LENGTH}
         />
       </div>
 
@@ -54,7 +54,7 @@ export const ConsultationForm = ({
             相談内容
           </label>
           <span className="text-sm text-gray-500 font-mono">
-            {body.length} / {BODY_MAX_LENGTH}
+            {body.length} / {CONSULTATION_RULES.BODY_MAX_LENGTH}
           </span>
         </div>
         <textarea
@@ -64,12 +64,11 @@ export const ConsultationForm = ({
           placeholder="質問内容を入力してください..."
           rows={12}
           className="w-full p-4 bg-gray-50 border border-gray-200 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent outline-none transition-all resize-y"
-          maxLength={BODY_MAX_LENGTH}
+          maxLength={CONSULTATION_RULES.BODY_MAX_LENGTH}
         />
       </div>
-
-      {/* タグ選択 (今回はプレースホルダーとして実装) */}
-      <div className="space-y-2">
+      
+       <div className="space-y-2">
         <div className="flex justify-between items-center">
           <label className="block text-md font-bold text-gray-800">
             タグ選択
