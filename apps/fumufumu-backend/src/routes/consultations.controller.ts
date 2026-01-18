@@ -14,6 +14,7 @@ import { AppError } from "@/errors/AppError";
 // 型定義
 // ============================================
 
+
 // zValidatorを通過した後のContext型
 // in: 入力型（HTTPリクエストの生の文字列）, out: 変換後の型（zodで変換された型）
 type ListConsultationsContext = Context<
@@ -26,6 +27,11 @@ const consultationIdParamSchema = z.object({
   id: z.coerce.number().int().positive(),
 });
 
+type GetConsultationContext = Context<
+	AppBindings,
+	string,
+	{ in: { param: unknown }; out: { param: z.output<typeof consultationIdParamSchema> } }
+>
 
 // ============================================
 // ファクトリ作成
@@ -36,6 +42,42 @@ const factory = createFactory<AppBindings>();
 // ============================================
 // ハンドラー関数
 // ============================================
+
+/**
+ * 相談単体取得ハンドラ
+ * 
+ * @param c - Honoコンテキスト（バリデーション済みパラメータを含む）
+ * @returns 相談のJSONレスポンス
+ */
+export async function getConsultation(c: GetConsultationContext) {
+	try {
+		const { id } = c.req.valid("param");
+		const service = c.get("consultationService");
+		const result = await service.getConsultation(id);
+		return c.json(result, 200);
+ 	} catch (error) {
+		console.error('[getConsultation] Failed to fetch consultation:', error);
+
+		if (error instanceof AppError) {
+			return c.json(
+				{
+					error: error.name,
+					message: error.message,
+				},
+				error.statusCode as any
+			);
+		}
+
+		// 予期しないエラー
+		return c.json(
+			{
+				error: 'Internal server error',
+				message: 'Failed to fetch consultation',
+			},
+			500
+		);
+	}
+}
 
 /**
  * 相談一覧取得ハンドラ
@@ -90,6 +132,11 @@ export async function listConsultations(c: ListConsultationsContext) {
 // ============================================
 // ハンドラー（createHandlers版）
 // ============================================
+
+export const getConsultationHandlers = factory.createHandlers(
+	zValidator("param", consultationIdParamSchema),
+	async (c) => getConsultation(c)
+);
 
 export const listConsultationsHandlers = factory.createHandlers(
 	zValidator("query", listConsultationsQuerySchema),
@@ -146,6 +193,7 @@ export const consultationsRoute = new Hono<AppBindings>();
 consultationsRoute.use("/*", authGuard, injectConsultationService);
 
 // ルーティング登録
+consultationsRoute.get("/:id", ...getConsultationHandlers);
 consultationsRoute.get("/", ...listConsultationsHandlers);
 consultationsRoute.post("/", ...createConsultationHandlers);
 consultationsRoute.put("/:id", ...updateConsultationHandlers);

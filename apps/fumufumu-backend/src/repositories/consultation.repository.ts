@@ -11,6 +11,9 @@ export class ConsultationRepository {
 	async findFirstById(id: number) {
 		const consultation = await this.db.query.consultations.findFirst({
 			where: eq(consultations.id, id),
+			with: {
+				author: true,
+			}
 		});
 
 		if (!consultation) {

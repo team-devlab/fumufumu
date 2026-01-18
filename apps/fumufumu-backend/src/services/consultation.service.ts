@@ -6,12 +6,13 @@ import type { ConsultationBody } from "@/validators/consultation.validator";
 import { ForbiddenError, NotFoundError } from "@/errors/AppError";
 
 type ConsultationEntity = Awaited<ReturnType<ConsultationRepository["findAll"]>>[number];
+type ConsultationEntityById = Awaited<ReturnType<ConsultationRepository["findFirstById"]>>;
 
 export class ConsultationService {
 	private static readonly BODY_PREVIEW_LENGTH = 100;
 
 	constructor(private repository: ConsultationRepository) {}
-
+ 
 	/**
 	 * 相談データをレスポンス形式に変換する
 	 * 
@@ -46,6 +47,11 @@ export class ConsultationService {
 			draft: consultation.draft,
 			updated_at: consultation.updated_at,
 		};
+	}
+
+	async getConsultation(id: number) :Promise<ConsultationResponse> {
+		const consultation = await this.repository.findFirstById(id);
+		return this.toConsultationResponse(consultation as unknown as ConsultationEntityById);
 	}
 
 	async listConsultations(filters?: ConsultationFilters): Promise<ConsultationListResponse> {
