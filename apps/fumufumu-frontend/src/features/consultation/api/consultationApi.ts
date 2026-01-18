@@ -1,6 +1,10 @@
 import "server-only";
 import { cookies } from "next/headers";
-import type { ConsultationListResponse } from "@/features/consultation/types";
+import type {
+  ConsultationListResponse,
+  CreateConsultationParams,
+  Consultation,
+ } from "@/features/consultation/types";
 import { apiClient } from "@/lib/api/client";
 
 export const fetchConsultationsApi =
@@ -16,3 +20,12 @@ export const fetchConsultationsApi =
       cache: "no-store",
     });
   };
+
+export const createConsultationApi = async (
+  params: CreateConsultationParams,
+): Promise<Consultation> => {
+  return apiClient<Consultation>("/api/consultations", {
+    method: "POST",
+    body: JSON.stringify(params),
+  });
+};
