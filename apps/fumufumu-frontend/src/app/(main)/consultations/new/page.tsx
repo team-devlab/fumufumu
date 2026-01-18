@@ -7,7 +7,7 @@ import { useConsultationEntry } from "@/features/consultation/hooks/useConsultat
 
 export default function NewConsultationPage() {
   const router = useRouter();
-  
+
   // カスタムフックからステートとロジックを取得
   const {
     title,

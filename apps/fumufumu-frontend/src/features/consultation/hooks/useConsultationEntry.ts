@@ -3,12 +3,12 @@
 import { useRouter } from "next/navigation";
 import { useState } from "react";
 import toast from "react-hot-toast";
+import { ROUTES } from "@/config/routes";
 import { createConsultation } from "@/features/consultation/api/consultationClientApi";
 import { CONSULTATION_RULES } from "@/features/consultation/config/constants";
 import { usePreventUnload } from "@/features/consultation/hooks/usePreventUnload";
-import { ROUTES } from "@/config/routes";
 
-const countCharacters = (text: string) => text.replace(/\s/g, '').length;
+const countCharacters = (text: string) => text.replace(/\s/g, "").length;
 
 export const useConsultationEntry = () => {
   const router = useRouter();
@@ -25,10 +25,10 @@ export const useConsultationEntry = () => {
   usePreventUnload(isDirty);
 
   const validateBody = () => {
-     if (countCharacters(body) < CONSULTATION_RULES.BODY_MIN_LENGTH) {
-        return false;
-     }
-     return true;
+    if (countCharacters(body) < CONSULTATION_RULES.BODY_MIN_LENGTH) {
+      return false;
+    }
+    return true;
   };
 
   const handleSaveDraft = async () => {
@@ -38,7 +38,9 @@ export const useConsultationEntry = () => {
     }
 
     if (!validateBody()) {
-      toast.error(`下書き保存する場合も、相談内容は${CONSULTATION_RULES.BODY_MIN_LENGTH}文字以上必要です`);
+      toast.error(
+        `下書き保存する場合も、相談内容は${CONSULTATION_RULES.BODY_MIN_LENGTH}文字以上必要です`,
+      );
       return;
     }
 
@@ -68,14 +70,16 @@ export const useConsultationEntry = () => {
       toast.error("タイトルと相談内容を入力してください");
       return;
     }
-    
+
     if (!validateBody()) {
-        toast.error(`相談内容は${CONSULTATION_RULES.BODY_MIN_LENGTH}文字以上入力してください`);
-        return;
+      toast.error(
+        `相談内容は${CONSULTATION_RULES.BODY_MIN_LENGTH}文字以上入力してください`,
+      );
+      return;
     }
 
     toast("確認画面機能は開発中です。\n入力内容は有効です。", {
-        icon: '🚧',
+      icon: "🚧",
     });
   };
 

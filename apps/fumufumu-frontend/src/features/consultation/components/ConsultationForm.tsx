@@ -13,7 +13,6 @@ export const ConsultationForm = ({
   onChangeTitle,
   onChangeBody,
 }: Props) => {
-
   return (
     <div className="space-y-8 bg-white p-8 rounded-xl shadow-sm border border-gray-100">
       <h1 className="text-xl font-bold text-gray-800 bg-gray-100 inline-block px-3 py-1 rounded-md">
@@ -67,10 +66,13 @@ export const ConsultationForm = ({
           maxLength={CONSULTATION_RULES.BODY_MAX_LENGTH}
         />
       </div>
-      
-       <div className="space-y-2">
+
+      <div className="space-y-2">
         <div className="flex justify-between items-center">
-          <label className="block text-md font-bold text-gray-800">
+          <label
+            htmlFor="tags"
+            className="block text-md font-bold text-gray-800"
+          >
             タグ選択
           </label>
           <span className="text-xs text-gray-400">

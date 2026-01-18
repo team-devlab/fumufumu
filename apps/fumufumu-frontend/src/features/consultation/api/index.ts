@@ -1,7 +1,8 @@
 import "server-only";
 import {
+  createConsultationApi as createConsultationApiClient,
   fetchConsultationsApi,
-  createConsultationApi as createConsultationApiClient, } from "@/features/consultation/api/consultationApi";
+} from "@/features/consultation/api/consultationApi";
 import { fetchConsultationsMock } from "@/features/consultation/api/mockApi";
 import type { ConsultationListResponse } from "@/features/consultation/types";
 

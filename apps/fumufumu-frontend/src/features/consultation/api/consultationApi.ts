@@ -1,10 +1,10 @@
 import "server-only";
 import { cookies } from "next/headers";
 import type {
+  Consultation,
   ConsultationListResponse,
   CreateConsultationParams,
-  Consultation,
- } from "@/features/consultation/types";
+} from "@/features/consultation/types";
 import { apiClient } from "@/lib/api/client";
 
 export const fetchConsultationsApi =
