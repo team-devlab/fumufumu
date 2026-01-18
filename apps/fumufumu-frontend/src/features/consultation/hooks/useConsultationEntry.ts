@@ -1,10 +1,11 @@
 "use client";
 
 import { useRouter } from "next/navigation";
-import { useState, useEffect } from "react";
+import { useState } from "react";
 import toast from "react-hot-toast";
 import { createConsultation } from "@/features/consultation/api/consultationClientApi";
 import { CONSULTATION_RULES } from "@/features/consultation/config/constants";
+import { usePreventUnload } from "@/features/consultation/hooks/usePreventUnload";
 
 const countCharacters = (text: string) => text.replace(/\s/g, '').length;
 
@@ -19,19 +20,8 @@ export const useConsultationEntry = () => {
   const [isProcessing, setIsProcessing] = useState(false);
 
   // NOTE: 誤操作による離脱防止
-  useEffect(() => {
-    const handleBeforeUnload = (e: BeforeUnloadEvent) => {
-      // タイトルか本文に何かしら入力があり、かつ処理中でない場合
-      if ((title || body) && !isProcessing) {
-        e.preventDefault();
-        // これを設定するとブラウザ標準の確認ダイアログが出る（モダンブラウザの仕様）
-        e.returnValue = "";
-      }
-    };
-
-    window.addEventListener("beforeunload", handleBeforeUnload);
-    return () => window.removeEventListener("beforeunload", handleBeforeUnload);
-  }, [title, body, isProcessing]);
+  const isDirty = (!!title || !!body) && !isProcessing;
+  usePreventUnload(isDirty);
 
   const validateBody = () => {
      if (countCharacters(body) < CONSULTATION_RULES.BODY_MIN_LENGTH) {
