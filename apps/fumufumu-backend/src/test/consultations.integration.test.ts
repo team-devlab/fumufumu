@@ -340,6 +340,74 @@ describe('Consultations API Integration Tests', () => {
 		});
 	});
 
+	describe('GET /api/consultations/:id', () => {
+		let existingId: number;
+
+		beforeAll(async () => {
+			const req = new Request('http://localhost/api/consultations', {
+				method: 'POST',
+				headers: {
+					'Content-Type': 'application/json',
+					'Cookie': sessionCookie!,
+				},
+				body: JSON.stringify({
+					title: 'テスト相談',
+					body: 'テスト本文です。10文字以上にします。',
+					draft: false,
+				}),
+			});
+
+			const res = await app.fetch(req, env);
+			expect(res.status).toBe(201);
+
+			const data = await res.json() as any;
+			existingId = data.id;
+		});
+
+		it('相談単体取得: 存在するIDの相談を取得できる', async () => {
+			const req = new Request(`http://localhost/api/consultations/${existingId}`, {
+				headers: {
+					'Cookie': sessionCookie!,
+				},
+			});
+
+			const res = await app.fetch(req, env);
+			expect(res.status).toBe(200);
+
+			const data = await res.json() as any;
+			expect(data).toHaveProperty('id');
+			expect(data.id).toBe(existingId);
+			expect(data).toHaveProperty('title');
+			expect(data.title).toBe('テスト相談');
+			expect(data).toHaveProperty('body_preview');
+			expect(data.body_preview).toBe('テスト本文です。10文字以上にします。');
+			expect(data).toHaveProperty('draft');
+			expect(data).toHaveProperty('hidden_at');
+			expect(data.hidden_at).toBeNull();
+			expect(data).toHaveProperty('solved_at');
+			expect(data.solved_at).toBeNull();
+			expect(data).toHaveProperty('created_at');
+			expect(data).toHaveProperty('updated_at');
+			expect(data).toHaveProperty('author');
+			expect(data.author).toHaveProperty('name');
+			expect(data.author).toHaveProperty('disabled');
+		});
+
+		it('【404 Not Found】存在しないIDを取得しようとするとエラーになる', async () => {
+			const req = new Request('http://localhost/api/consultations/999999', {
+				headers: {
+					'Cookie': sessionCookie!,
+				},
+			});
+
+			const res = await app.fetch(req, env);
+			expect(res.status).toBe(404);
+			const data = await res.json() as any;
+			expect(data.error).toBe('NotFoundError');
+			expect(data.message).toBe('相談が見つかりません: id=999999');
+		});
+	});
+
 	describe('GET /api/consultations', () => {
 		it('相談一覧を取得できる', async () => {
 			const req = new Request('http://localhost/api/consultations', {
