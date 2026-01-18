@@ -14,6 +14,7 @@ import { AppError } from "@/errors/AppError";
 // 型定義
 // ============================================
 
+
 // zValidatorを通過した後のContext型
 // in: 入力型（HTTPリクエストの生の文字列）, out: 変換後の型（zodで変換された型）
 type ListConsultationsContext = Context<
@@ -25,7 +26,6 @@ type ListConsultationsContext = Context<
 const consultationIdParamSchema = z.object({
   id: z.coerce.number().int().positive(),
 });
-
 
 // ============================================
 // ファクトリ作成
@@ -91,6 +91,18 @@ export async function listConsultations(c: ListConsultationsContext) {
 // ハンドラー（createHandlers版）
 // ============================================
 
+export const getConsultationHandlers = factory.createHandlers(
+	zValidator("param", consultationIdParamSchema, (result, c) => {
+		if (!result.success) throw result.error;
+	}),
+	async (c) => {
+		const { id } = c.req.valid("param");
+		const service = c.get("consultationService");
+		const result = await service.getConsultation(id);
+		return c.json(result, 200);
+	}
+);
+
 export const listConsultationsHandlers = factory.createHandlers(
 	zValidator("query", listConsultationsQuerySchema),
 	async (c) => listConsultations(c)
@@ -146,6 +158,7 @@ export const consultationsRoute = new Hono<AppBindings>();
 consultationsRoute.use("/*", authGuard, injectConsultationService);
 
 // ルーティング登録
+consultationsRoute.get("/:id", ...getConsultationHandlers);
 consultationsRoute.get("/", ...listConsultationsHandlers);
 consultationsRoute.post("/", ...createConsultationHandlers);
 consultationsRoute.put("/:id", ...updateConsultationHandlers);
