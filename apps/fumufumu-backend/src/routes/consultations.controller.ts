@@ -44,42 +44,6 @@ const factory = createFactory<AppBindings>();
 // ============================================
 
 /**
- * 相談単体取得ハンドラ
- * 
- * @param c - Honoコンテキスト（バリデーション済みパラメータを含む）
- * @returns 相談のJSONレスポンス
- */
-export async function getConsultation(c: GetConsultationContext) {
-	try {
-		const { id } = c.req.valid("param");
-		const service = c.get("consultationService");
-		const result = await service.getConsultation(id);
-		return c.json(result, 200);
- 	} catch (error) {
-		console.error('[getConsultation] Failed to fetch consultation:', error);
-
-		if (error instanceof AppError) {
-			return c.json(
-				{
-					error: error.name,
-					message: error.message,
-				},
-				error.statusCode as any
-			);
-		}
-
-		// 予期しないエラー
-		return c.json(
-			{
-				error: 'Internal server error',
-				message: 'Failed to fetch consultation',
-			},
-			500
-		);
-	}
-}
-
-/**
  * 相談一覧取得ハンドラ
  * 
  * @param c - Honoコンテキスト（バリデーション済みクエリパラメータを含む）
@@ -134,8 +98,15 @@ export async function listConsultations(c: ListConsultationsContext) {
 // ============================================
 
 export const getConsultationHandlers = factory.createHandlers(
-	zValidator("param", consultationIdParamSchema),
-	async (c) => getConsultation(c)
+	zValidator("param", consultationIdParamSchema, (result, c) => {
+		if (!result.success) throw result.error;
+	}),
+	async (c) => {
+		const { id } = c.req.valid("param");
+		const service = c.get("consultationService");
+		const result = await service.getConsultation(id);
+		return c.json(result, 200);
+	}
 );
 
 export const listConsultationsHandlers = factory.createHandlers(
