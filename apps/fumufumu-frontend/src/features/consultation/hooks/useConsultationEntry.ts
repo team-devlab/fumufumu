@@ -22,11 +22,10 @@ export const useConsultationEntry = () => {
       return;
     }
 
-    // ★追加: 本文も空だとエラーになるため、簡易チェック（バックエンドは10文字以上）
-    // 下書きでも文字数制限があるかはバックエンド仕様によりますが、今回はエラー回避のため入力させます
-    if (!body.trim()) {
-      alert("下書き保存する場合も、相談内容の入力が必要です");
-      return;
+    // 本文も空だとエラーになるため、簡易チェック（バックエンドは10文字以上）
+    if (body.replace(/\s/g, '').length < 10) {
+       alert("下書き保存する場合も、相談内容は10文字以上必要です");
+       return;
     }
 
     setIsProcessing(true);
