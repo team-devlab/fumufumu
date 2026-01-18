@@ -6,6 +6,7 @@ import toast from "react-hot-toast";
 import { createConsultation } from "@/features/consultation/api/consultationClientApi";
 import { CONSULTATION_RULES } from "@/features/consultation/config/constants";
 import { usePreventUnload } from "@/features/consultation/hooks/usePreventUnload";
+import { ROUTES } from "@/config/routes";
 
 const countCharacters = (text: string) => text.replace(/\s/g, '').length;
 
@@ -50,7 +51,7 @@ export const useConsultationEntry = () => {
       });
 
       toast.success("下書きを保存しました");
-      router.push("/consultations");
+      router.push(ROUTES.CONSULTATION.LIST);
     } catch (error) {
       console.error(error);
       if (error instanceof Error) {
