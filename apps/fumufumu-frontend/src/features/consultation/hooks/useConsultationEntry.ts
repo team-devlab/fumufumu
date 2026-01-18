@@ -1,7 +1,7 @@
 "use client";
 
 import { useRouter } from "next/navigation";
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import toast from "react-hot-toast";
 import { createConsultation } from "@/features/consultation/api/consultationClientApi";
 import { CONSULTATION_RULES } from "@/features/consultation/config/constants";
@@ -18,6 +18,21 @@ export const useConsultationEntry = () => {
   // 処理状態
   const [isProcessing, setIsProcessing] = useState(false);
 
+  // NOTE: 誤操作による離脱防止
+  useEffect(() => {
+    const handleBeforeUnload = (e: BeforeUnloadEvent) => {
+      // タイトルか本文に何かしら入力があり、かつ処理中でない場合
+      if ((title || body) && !isProcessing) {
+        e.preventDefault();
+        // これを設定するとブラウザ標準の確認ダイアログが出る（モダンブラウザの仕様）
+        e.returnValue = "";
+      }
+    };
+
+    window.addEventListener("beforeunload", handleBeforeUnload);
+    return () => window.removeEventListener("beforeunload", handleBeforeUnload);
+  }, [title, body, isProcessing]);
+
   const validateBody = () => {
      if (countCharacters(body) < CONSULTATION_RULES.BODY_MIN_LENGTH) {
         return false;
@@ -32,7 +47,7 @@ export const useConsultationEntry = () => {
     }
 
     if (!validateBody()) {
-      toast.error(`下書き保存する場合も、相談内容は${CONSULTATION_RULES.BODY_MIN_LENGTH}文字以上必要です`); // ★変更
+      toast.error(`下書き保存する場合も、相談内容は${CONSULTATION_RULES.BODY_MIN_LENGTH}文字以上必要です`);
       return;
     }
 
@@ -53,23 +68,21 @@ export const useConsultationEntry = () => {
       } else {
         toast.error("保存に失敗しました。時間をおいて再度お試しください。");
       }
-    } finally {
-      setIsProcessing(false);
+      setIsProcessing(false); // エラー時はフラグを戻す（成功時は遷移するので戻さなくて良い）
     }
   };
 
   const handleConfirm = () => {
     if (!title.trim() || !body.trim()) {
-      toast.error("タイトルと相談内容を入力してください"); // ★変更
+      toast.error("タイトルと相談内容を入力してください");
       return;
     }
     
     if (!validateBody()) {
-        toast.error(`相談内容は${CONSULTATION_RULES.BODY_MIN_LENGTH}文字以上入力してください`); // ★変更
+        toast.error(`相談内容は${CONSULTATION_RULES.BODY_MIN_LENGTH}文字以上入力してください`);
         return;
     }
 
-    // ★開発中メッセージは info などで控えめに表示
     toast("確認画面機能は開発中です。\n入力内容は有効です。", {
         icon: '🚧',
     });
