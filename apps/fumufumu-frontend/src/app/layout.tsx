@@ -1,4 +1,5 @@
 import type { Metadata } from "next";
+import { Toaster } from "react-hot-toast"; // ★追加
 import "@/app/globals.css";
 
 export const metadata: Metadata = {
@@ -13,7 +14,11 @@ export default function RootLayout({
 }>) {
   return (
     <html lang="en">
-      <body className={``}>{children}</body>
+      <body className={``}>
+        {/* ここに配置することで、アプリ内のどこからでも通知を出せます */}
+        <Toaster position="top-center" />
+        {children}
+      </body>
     </html>
   );
 }

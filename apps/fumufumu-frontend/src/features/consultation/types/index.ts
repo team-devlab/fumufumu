@@ -35,3 +35,9 @@ export interface ConsultationListResponse {
   };
   data: Consultation[];
 }
+
+export interface CreateConsultationParams {
+  title: string;
+  body: string;
+  draft: boolean;
+}
