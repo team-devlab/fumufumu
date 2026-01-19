@@ -21,7 +21,8 @@ export const useConsultationEntry = () => {
   const [isProcessing, setIsProcessing] = useState(false);
 
   // NOTE: 誤操作による離脱防止
-  const isDirty = (!!title || !!body) && !isProcessing;
+  const hasInput = Boolean(title) || Boolean(body);
+  const isDirty = hasInput && !isProcessing;
   usePreventUnload(isDirty);
 
   const validateBody = () => {
