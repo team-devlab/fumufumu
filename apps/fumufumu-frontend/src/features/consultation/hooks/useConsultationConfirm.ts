@@ -32,7 +32,7 @@ export const useConsultationConfirm = () => {
         // tags: tags // APIがタグ対応したらここを開放
       });
 
-      // ★ 投稿成功時にリセット (ADR 003 Exit Point)
+      // ADR 003: 投稿成功時にリセット
       reset();
 
       toast.success(draft ? "下書きを保存しました" : "相談を投稿しました！");

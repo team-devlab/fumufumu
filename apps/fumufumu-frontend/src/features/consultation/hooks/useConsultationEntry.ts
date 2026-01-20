@@ -7,7 +7,6 @@ import { ROUTES } from "@/config/routes";
 import { createConsultation } from "@/features/consultation/api/consultationClientApi";
 import { CONSULTATION_RULES } from "@/features/consultation/config/constants";
 import { usePreventUnload } from "@/features/consultation/hooks/usePreventUnload";
-// ★ Storeをインポート
 import { useConsultationFormStore } from "@/features/consultation/stores/useConsultationFormStore";
 
 const countCharacters = (text: string) => text.replace(/\s/g, "").length;
@@ -15,13 +14,12 @@ const countCharacters = (text: string) => text.replace(/\s/g, "").length;
 export const useConsultationEntry = () => {
   const router = useRouter();
 
-  // ★ 変更点: useState から Zustand Store に置き換え
   const {
     title,
     setTitle,
     body,
     setBody,
-    reset, // ADR 003 Exit Point用
+    reset,
   } = useConsultationFormStore();
 
   // 処理状態 (UIのローディング状態などは、入力データではないのでローカルStateのままでOK)
@@ -32,7 +30,6 @@ export const useConsultationEntry = () => {
   const isDirty = hasInput && !isProcessing;
   usePreventUnload(isDirty);
 
-  // ★ 追加: 「一覧に戻る」ボタン用のハンドラ
   const handleBack = () => {
     if (isDirty) {
       const ok = window.confirm(
@@ -40,9 +37,7 @@ export const useConsultationEntry = () => {
       );
       if (!ok) return;
     }
-    // ここで reset() を呼ぶかどうかは要件次第ですが、
-    // 「キャンセル＝破棄」とみなすなら呼んでも良いですし、
-    // 「維持」したいなら呼ばなくてOKです。今回は「維持（呼ばない）」にしておきます。
+
     router.back();
   };
 
@@ -74,7 +69,7 @@ export const useConsultationEntry = () => {
         draft: true,
       });
 
-      // ★追加: 投稿成功時にもリセット (ADR 003 Exit Point)
+      // ADR 003: 投稿成功時にリセット
       reset();
 
       toast.success("下書きを保存しました");
@@ -103,7 +98,6 @@ export const useConsultationEntry = () => {
       return;
     }
 
-    // ★ 変更点: 確認画面へ遷移 (B案)
     router.push(`${ROUTES.CONSULTATION.NEW}/confirm`);
   };
 
