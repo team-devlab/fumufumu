@@ -1,4 +1,4 @@
-import { TemporaryHeader } from "./_components/TemporaryHeader";
+import { Header } from "./_components/Header";
 
 export default function MainLayout({
   children,
@@ -7,7 +7,7 @@ export default function MainLayout({
 }>) {
   return (
     <div className="flex flex-col h-screen">
-      <TemporaryHeader />
+      <Header />
       <div className="flex flex-1 overflow-hidden">
         <main className="flex-1 overflow-y-auto bg-gray-100 p-6">
           {children}

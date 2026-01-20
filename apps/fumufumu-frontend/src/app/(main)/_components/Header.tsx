@@ -5,7 +5,7 @@ import { useRouter } from "next/navigation";
 import { ROUTES } from "@/config/routes";
 import { useConsultationFormStore } from "@/features/consultation/stores/useConsultationFormStore";
 
-export const TemporaryHeader = () => {
+export const Header = () => {
   const router = useRouter();
   // Storeからreset関数を取得（Selectorパターンで再レンダリング防止）
   const reset = useConsultationFormStore((state) => state.reset);
