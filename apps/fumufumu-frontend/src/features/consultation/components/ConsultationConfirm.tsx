@@ -28,9 +28,7 @@ export const ConsultationConfirm = ({
 
       {/* タイトル確認 */}
       <div className="space-y-2">
-        <label className="block text-lg font-bold text-gray-600">
-          タイトル
-        </label>
+        <span className="block text-lg font-bold text-gray-600">タイトル</span>
         <div className="p-4 bg-gray-50 border border-gray-200 rounded-lg text-gray-900 font-bold">
           {title}
         </div>
@@ -38,9 +36,7 @@ export const ConsultationConfirm = ({
 
       {/* 相談内容確認 */}
       <div className="space-y-2">
-        <label className="block text-lg font-bold text-gray-600">
-          相談内容
-        </label>
+        <span className="block text-lg font-bold text-gray-600">相談内容</span>
         <div className="p-4 bg-gray-50 border border-gray-200 rounded-lg text-gray-800 min-h-[200px] whitespace-pre-wrap leading-relaxed">
           {body}
         </div>
@@ -48,9 +44,9 @@ export const ConsultationConfirm = ({
 
       {/* タグ確認 */}
       <div className="space-y-2">
-        <label className="block text-md font-bold text-gray-600">
+        <span className="block text-md font-bold text-gray-600">
           選択されたタグ
-        </label>
+        </span>
         <div className="flex flex-wrap gap-2">
           {tags.length > 0 ? (
             tags.map((tag) => (

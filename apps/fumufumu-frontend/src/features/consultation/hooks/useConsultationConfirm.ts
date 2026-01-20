@@ -9,7 +9,7 @@ import { useConsultationFormStore } from "@/features/consultation/stores/useCons
 
 export const useConsultationConfirm = () => {
   const router = useRouter();
-  
+
   // Storeからデータを取得
   const { title, body, tags, reset } = useConsultationFormStore();
   const [isProcessing, setIsProcessing] = useState(false);
@@ -19,7 +19,7 @@ export const useConsultationConfirm = () => {
     // バリデーション：万が一データがない状態で来てしまったら入力画面へ戻す
     if (!title || !body) {
       toast.error("入力内容が不足しています");
-      router.push(ROUTES.CONSULTATION.NEW); 
+      router.push(ROUTES.CONSULTATION.NEW);
       return;
     }
 

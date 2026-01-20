@@ -16,12 +16,12 @@ export const useConsultationEntry = () => {
   const router = useRouter();
 
   // ★ 変更点: useState から Zustand Store に置き換え
-  const { 
-    title, 
-    setTitle, 
-    body, 
+  const {
+    title,
+    setTitle,
+    body,
     setBody,
-    reset // ADR 003 Exit Point用
+    reset, // ADR 003 Exit Point用
   } = useConsultationFormStore();
 
   // 処理状態 (UIのローディング状態などは、入力データではないのでローカルStateのままでOK)
@@ -35,7 +35,9 @@ export const useConsultationEntry = () => {
   // ★ 追加: 「一覧に戻る」ボタン用のハンドラ
   const handleBack = () => {
     if (isDirty) {
-      const ok = window.confirm("入力中の内容は保存されていません。一覧に戻りますか？");
+      const ok = window.confirm(
+        "入力中の内容は保存されていません。一覧に戻りますか？",
+      );
       if (!ok) return;
     }
     // ここで reset() を呼ぶかどうかは要件次第ですが、
@@ -73,7 +75,7 @@ export const useConsultationEntry = () => {
       });
 
       // ★追加: 投稿成功時にもリセット (ADR 003 Exit Point)
-      reset(); 
+      reset();
 
       toast.success("下書きを保存しました");
       router.push(ROUTES.CONSULTATION.LIST);
