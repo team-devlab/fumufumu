@@ -5,18 +5,25 @@ import { useState } from "react";
 import toast from "react-hot-toast";
 import { ROUTES } from "@/config/routes";
 import { createConsultation } from "@/features/consultation/api/consultationClientApi";
-import { useConsultationFormStore } from "@/features/consultation/stores/useConsultationFormStore";
+import {
+  useConsultationActions,
+  useConsultationBody,
+  useConsultationTags,
+  useConsultationTitle,
+} from "@/features/consultation/stores/useConsultationFormStore";
 
 export const useConsultationConfirm = () => {
   const router = useRouter();
 
-  // Storeからデータを取得
-  const { title, body, tags, reset } = useConsultationFormStore();
+  const title = useConsultationTitle();
+  const body = useConsultationBody();
+  const tags = useConsultationTags();
+  const { reset } = useConsultationActions();
+  
   const [isProcessing, setIsProcessing] = useState(false);
 
   // 共通の保存処理
   const submitConsultation = async (draft: boolean) => {
-    // バリデーション：万が一データがない状態で来てしまったら入力画面へ戻す
     if (!title || !body) {
       toast.error("入力内容が不足しています");
       router.push(ROUTES.CONSULTATION.NEW);

@@ -2,14 +2,17 @@
 
 import { usePathname, useRouter } from "next/navigation";
 import { ROUTES } from "@/config/routes";
-import { useConsultationFormStore } from "@/features/consultation/stores/useConsultationFormStore";
+import { 
+  useConsultationActions, 
+  useHasInput 
+} from "@/features/consultation/stores/useConsultationFormStore";
 
 export const Header = () => {
   const router = useRouter();
   const pathname = usePathname();
 
-  const reset = useConsultationFormStore((state) => state.reset);
-  const hasInput = useConsultationFormStore((state) => state.hasInput());
+  const { reset } = useConsultationActions();
+  const hasInput = useHasInput();
 
   // ロゴクリック時のハンドラ
   const handleLogoClick = () => {
@@ -22,11 +25,8 @@ export const Header = () => {
       );
       if (!ok) return;
 
-      // OKならリセットしてトップへ（破棄挙動）
       reset();
     }
-
-    // それ以外なら確認なしでトップへ
     router.push(ROUTES.HOME);
   };
 

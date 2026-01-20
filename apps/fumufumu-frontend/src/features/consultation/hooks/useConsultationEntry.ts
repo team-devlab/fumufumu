@@ -7,24 +7,25 @@ import { ROUTES } from "@/config/routes";
 import { createConsultation } from "@/features/consultation/api/consultationClientApi";
 import { CONSULTATION_RULES } from "@/features/consultation/config/constants";
 import { usePreventUnload } from "@/features/consultation/hooks/usePreventUnload";
-import { useConsultationFormStore } from "@/features/consultation/stores/useConsultationFormStore";
+import {
+  useConsultationActions,
+  useConsultationBody,
+  useConsultationTitle,
+  useHasInput,
+} from "@/features/consultation/stores/useConsultationFormStore";
 
 const countCharacters = (text: string) => text.replace(/\s/g, "").length;
 
 export const useConsultationEntry = () => {
   const router = useRouter();
 
-  const {
-    title,
-    setTitle,
-    body,
-    setBody,
-    reset,
-  } = useConsultationFormStore();
+  // 個別のSelectorフックから値とアクションを取得
+  // これにより、例えば tags が更新されても、このコンポーネントは再レンダリングされにくくなります
+  const title = useConsultationTitle();
+  const body = useConsultationBody();
+  const { setTitle, setBody, reset } = useConsultationActions();
+  const hasInput = useHasInput();
 
-  const hasInput = useConsultationFormStore((state) => state.hasInput());
-
-  // 処理状態
   const [isProcessing, setIsProcessing] = useState(false);
 
   // NOTE: 誤操作による離脱防止
@@ -38,7 +39,6 @@ export const useConsultationEntry = () => {
       );
       if (!ok) return;
     }
-
     router.back();
   };
 

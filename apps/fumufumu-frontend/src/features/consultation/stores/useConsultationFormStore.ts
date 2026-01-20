@@ -3,17 +3,13 @@ import { create } from "zustand";
 type ConsultationFormState = {
   title: string;
   body: string;
-  // UI上の表示用のみ（APIには送信しない想定）
   tags: string[];
 
   setTitle: (title: string) => void;
   setBody: (body: string) => void;
   setTags: (tags: string[]) => void;
 
-  // ADR 003: アクション駆動リセット用
   reset: () => void;
-  
-  // 入力があるかどうかを判定する関数 (Getter)
   hasInput: () => boolean;
 };
 
@@ -23,9 +19,10 @@ const INITIAL_STATE = {
   tags: [] as string[],
 };
 
-export const useConsultationFormStore = create<ConsultationFormState>(
+// store自体は export しない（直接使わせない）のが理想
+const useConsultationFormStore = create<ConsultationFormState>(
   (set, get) => ({
-    ...INITIAL_STATE, // 初期値を展開
+    ...INITIAL_STATE,
 
     setTitle: (title) => set({ title }),
     setBody: (body) => set({ body }),
@@ -39,3 +36,21 @@ export const useConsultationFormStore = create<ConsultationFormState>(
     },
   }),
 );
+
+//-- Selector Hooks (ここから下を利用側でimportする) --//
+
+// 値取得用 (個別に取得することで、無関係な更新による再レンダリングを防ぐ)
+export const useConsultationTitle = () => useConsultationFormStore((s) => s.title);
+export const useConsultationBody = () => useConsultationFormStore((s) => s.body);
+export const useConsultationTags = () => useConsultationFormStore((s) => s.tags);
+export const useHasInput = () => useConsultationFormStore((s) => s.hasInput());
+
+// アクション取得用
+export const useConsultationActions = () => {
+  const setTitle = useConsultationFormStore((s) => s.setTitle);
+  const setBody = useConsultationFormStore((s) => s.setBody);
+  const setTags = useConsultationFormStore((s) => s.setTags);
+  const reset = useConsultationFormStore((s) => s.reset);
+  
+  return { setTitle, setBody, setTags, reset };
+};
