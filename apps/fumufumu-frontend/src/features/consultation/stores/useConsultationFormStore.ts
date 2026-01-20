@@ -17,21 +17,24 @@ type ConsultationFormState = {
   hasInput: () => boolean;
 };
 
+const INITIAL_STATE = {
+  title: "",
+  body: "",
+  tags: [] as string[],
+};
+
 export const useConsultationFormStore = create<ConsultationFormState>(
   (set, get) => ({
-    title: "",
-    body: "",
-    tags: [], // 初期値は空配列
+    ...INITIAL_STATE, // 初期値を展開
 
     setTitle: (title) => set({ title }),
     setBody: (body) => set({ body }),
     setTags: (tags) => set({ tags }),
 
-    reset: () => set({ title: "", body: "", tags: [] }),
+    reset: () => set(INITIAL_STATE),
 
     hasInput: () => {
       const { title, body, tags } = get();
-      // タイトルか本文に文字がある、またはタグが選択されている場合に true
       return title.trim() !== "" || body.trim() !== "" || tags.length > 0;
     },
   }),
