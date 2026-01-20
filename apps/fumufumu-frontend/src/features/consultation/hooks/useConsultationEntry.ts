@@ -32,6 +32,18 @@ export const useConsultationEntry = () => {
   const isDirty = hasInput && !isProcessing;
   usePreventUnload(isDirty);
 
+  // ★ 追加: 「一覧に戻る」ボタン用のハンドラ
+  const handleBack = () => {
+    if (isDirty) {
+      const ok = window.confirm("入力中の内容は保存されていません。一覧に戻りますか？");
+      if (!ok) return;
+    }
+    // ここで reset() を呼ぶかどうかは要件次第ですが、
+    // 「キャンセル＝破棄」とみなすなら呼んでも良いですし、
+    // 「維持」したいなら呼ばなくてOKです。今回は「維持（呼ばない）」にしておきます。
+    router.back();
+  };
+
   const validateBody = () => {
     if (countCharacters(body) < CONSULTATION_RULES.BODY_MIN_LENGTH) {
       return false;
@@ -101,5 +113,6 @@ export const useConsultationEntry = () => {
     isProcessing,
     handleSaveDraft,
     handleConfirm,
+    handleBack,
   };
 };
