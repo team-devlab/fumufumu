@@ -7,17 +7,24 @@ import { ROUTES } from "@/config/routes";
 import { createConsultation } from "@/features/consultation/api/consultationClientApi";
 import { CONSULTATION_RULES } from "@/features/consultation/config/constants";
 import { usePreventUnload } from "@/features/consultation/hooks/usePreventUnload";
+// ★ Storeをインポート
+import { useConsultationFormStore } from "@/features/consultation/stores/useConsultationFormStore";
 
 const countCharacters = (text: string) => text.replace(/\s/g, "").length;
 
 export const useConsultationEntry = () => {
   const router = useRouter();
 
-  // フォームの状態
-  const [title, setTitle] = useState("");
-  const [body, setBody] = useState("");
+  // ★ 変更点: useState から Zustand Store に置き換え
+  const { 
+    title, 
+    setTitle, 
+    body, 
+    setBody,
+    reset // ADR 003 Exit Point用
+  } = useConsultationFormStore();
 
-  // 処理状態
+  // 処理状態 (UIのローディング状態などは、入力データではないのでローカルStateのままでOK)
   const [isProcessing, setIsProcessing] = useState(false);
 
   // NOTE: 誤操作による離脱防止
@@ -53,6 +60,9 @@ export const useConsultationEntry = () => {
         draft: true,
       });
 
+      // ★追加: 投稿成功時にもリセット (ADR 003 Exit Point)
+      reset(); 
+
       toast.success("下書きを保存しました");
       router.push(ROUTES.CONSULTATION.LIST);
     } catch (error) {
@@ -62,7 +72,7 @@ export const useConsultationEntry = () => {
       } else {
         toast.error("保存に失敗しました。時間をおいて再度お試しください。");
       }
-      setIsProcessing(false); // エラー時はフラグを戻す（成功時は遷移するので戻さなくて良い）
+      setIsProcessing(false);
     }
   };
 
@@ -79,9 +89,8 @@ export const useConsultationEntry = () => {
       return;
     }
 
-    toast("確認画面機能は開発中です。\n入力内容は有効です。", {
-      icon: "🚧",
-    });
+    // ★ 変更点: 確認画面へ遷移 (B案)
+    router.push(`${ROUTES.CONSULTATION.NEW}/confirm`);
   };
 
   return {
