@@ -1,9 +1,10 @@
 import { Button } from "@/components/ui/Button";
+import { CONSULTATION_LABELS } from "@/features/consultation/config/constants";
 
 type Props = {
   title: string;
   body: string;
-  tags: string[]; // 現状は空配列が来る想定
+  tags: string[]; 
   onBack: () => void;
   onSaveDraft: () => void;
   onPublish: () => void;
@@ -28,7 +29,9 @@ export const ConsultationConfirm = ({
 
       {/* タイトル確認 */}
       <div className="space-y-2">
-        <span className="block text-lg font-bold text-gray-600">タイトル</span>
+        <span className="block text-lg font-bold text-gray-600">
+          {CONSULTATION_LABELS.TITLE}
+        </span>
         <div className="p-4 bg-gray-50 border border-gray-200 rounded-lg text-gray-900 font-bold">
           {title}
         </div>
@@ -36,7 +39,9 @@ export const ConsultationConfirm = ({
 
       {/* 相談内容確認 */}
       <div className="space-y-2">
-        <span className="block text-lg font-bold text-gray-600">相談内容</span>
+        <span className="block text-lg font-bold text-gray-600">
+          {CONSULTATION_LABELS.BODY}
+        </span>
         <div className="p-4 bg-gray-50 border border-gray-200 rounded-lg text-gray-800 min-h-[200px] whitespace-pre-wrap leading-relaxed">
           {body}
         </div>
@@ -45,7 +50,7 @@ export const ConsultationConfirm = ({
       {/* タグ確認 */}
       <div className="space-y-2">
         <span className="block text-md font-bold text-gray-600">
-          選択されたタグ
+          {CONSULTATION_LABELS.TAGS_CONFIRM}
         </span>
         <div className="flex flex-wrap gap-2">
           {tags.length > 0 ? (
@@ -58,7 +63,9 @@ export const ConsultationConfirm = ({
               </span>
             ))
           ) : (
-            <span className="text-gray-400 text-sm">タグ未選択</span>
+            <span className="text-gray-400 text-sm">
+              {CONSULTATION_LABELS.NO_TAG}
+            </span>
           )}
         </div>
       </div>
