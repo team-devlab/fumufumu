@@ -22,11 +22,12 @@ export const useConsultationEntry = () => {
     reset,
   } = useConsultationFormStore();
 
-  // 処理状態 (UIのローディング状態などは、入力データではないのでローカルStateのままでOK)
+  const hasInput = useConsultationFormStore((state) => state.hasInput());
+
+  // 処理状態
   const [isProcessing, setIsProcessing] = useState(false);
 
   // NOTE: 誤操作による離脱防止
-  const hasInput = Boolean(title) || Boolean(body);
   const isDirty = hasInput && !isProcessing;
   usePreventUnload(isDirty);
 

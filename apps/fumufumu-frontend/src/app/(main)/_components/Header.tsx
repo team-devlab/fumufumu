@@ -6,12 +6,10 @@ import { useConsultationFormStore } from "@/features/consultation/stores/useCons
 
 export const Header = () => {
   const router = useRouter();
-  const pathname = usePathname(); 
+  const pathname = usePathname();
 
-  const { title, body, tags, reset } = useConsultationFormStore();
-
-  // 共通のDirty Check関数
-  const hasInput = title.trim() !== "" || body.trim() !== "" || tags.length > 0;
+  const reset = useConsultationFormStore((state) => state.reset);
+  const hasInput = useConsultationFormStore((state) => state.hasInput());
 
   // ロゴクリック時のハンドラ
   const handleLogoClick = () => {
@@ -33,7 +31,7 @@ export const Header = () => {
   };
 
   const handleCreateNew = () => {
-    // 新規作成ボタンは「どこにいても」Storeにゴミがあれば確認する（既存ロジック）
+    // 新規作成ボタンは「どこにいても」Storeにゴミがあれば確認する
     if (hasInput) {
       const ok = window.confirm(
         "入力中の内容があります。破棄して新規作成しますか？",
