@@ -1,6 +1,6 @@
-import { 
-  CONSULTATION_RULES, 
-  CONSULTATION_LABELS
+import {
+  CONSULTATION_LABELS,
+  CONSULTATION_RULES,
 } from "@/features/consultation/config/constants";
 
 type Props = {

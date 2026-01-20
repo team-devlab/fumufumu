@@ -19,7 +19,7 @@ export const useConsultationConfirm = () => {
   const body = useConsultationBody();
   const tags = useConsultationTags();
   const { reset } = useConsultationActions();
-  
+
   const [isProcessing, setIsProcessing] = useState(false);
 
   // 共通の保存処理

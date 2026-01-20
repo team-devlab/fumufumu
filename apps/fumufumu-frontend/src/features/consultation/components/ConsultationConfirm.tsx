@@ -4,7 +4,7 @@ import { CONSULTATION_LABELS } from "@/features/consultation/config/constants";
 type Props = {
   title: string;
   body: string;
-  tags: string[]; 
+  tags: string[];
   onBack: () => void;
   onSaveDraft: () => void;
   onPublish: () => void;

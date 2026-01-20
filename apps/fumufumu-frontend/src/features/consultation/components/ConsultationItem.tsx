@@ -1,6 +1,6 @@
 import type React from "react";
-import type { Consultation } from "@/features/consultation/types";
 import { CONSULTATION_LABELS } from "@/features/consultation/config/constants";
+import type { Consultation } from "@/features/consultation/types";
 
 type Props = {
   consultation: Consultation;

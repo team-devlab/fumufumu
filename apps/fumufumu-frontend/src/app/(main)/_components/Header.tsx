@@ -2,9 +2,9 @@
 
 import { usePathname, useRouter } from "next/navigation";
 import { ROUTES } from "@/config/routes";
-import { 
-  useConsultationActions, 
-  useHasInput 
+import {
+  useConsultationActions,
+  useHasInput,
 } from "@/features/consultation/stores/useConsultationFormStore";
 
 export const Header = () => {
