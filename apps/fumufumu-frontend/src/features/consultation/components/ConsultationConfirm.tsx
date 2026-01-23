@@ -42,9 +42,7 @@ export const ConsultationConfirm = ({
         <span className="block text-lg font-bold text-gray-600">
           {CONSULTATION_LABELS.BODY}
         </span>
-        <div className="text-xl font-bold text-gray-800 ">
-          {body}
-        </div>
+        <div className="text-xl font-bold text-gray-800 "> {body} </div>
       </div>
 
       {/* タグ確認 */}
