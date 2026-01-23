@@ -1,4 +1,5 @@
 import type React from "react";
+import { CONSULTATION_LABELS } from "@/features/consultation/config/constants";
 import type { Consultation } from "@/features/consultation/types";
 
 type Props = {
@@ -9,7 +10,6 @@ export const ConsultationItem: React.FC<Props> = ({ consultation }) => {
   // TODO: 日付フォーマット用のライブラリ(date-fns等)を導入して動的に計算する
   const timeAgo = "2時間前";
 
-  // Backendには status フィールドがないため、solved_at(解決日時)の有無で判定している
   const isResolved = !!consultation.solved_at;
 
   return (
@@ -37,7 +37,7 @@ export const ConsultationItem: React.FC<Props> = ({ consultation }) => {
           </div>
           <div className="flex items-baseline space-x-2">
             <span className="font-semibold text-gray-700">
-              {consultation.author?.name ?? "退会済みユーザー"}
+              {consultation.author?.name ?? CONSULTATION_LABELS.ANONYMOUS_USER}
             </span>
             <span className="text-xs text-gray-400">{timeAgo}</span>
           </div>
@@ -46,7 +46,7 @@ export const ConsultationItem: React.FC<Props> = ({ consultation }) => {
         {/* Status Badge */}
         {isResolved && (
           <span className="bg-teal-600 text-white text-xs px-3 py-1 rounded-full font-medium">
-            解決済み
+            {CONSULTATION_LABELS.STATUS_SOLVED}
           </span>
         )}
       </div>
@@ -56,7 +56,6 @@ export const ConsultationItem: React.FC<Props> = ({ consultation }) => {
         <h3 className="text-lg font-bold text-gray-800 mb-2">
           {consultation.title}
         </h3>
-        {/* 一覧画面のため、全文ではなくプレビュー用テキストを表示 */}
         <p className="text-gray-600 text-sm leading-relaxed">
           {consultation.body_preview}
         </p>
@@ -66,9 +65,10 @@ export const ConsultationItem: React.FC<Props> = ({ consultation }) => {
       <div className="flex items-center justify-between">
         <div className="flex items-center justify-between">
           <div className="flex space-x-2">
-            {/* TODO: タグ機能はBackend未実装のためハードコードで表示 */}
+            {/* TODO: タグ機能はBackend未実装のため仮の値を表示 */}
             <span className="px-3 py-1 bg-gray-100 text-gray-600 text-xs rounded-full">
-              キャリア
+              {/* MOCKデータを仮利用 */}
+              {CONSULTATION_LABELS.MOCK_TAG_CAREER}
             </span>
           </div>
         </div>

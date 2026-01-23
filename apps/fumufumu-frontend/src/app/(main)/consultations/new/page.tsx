@@ -1,13 +1,10 @@
 "use client";
 
-import { useRouter } from "next/navigation";
 import { ConsultationForm } from "@/features/consultation/components/ConsultationForm";
 import { ConsultationFormActions } from "@/features/consultation/components/ConsultationFormActions";
 import { useConsultationEntry } from "@/features/consultation/hooks/useConsultationEntry";
 
 export default function NewConsultationPage() {
-  const router = useRouter();
-
   // カスタムフックからステートとロジックを取得
   const {
     title,
@@ -17,6 +14,7 @@ export default function NewConsultationPage() {
     isProcessing,
     handleSaveDraft,
     handleConfirm,
+    handleBack,
   } = useConsultationEntry();
 
   return (
@@ -28,7 +26,7 @@ export default function NewConsultationPage() {
         onChangeBody={setBody}
       />
       <ConsultationFormActions
-        onBack={() => router.back()}
+        onBack={handleBack}
         onSaveDraft={handleSaveDraft}
         onConfirm={handleConfirm}
         isProcessing={isProcessing}
