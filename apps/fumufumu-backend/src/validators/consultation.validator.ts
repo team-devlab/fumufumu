@@ -61,11 +61,11 @@ export const listConsultationsQuerySchema = z.object({
 	solved: booleanStringSchema.optional(),
 });
 
-export const consultationBodySchema = z.object({
+export const consultationContentSchema = z.object({
 	title: consultationTitleSchema,
 	body: consultationBodyContentSchema,
 	draft: consultationDraftSchema
 });
 
 export type ListConsultationsQuery = z.infer<typeof listConsultationsQuerySchema>;
-export type ConsultationBody = z.infer<typeof consultationBodySchema>;
+export type ConsultationContent = z.infer<typeof consultationContentSchema>;
