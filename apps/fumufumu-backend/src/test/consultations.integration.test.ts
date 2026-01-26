@@ -1,6 +1,7 @@
 import { env, applyD1Migrations } from 'cloudflare:test';
 import { describe, it, expect, beforeAll } from 'vitest';
 import app from '../index';
+import { join } from 'path';
 
 // DBの型定義
 interface CloudflareBindings {
@@ -557,5 +558,61 @@ describe('Consultations API Integration Tests', () => {
             expect(res.status).toBe(404);
         });
 	});
-});
 
+	describe('POST /api/consultations/:id/advice', () => {
+		let consultationId: number;
+
+		beforeAll(async () => {
+			const req = new Request('http://localhost/api/consultations', {
+				method: 'POST',
+				headers: {
+					'Content-Type': 'application/json',
+					'Cookie': sessionCookie!,
+				},
+				body: JSON.stringify({
+					title: 'テスト相談',
+					body: 'テスト本文です。10文字以上あります。',
+					draft: false,
+				}),
+			});
+
+			const res = await app.fetch(req, env);
+			expect(res.status).toBe(201);
+			const data = await res.json() as any;
+			consultationId = data.id;
+		})
+		it ('相談回答を作成できる', async () => {
+			const req = new Request(`http://localhost/api/consultations/${consultationId}/advice`, {
+				method: 'POST',
+				headers: {
+					'Content-Type': 'application/json',
+					'Cookie': sessionCookie!,
+				},
+				body: JSON.stringify({
+					body: '相談回答本文です。10文字以上あります。',
+				}),
+			});
+
+			const res = await app.fetch(req, env);
+			expect(res.status).toBe(201);
+		});
+
+		it ('下書き回答は公開できない', async() => {
+			const req = new Request(`http://localhost/api/consultations/${consultationId}/advice`, {
+				method: 'POST',
+				headers: {
+					'Content-Type': 'application/json',
+					'Cookie': sessionCookie!,
+				},
+				body: JSON.stringify({
+					body: '下書き回答本文です。10文字以上あります。',
+					draft: true,
+				}),
+			});
+		const res = await app.fetch(req, env);
+			expect(res.status).toBe(201);
+			const data = await res.json() as any;
+			expect(data.draft).toBe(true);
+		});
+	});
+});
