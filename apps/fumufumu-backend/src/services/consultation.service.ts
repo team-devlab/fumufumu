@@ -2,11 +2,13 @@
 import type { ConsultationRepository } from "@/repositories/consultation.repository";
 import type { ConsultationFilters } from "@/types/consultation.types";
 import type { ConsultationResponse, ConsultationListResponse, ConsultationSavedResponse } from "@/types/consultation.response";
-import type { ConsultationBody } from "@/validators/consultation.validator";
-import { ForbiddenError, NotFoundError } from "@/errors/AppError";
+import type { ConsultationContent } from "@/validators/consultation.validator";
+import { ForbiddenError } from "@/errors/AppError";
+import type { AdviceResponse } from "@/types/advice.response";
 
 type ConsultationEntity = Awaited<ReturnType<ConsultationRepository["findAll"]>>[number];
 type ConsultationEntityById = Awaited<ReturnType<ConsultationRepository["findFirstById"]>>;
+type AdviceEntity = Awaited<ReturnType<ConsultationRepository["createAdvice"]>>;
 
 export class ConsultationService {
 	private static readonly BODY_PREVIEW_LENGTH = 100;
@@ -49,6 +51,28 @@ export class ConsultationService {
 		};
 	}
 
+		/**
+	 * 相談回答データをレスポンス形式に変換する
+	 * 
+	 * @param advice - Repository層から取得した相談回答データ
+	 * @returns API レスポンス形式の相談回答データ
+	 */
+	private toAdviceResponse(advice: AdviceEntity): AdviceResponse {
+		return {
+			id: advice.id,
+			body: advice.body,
+			draft: advice.draft,
+			hidden_at: advice.hiddenAt?.toISOString() ?? null,
+			created_at: advice.createdAt.toISOString(),
+			updated_at: advice.updatedAt.toISOString(),
+			author: advice.author ? {
+				id: advice.author.id,
+				name: advice.author.name,
+				disabled: advice.author.disabled,
+			} : null
+		};
+	}
+
 	async getConsultation(id: number) :Promise<ConsultationResponse> {
 		const consultation = await this.repository.findFirstById(id);
 		return this.toConsultationResponse(consultation as unknown as ConsultationEntityById);
@@ -78,7 +102,7 @@ export class ConsultationService {
 	 * @throws {Error} 作成失敗時
 	 */
 	async createConsultation(
-		data: ConsultationBody,
+		data: ConsultationContent,
 		authorId: number
 	): Promise<ConsultationResponse> {
 		const createdConsultation = await this.repository.create({
@@ -102,7 +126,7 @@ export class ConsultationService {
 	 */
 	async updateConsultation(
 		id: number,
-		data: ConsultationBody,
+		data: ConsultationContent,
 		requestUserId: number
 	): Promise<ConsultationSavedResponse> {
     	const existingConsultation = await this.repository.findFirstById(id);
@@ -124,5 +148,21 @@ export class ConsultationService {
 			updated_at: updatedConsultation.updatedAt.toISOString(),
 		});
 	}
-}
+		/**
+	 * 
+	 * @param id - 相談ID
+	 * @param data.body - 回答本文
+	 * @param data.draft - 下書きフラグ（true: 下書き, false: 公開）
+	 * @param authorId - 回答者ID（認証ユーザー）
+	 * @returns 
+	 */
+	async createAdvice(id: number, data: ConsultationContent, authorId: number): Promise<AdviceResponse> {
+		const createdAdvice = await this.repository.createAdvice({
+			consultationId: id,
+			authorId,
+			...data,
+		});
 
+		return this.toAdviceResponse(createdAdvice);
+	}
+}

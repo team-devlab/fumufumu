@@ -176,18 +176,15 @@ export class ConsultationRepository {
 	}
 
 	async createAdvice(data: {
-		id: number;
-		title: string;
-		body: string;
-		authorId: number;
-		draft: boolean;
 		consultationId: number;
+		authorId: number;
+		body: string;
+		draft: boolean;
 	}) {
-		const [inserted] = await this.db
+		try {
+			const [inserted] = await this.db
 			.insert(advices)
 			.values({
-				id: data.id,
-				title: data.title,
 				body: data.body,
 				authorId: data.authorId,
 				draft: data.draft,
@@ -195,9 +192,29 @@ export class ConsultationRepository {
 			}).returning();
 
 		if (!inserted) {
-			throw new DatabaseError("アドバイスの作成に失敗しました: insert操作がデータを返しませんでした");
+			throw new DatabaseError("相談回答の作成に失敗しました: insert操作がデータを返しませんでした");
 		}
 
-		return inserted;
+		const author = await this.db.query.users.findFirst({
+			where: eq(users.id, data.authorId),
+		});
+
+		if (!author) {
+			throw new NotFoundError(`指定されたユーザーが見つかりません: authorId=${data.authorId}`);
+		}
+
+		return {
+			...inserted,
+			author,
+			};
+		} catch (error) {
+			const errorMessage = (error as Error).message || String(error);
+
+			if (error instanceof DatabaseError || error instanceof NotFoundError) {
+				throw error;
+			}
+
+			throw new DatabaseError(`データベースエラーが発生しました: ${errorMessage}`);
+		}
 	}
 }
