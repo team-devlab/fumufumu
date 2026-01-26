@@ -6,7 +6,6 @@ import { consultations } from "./consultations";
 // 回答（advice）テーブル
 export const advices = sqliteTable("advices", {
   id: integer("id").primaryKey({ autoIncrement: true }),
-  title: text("title").notNull(),
   body: text("body").notNull(),
   draft: integer("draft", { mode: "boolean" }).default(false).notNull(),
   hiddenAt: integer("hidden_at", { mode: "timestamp_ms" }),
