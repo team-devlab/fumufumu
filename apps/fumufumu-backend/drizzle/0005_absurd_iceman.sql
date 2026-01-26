@@ -1,1 +1,0 @@
-ALTER TABLE `advices` DROP COLUMN `title`;
