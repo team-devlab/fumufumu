@@ -2,7 +2,7 @@
 import type { ConsultationRepository } from "@/repositories/consultation.repository";
 import type { ConsultationFilters } from "@/types/consultation.types";
 import type { ConsultationResponse, ConsultationListResponse, ConsultationSavedResponse } from "@/types/consultation.response";
-import type { ConsultationContent } from "@/validators/consultation.validator";
+import type { ConsultationContent, AdviceContent } from "@/validators/consultation.validator";
 import { ForbiddenError } from "@/errors/AppError";
 import type { AdviceResponse } from "@/types/advice.response";
 
@@ -156,7 +156,7 @@ export class ConsultationService {
 	 * @param authorId - 回答者ID（認証ユーザー）
 	 * @returns 
 	 */
-	async createAdvice(id: number, data: ConsultationContent, authorId: number): Promise<AdviceResponse> {
+	async createAdvice(id: number, data: AdviceContent, authorId: number): Promise<AdviceResponse> {
 		const createdAdvice = await this.repository.createAdvice({
 			consultationId: id,
 			authorId,

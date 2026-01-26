@@ -67,5 +67,11 @@ export const consultationContentSchema = z.object({
 	draft: consultationDraftSchema
 });
 
+export const adviceContentSchema = z.object({
+	body: consultationBodyContentSchema,
+	draft: consultationDraftSchema
+});
+
 export type ListConsultationsQuery = z.infer<typeof listConsultationsQuerySchema>;
 export type ConsultationContent = z.infer<typeof consultationContentSchema>;
+export type AdviceContent = z.infer<typeof adviceContentSchema>;
