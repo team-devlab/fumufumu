@@ -175,6 +175,16 @@ export class ConsultationRepository {
 		return updated;
 	}
 
+	/**
+	 * 
+	 * @param data - 作成する相談回答データ
+	 * @param data.consultationId - 相談ID
+	 * @param data.authorId - 回答者ID
+	 * @param data.body - 回答本文
+	 * @param data.draft - 下書きフラグ（true: 下書き, false: 公開）
+	 * @returns 作成された相談回答データ（authorリレーション含む）
+	 * @throws {Error} データベースエラー、作成失敗時
+	 */
 	async createAdvice(data: {
 		consultationId: number;
 		authorId: number;
