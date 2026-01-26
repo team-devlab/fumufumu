@@ -4,6 +4,7 @@ import type { DbInstance } from "@/index";
 import { eq, and, isNull, isNotNull, type SQL } from "drizzle-orm";
 import type { ConsultationFilters } from "@/types/consultation.types";
 import { DatabaseError, ConflictError, NotFoundError } from "@/errors/AppError";
+import { advices } from "@/db/schema/advices";
 
 export class ConsultationRepository {
 	constructor(private db: DbInstance) {}
@@ -172,5 +173,31 @@ export class ConsultationRepository {
 		}
 
 		return updated;
+	}
+
+	async createAdvice(data: {
+		id: number;
+		title: string;
+		body: string;
+		authorId: number;
+		draft: boolean;
+		consultationId: number;
+	}) {
+		const [inserted] = await this.db
+			.insert(advices)
+			.values({
+				id: data.id,
+				title: data.title,
+				body: data.body,
+				authorId: data.authorId,
+				draft: data.draft,
+				consultationId: data.consultationId,
+			}).returning();
+
+		if (!inserted) {
+			throw new DatabaseError("アドバイスの作成に失敗しました: insert操作がデータを返しませんでした");
+		}
+
+		return inserted;
 	}
 }
