@@ -613,5 +613,46 @@ describe('Consultations API Integration Tests', () => {
 			const data = await res.json() as any;
 			expect(data.draft).toBe(true);
 		});
+		
+		it('本文が短すぎる場合（10文字未満）はバリデーションエラー(400)になる', async () => {
+			const req = new Request(`http://localhost/api/consultations/${consultationId}/advice`, {
+				method: 'POST',
+				headers: {
+					'Content-Type': 'application/json',
+					'Cookie': sessionCookie!,
+				},
+				body: JSON.stringify({
+					body: '123456789', // 10文字未満
+					draft: false,
+				}),
+			});
+
+			const res = await app.fetch(req, env);
+			expect(res.status).toBe(400);
+            
+            const data = await res.json() as any;
+            expect(data.success).toBe(false); 
+		});
+
+		it('存在しない相談IDを指定すると404エラーになる', async () => {
+			const nonExistentId = 99999; // 存在しないID
+			const req = new Request(`http://localhost/api/consultations/${nonExistentId}/advice`, {
+				method: 'POST',
+				headers: {
+					'Content-Type': 'application/json',
+					'Cookie': sessionCookie!,
+				},
+				body: JSON.stringify({
+					body: 'これは存在しない相談への回答です。10文字以上あります。',
+					draft: false,
+				}),
+			});
+
+			const res = await app.fetch(req, env);
+			expect(res.status).toBe(404);
+
+            const data = await res.json() as any;
+            expect(data.error).toBe('NotFoundError');
+		});
 	});
 });
