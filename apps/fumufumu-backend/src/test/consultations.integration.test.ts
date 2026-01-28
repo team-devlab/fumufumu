@@ -1,7 +1,6 @@
 import { env, applyD1Migrations } from 'cloudflare:test';
 import { describe, it, expect, beforeAll } from 'vitest';
 import app from '../index';
-import { join } from 'path';
 
 // DBの型定義
 interface CloudflareBindings {
