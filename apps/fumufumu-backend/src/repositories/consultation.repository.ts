@@ -191,26 +191,45 @@ export class ConsultationRepository {
 		body: string;
 		draft: boolean;
 	}) {
-		try {
-			const [inserted] = await this.db
-			.insert(advices)
-			.values({
-				body: data.body,
-				authorId: data.authorId,
-				draft: data.draft,
-				consultationId: data.consultationId,
-			}).returning();
-
-		if (!inserted) {
-			throw new DatabaseError("相談回答の作成に失敗しました: insert操作がデータを返しませんでした");
+		try
+		  const insertQuery = this.db
+				.insert(advices)
+				.values({
+					body: data.body,
+					authorId: data.authorId,
+					draft: data.draft,
+					consultationId: data.consultationId,
+				})
+				.returning();
+				
+	      let insertedAdvice;
+	      
+	      if (data.draft) {
+	        // 下書きの時は親の相談更新日時は更新しない
+	        [insertedAdvice] = await insertQuery;
+	      } else {
+	        const [insertResult, updateResult] = await this.db.batch([
+					insertQuery, // 定義済みの変数を再利用
+					this.db
+						.update(consultations)
+						.set({ updatedAt: new Date() })
+						.where(and(eq(consultations.id, data.consultationId), isNull(consultations.hiddenAt)))
+						.returning({ id: consultations.id }),
+		    ]);
+		    
+		    // 親が見つからない（または非表示）のチェック
+		    if (updateResult.length === 0) {
+				throw new NotFoundError(`指定された相談(ID:${data.consultationId})は見つかりませんでした`);
+			}
+			insertedAdvice = insertResult[0];
 		}
-
-		const author = await this.db.query.users.findFirst({
-			where: eq(users.id, data.authorId),
-		});
-
+		
+		if (!insertedAdvice) {
+			throw new DatabaseError("相談回答の作成に失敗しました");
+		}
+		
 		if (!author) {
-			throw new NotFoundError(`指定されたユーザーが見つかりません: authorId=${data.authorId}`);
+			throw new NotFoundError("指定されたユーザーが見つかりません");
 		}
 
 		return {
