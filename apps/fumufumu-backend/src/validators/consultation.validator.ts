@@ -31,7 +31,7 @@ const consultationTitleSchema = z
 	.min(1, "タイトルを入力してください")
 	.max(100, "タイトルは100文字以内で入力してください");
 
-const consultationBodyContentSchema = z
+const postBodySchema = z
 	.string()
 	.min(10, "本文は10文字以上入力してください")
 	.max(10000, "本文は10,000文字以内で入力してください");
@@ -63,12 +63,12 @@ export const listConsultationsQuerySchema = z.object({
 
 export const consultationContentSchema = z.object({
 	title: consultationTitleSchema,
-	body: consultationBodyContentSchema,
+	body: postBodySchema,
 	draft: consultationDraftSchema
 });
 
 export const adviceContentSchema = z.object({
-	body: consultationBodyContentSchema,
+	body: postBodySchema,
 	draft: consultationDraftSchema
 });
 
