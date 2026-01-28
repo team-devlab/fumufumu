@@ -218,13 +218,19 @@ export class ConsultationRepository {
 			author,
 			};
 		} catch (error) {
-			const errorMessage = (error as Error).message || String(error);
+			const errorString = error instanceof Error
+				? `${error.message} ${String(error.cause)}`
+				: String(error);
+
+			if (errorString.includes("FOREIGN KEY constraint failed")) {
+				throw new NotFoundError(`指定された相談(ID:${data.consultationId})は見つかりませんでした`);
+			}
 
 			if (error instanceof DatabaseError || error instanceof NotFoundError) {
 				throw error;
 			}
 
-			throw new DatabaseError(`データベースエラーが発生しました: ${errorMessage}`);
+			throw new DatabaseError(`データベースエラーが発生しました: ${errorString}`);
 		}
 	}
 }
