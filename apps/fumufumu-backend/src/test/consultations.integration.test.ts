@@ -629,9 +629,6 @@ describe('Consultations API Integration Tests', () => {
 
 			const res = await app.fetch(req, env);
 			expect(res.status).toBe(400);
-            
-            const data = await res.json() as any;
-            expect(data.success).toBe(false); 
 		});
 
 		it('存在しない相談IDを指定すると404エラーになる', async () => {

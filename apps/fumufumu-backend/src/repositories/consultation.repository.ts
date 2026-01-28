@@ -191,7 +191,7 @@ export class ConsultationRepository {
 		body: string;
 		draft: boolean;
 	}) {
-		try
+		try {
 		  const insertQuery = this.db
 				.insert(advices)
 				.values({
@@ -228,12 +228,15 @@ export class ConsultationRepository {
 			throw new DatabaseError("相談回答の作成に失敗しました");
 		}
 		
+		const author = await this.db.query.users.findFirst({
+      where: eq(users.id, data.authorId),
+    });
 		if (!author) {
 			throw new NotFoundError("指定されたユーザーが見つかりません");
 		}
 
 		return {
-			...inserted,
+			...insertedAdvice,
 			author,
 			};
 		} catch (error) {
