@@ -1,7 +1,7 @@
 // Business層: 相談ビジネスロジック
 import type { ConsultationRepository } from "@/repositories/consultation.repository";
 import type { ConsultationFilters } from "@/types/consultation.types";
-import type { ConsultationResponse, ConsultationListResponse, ConsultationSavedResponse } from "@/types/consultation.response";
+import type { ConsultationResponse, ConsultationListResponse, ConsultationSavedResponse, AdviceSavedResponse } from "@/types/consultation.response";
 import type { ConsultationContent, AdviceContent } from "@/validators/consultation.validator";
 import { ForbiddenError } from "@/errors/AppError";
 import type { AdviceResponse } from "@/types/advice.response";
@@ -70,6 +70,18 @@ export class ConsultationService {
 				name: advice.author.name,
 				disabled: advice.author.disabled,
 			} : null
+		};
+	}
+
+	private toAdviceSavedResponse(advice: {
+		id: number;
+		draft: boolean;
+		updated_at: string;
+	}): AdviceSavedResponse {
+		return {
+			id: advice.id,
+			draft: advice.draft,
+			updated_at: advice.updated_at,
 		};
 	}
 
@@ -148,7 +160,9 @@ export class ConsultationService {
 			updated_at: updatedConsultation.updatedAt.toISOString(),
 		});
 	}
-		/**
+	/**
+	 * 
+	 * 相談に対する回答を作成する
 	 * 
 	 * @param id - 相談ID
 	 * @param data.body - 回答本文
@@ -164,5 +178,18 @@ export class ConsultationService {
 		});
 
 		return this.toAdviceResponse(createdAdvice);
+	}
+
+	async updateAdvice(id: number, data: AdviceContent, authorId: number): Promise<AdviceSavedResponse> {
+		const updatedAdvice = await this.repository.updateAdvice({
+			consultationId: id,
+			authorId,
+			...data,
+		});
+		return this.toAdviceSavedResponse({
+			id: updatedAdvice.id,
+			draft: updatedAdvice.draft,
+			updated_at: updatedAdvice.updatedAt.toISOString(),
+		});
 	}
 }

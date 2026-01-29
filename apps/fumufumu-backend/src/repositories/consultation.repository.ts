@@ -255,4 +255,29 @@ export class ConsultationRepository {
 			throw new DatabaseError(`データベースエラーが発生しました: ${errorString}`);
 		}
 	}
+
+	async updateAdvice(data: {
+		consultationId: number;
+		authorId: number;
+		body: string;
+		draft: boolean;
+	}) {
+		const [updated] = await this.db.update(advices)
+			.set({
+				body: data.body,
+				draft: data.draft,
+				updatedAt: new Date(),
+			})
+			.where(
+				and(
+					eq(advices.consultationId, data.consultationId),
+					eq(advices.authorId, data.authorId),
+				)
+			)
+			.returning();
+		if (!updated) {
+			throw new DatabaseError(`相談回答の更新に失敗しました: consultationId=${data.consultationId}, authorId=${data.authorId}`);
+		}
+		return updated;
+	}
 }

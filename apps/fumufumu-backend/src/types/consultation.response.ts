@@ -28,3 +28,9 @@ export type ConsultationSavedResponse = {
 	updated_at: string;
 };
 
+// APIレスポンス用の相談回答データ
+export type AdviceSavedResponse = {
+	id: number;
+	draft: boolean;
+	updated_at: string;
+};

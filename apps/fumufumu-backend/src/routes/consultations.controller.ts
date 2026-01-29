@@ -165,6 +165,23 @@ export const createAdviceHandlers = factory.createHandlers(
 	}
 );
 
+export const updateAdviceHandlers = factory.createHandlers(
+	zValidator("param", consultationIdParamSchema, (result) => {
+		if (!result.success) throw result.error;
+	}),
+	zValidator("json", adviceContentSchema, (result) => {
+		if (!result.success) throw result.error;
+	}),
+	async (c) => {
+		const { id } = c.req.valid("param");
+		const validatedBody = c.req.valid("json");
+		const authorId = c.get("appUserId");
+		const service = c.get("consultationService");
+		const result = await service.updateAdvice(id, validatedBody, authorId);
+		return c.json(result, 200);
+	}
+);
+
 // ============================================
 // ルーター設定
 // ============================================
@@ -182,3 +199,4 @@ consultationsRoute.post("/", ...createConsultationHandlers);
 consultationsRoute.put("/:id", ...updateConsultationHandlers);
 // 相談に対するアドバイス関連
 consultationsRoute.post("/:id/advice", ...createAdviceHandlers);
+consultationsRoute.put("/:id/advice", ...updateAdviceHandlers);
