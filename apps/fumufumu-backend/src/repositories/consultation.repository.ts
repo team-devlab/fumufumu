@@ -4,6 +4,7 @@ import type { DbInstance } from "@/index";
 import { eq, and, isNull, isNotNull, type SQL } from "drizzle-orm";
 import type { ConsultationFilters } from "@/types/consultation.types";
 import { DatabaseError, ConflictError, NotFoundError } from "@/errors/AppError";
+import { advices } from "@/db/schema/advices";
 
 export class ConsultationRepository {
 	constructor(private db: DbInstance) {}
@@ -172,5 +173,86 @@ export class ConsultationRepository {
 		}
 
 		return updated;
+	}
+
+	/**
+	 * 
+	 * @param data - 作成する相談回答データ
+	 * @param data.consultationId - 相談ID
+	 * @param data.authorId - 回答者ID
+	 * @param data.body - 回答本文
+	 * @param data.draft - 下書きフラグ（true: 下書き, false: 公開）
+	 * @returns 作成された相談回答データ（authorリレーション含む）
+	 * @throws {Error} データベースエラー、作成失敗時
+	 */
+	async createAdvice(data: {
+		consultationId: number;
+		authorId: number;
+		body: string;
+		draft: boolean;
+	}) {
+		try {
+		  const insertQuery = this.db
+				.insert(advices)
+				.values({
+					body: data.body,
+					authorId: data.authorId,
+					draft: data.draft,
+					consultationId: data.consultationId,
+				})
+				.returning();
+				
+	      let insertedAdvice;
+	      
+	      if (data.draft) {
+	        // 下書きの時は親の相談更新日時は更新しない
+	        [insertedAdvice] = await insertQuery;
+	      } else {
+	        const [insertResult, updateResult] = await this.db.batch([
+					insertQuery, // 定義済みの変数を再利用
+					this.db
+						.update(consultations)
+						.set({ updatedAt: new Date() })
+						.where(and(eq(consultations.id, data.consultationId), isNull(consultations.hiddenAt)))
+						.returning({ id: consultations.id }),
+		    ]);
+		    
+		    // 親が見つからない（または非表示）のチェック
+		    if (updateResult.length === 0) {
+				throw new NotFoundError(`指定された相談(ID:${data.consultationId})は見つかりませんでした`);
+			}
+			insertedAdvice = insertResult[0];
+		}
+		
+		if (!insertedAdvice) {
+			throw new DatabaseError("相談回答の作成に失敗しました");
+		}
+		
+		const author = await this.db.query.users.findFirst({
+      where: eq(users.id, data.authorId),
+    });
+		if (!author) {
+			throw new NotFoundError("指定されたユーザーが見つかりません");
+		}
+
+		return {
+			...insertedAdvice,
+			author,
+			};
+		} catch (error) {
+			const errorString = error instanceof Error
+				? `${error.message} ${String(error.cause)}`
+				: String(error);
+
+			if (errorString.includes("FOREIGN KEY constraint failed")) {
+				throw new NotFoundError(`指定された相談(ID:${data.consultationId})は見つかりませんでした`);
+			}
+
+			if (error instanceof DatabaseError || error instanceof NotFoundError) {
+				throw error;
+			}
+
+			throw new DatabaseError(`データベースエラーが発生しました: ${errorString}`);
+		}
 	}
 }

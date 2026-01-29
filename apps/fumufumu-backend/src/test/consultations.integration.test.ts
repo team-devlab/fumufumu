@@ -557,5 +557,99 @@ describe('Consultations API Integration Tests', () => {
             expect(res.status).toBe(404);
         });
 	});
-});
 
+	describe('POST /api/consultations/:id/advice', () => {
+		let consultationId: number;
+
+		beforeAll(async () => {
+			const req = new Request('http://localhost/api/consultations', {
+				method: 'POST',
+				headers: {
+					'Content-Type': 'application/json',
+					'Cookie': sessionCookie!,
+				},
+				body: JSON.stringify({
+					title: 'テスト相談',
+					body: 'テスト本文です。10文字以上あります。',
+					draft: false,
+				}),
+			});
+
+			const res = await app.fetch(req, env);
+			expect(res.status).toBe(201);
+			const data = await res.json() as any;
+			consultationId = data.id;
+		})
+		it ('相談回答を作成できる', async () => {
+			const req = new Request(`http://localhost/api/consultations/${consultationId}/advice`, {
+				method: 'POST',
+				headers: {
+					'Content-Type': 'application/json',
+					'Cookie': sessionCookie!,
+				},
+				body: JSON.stringify({
+					body: '相談回答本文です。10文字以上あります。',
+				}),
+			});
+
+			const res = await app.fetch(req, env);
+			expect(res.status).toBe(201);
+		});
+
+		it ('下書き回答は公開できない', async() => {
+			const req = new Request(`http://localhost/api/consultations/${consultationId}/advice`, {
+				method: 'POST',
+				headers: {
+					'Content-Type': 'application/json',
+					'Cookie': sessionCookie!,
+				},
+				body: JSON.stringify({
+					body: '下書き回答本文です。10文字以上あります。',
+					draft: true,
+				}),
+			});
+		const res = await app.fetch(req, env);
+			expect(res.status).toBe(201);
+			const data = await res.json() as any;
+			expect(data.draft).toBe(true);
+		});
+		
+		it('本文が短すぎる場合（10文字未満）はバリデーションエラー(400)になる', async () => {
+			const req = new Request(`http://localhost/api/consultations/${consultationId}/advice`, {
+				method: 'POST',
+				headers: {
+					'Content-Type': 'application/json',
+					'Cookie': sessionCookie!,
+				},
+				body: JSON.stringify({
+					body: '123456789', // 10文字未満
+					draft: false,
+				}),
+			});
+
+			const res = await app.fetch(req, env);
+			expect(res.status).toBe(400);
+		});
+
+		it('存在しない相談IDを指定すると404エラーになる', async () => {
+			const nonExistentId = 99999; // 存在しないID
+			const req = new Request(`http://localhost/api/consultations/${nonExistentId}/advice`, {
+				method: 'POST',
+				headers: {
+					'Content-Type': 'application/json',
+					'Cookie': sessionCookie!,
+				},
+				body: JSON.stringify({
+					body: 'これは存在しない相談への回答です。10文字以上あります。',
+					draft: false,
+				}),
+			});
+
+			const res = await app.fetch(req, env);
+			expect(res.status).toBe(404);
+
+            const data = await res.json() as any;
+            expect(data.error).toBe('NotFoundError');
+		});
+	});
+});

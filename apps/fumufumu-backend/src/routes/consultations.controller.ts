@@ -7,7 +7,7 @@ import type { AppBindings } from "@/index";
 import { authGuard } from "@/middlewares/authGuard.middleware";
 import { injectConsultationService } from "@/middlewares/injectService.middleware";
 import type { ConsultationFilters } from "@/types/consultation.types";
-import { listConsultationsQuerySchema, consultationBodySchema } from "@/validators/consultation.validator";
+import { listConsultationsQuerySchema, consultationContentSchema, adviceContentSchema } from "@/validators/consultation.validator";
 import { AppError } from "@/errors/AppError";
 
 // ============================================
@@ -110,7 +110,7 @@ export const listConsultationsHandlers = factory.createHandlers(
 
 export const createConsultationHandlers = factory.createHandlers(
   // 第3引数にフックを追加して、明示的にエラーをthrowさせる必要があります
-  zValidator("json", consultationBodySchema, (result, c) => {
+  zValidator("json", consultationContentSchema, (result, c) => {
     if (!result.success) {
       // ここで throw することで、app.onError が呼ばれるようになります
       throw result.error;
@@ -134,7 +134,7 @@ export const updateConsultationHandlers = factory.createHandlers(
   zValidator("param", consultationIdParamSchema, (result) => {
     if (!result.success) throw result.error;
   }),
-  zValidator("json", consultationBodySchema, (result) => {
+  zValidator("json", consultationContentSchema, (result) => {
     if (!result.success) throw result.error;
   }),
 	async (c) => {
@@ -148,6 +148,23 @@ export const updateConsultationHandlers = factory.createHandlers(
 	}
 );
 
+export const createAdviceHandlers = factory.createHandlers(
+	zValidator("param", consultationIdParamSchema, (result) => {
+		if (!result.success) throw result.error;
+	}),
+	zValidator("json", adviceContentSchema, (result) => {
+		if (!result.success) throw result.error;
+	}),
+	async (c) => {
+		const { id } = c.req.valid("param");
+		const validatedBody = c.req.valid("json");
+		const authorId = c.get("appUserId");
+		const service = c.get("consultationService");
+		const result = await service.createAdvice(id, validatedBody, authorId);
+		return c.json(result, 201);
+	}
+);
+
 // ============================================
 // ルーター設定
 // ============================================
@@ -158,7 +175,10 @@ export const consultationsRoute = new Hono<AppBindings>();
 consultationsRoute.use("/*", authGuard, injectConsultationService);
 
 // ルーティング登録
+// 相談関連
 consultationsRoute.get("/:id", ...getConsultationHandlers);
 consultationsRoute.get("/", ...listConsultationsHandlers);
 consultationsRoute.post("/", ...createConsultationHandlers);
 consultationsRoute.put("/:id", ...updateConsultationHandlers);
+// 相談に対するアドバイス関連
+consultationsRoute.post("/:id/advice", ...createAdviceHandlers);
