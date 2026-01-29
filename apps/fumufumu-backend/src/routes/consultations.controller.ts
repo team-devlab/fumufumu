@@ -7,7 +7,7 @@ import type { AppBindings } from "@/index";
 import { authGuard } from "@/middlewares/authGuard.middleware";
 import { injectConsultationService } from "@/middlewares/injectService.middleware";
 import type { ConsultationFilters } from "@/types/consultation.types";
-import { listConsultationsQuerySchema, consultationContentSchema, adviceContentSchema } from "@/validators/consultation.validator";
+import { listConsultationsQuerySchema, consultationContentSchema, adviceContentSchema, updateDraftAdviceContentSchema } from "@/validators/consultation.validator";
 import { AppError } from "@/errors/AppError";
 
 // ============================================
@@ -165,11 +165,11 @@ export const createAdviceHandlers = factory.createHandlers(
 	}
 );
 
-export const updateAdviceHandlers = factory.createHandlers(
+export const updateDraftAdviceHandlers = factory.createHandlers(
 	zValidator("param", consultationIdParamSchema, (result) => {
 		if (!result.success) throw result.error;
 	}),
-	zValidator("json", adviceContentSchema, (result) => {
+	zValidator("json", updateDraftAdviceContentSchema, (result) => {
 		if (!result.success) throw result.error;
 	}),
 	async (c) => {
@@ -177,9 +177,9 @@ export const updateAdviceHandlers = factory.createHandlers(
 		const validatedBody = c.req.valid("json");
 		const authorId = c.get("appUserId");
 		const service = c.get("consultationService");
-		const result = await service.updateAdvice(id, validatedBody, authorId);
+		const result = await service.updateDraftAdvice(id, validatedBody, authorId);
 		return c.json(result, 200);
-	}
+	}	
 );
 
 // ============================================
@@ -199,4 +199,4 @@ consultationsRoute.post("/", ...createConsultationHandlers);
 consultationsRoute.put("/:id", ...updateConsultationHandlers);
 // 相談に対するアドバイス関連
 consultationsRoute.post("/:id/advice", ...createAdviceHandlers);
-consultationsRoute.put("/:id/advice", ...updateAdviceHandlers);
+consultationsRoute.put("/:id/advice/draft", ...updateDraftAdviceHandlers);

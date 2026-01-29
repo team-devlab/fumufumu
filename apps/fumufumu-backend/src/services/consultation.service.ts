@@ -2,7 +2,7 @@
 import type { ConsultationRepository } from "@/repositories/consultation.repository";
 import type { ConsultationFilters } from "@/types/consultation.types";
 import type { ConsultationResponse, ConsultationListResponse, ConsultationSavedResponse, AdviceSavedResponse } from "@/types/consultation.response";
-import type { ConsultationContent, AdviceContent } from "@/validators/consultation.validator";
+import type { ConsultationContent, AdviceContent, UpdateDraftAdviceContentSchema } from "@/validators/consultation.validator";
 import { ForbiddenError } from "@/errors/AppError";
 import type { AdviceResponse } from "@/types/advice.response";
 
@@ -180,16 +180,24 @@ export class ConsultationService {
 		return this.toAdviceResponse(createdAdvice);
 	}
 
-	async updateAdvice(id: number, data: AdviceContent, authorId: number): Promise<AdviceSavedResponse> {
-		const updatedAdvice = await this.repository.updateAdvice({
-			consultationId: id,
-			authorId,
-			...data,
-		});
-		return this.toAdviceSavedResponse({
-			id: updatedAdvice.id,
-			draft: updatedAdvice.draft,
-			updated_at: updatedAdvice.updatedAt.toISOString(),
-		});
+	/**
+	 * 
+	 * @param id - 相談ID
+	 * @param data.body - 回答本文
+	 * @param authorId - 回答者ID（認証ユーザー）
+	 * @returns 更新された相談回答のレスポンス
+	 */
+		async updateDraftAdvice(id: number, data: UpdateDraftAdviceContentSchema, authorId: number): Promise<AdviceSavedResponse> {
+			const updatedAdvice = await this.repository.updateDraftAdvice({
+				consultationId: id,
+				authorId,
+				body: data.body,
+				draft: true,
+			});
+			return this.toAdviceSavedResponse({
+				id: updatedAdvice.id,
+				draft: updatedAdvice.draft,
+				updated_at: updatedAdvice.updatedAt.toISOString(),
+			});
+		}
 	}
-}

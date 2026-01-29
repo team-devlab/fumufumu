@@ -256,7 +256,16 @@ export class ConsultationRepository {
 		}
 	}
 
-	async updateAdvice(data: {
+	/**
+	 * 
+	 * @param data - 更新する相談回答データ
+	 * @param data.consultationId - 相談ID
+	 * @param data.authorId - 回答者ID
+	 * @param data.body - 回答本文
+	 * @param data.draft - 下書きフラグ（true: 下書き, false: 公開）
+	 * @returns 更新された相談回答データ
+	 */
+	async updateDraftAdvice(data: {
 		consultationId: number;
 		authorId: number;
 		body: string;
@@ -272,12 +281,14 @@ export class ConsultationRepository {
 				and(
 					eq(advices.consultationId, data.consultationId),
 					eq(advices.authorId, data.authorId),
+					eq(advices.draft, true),
 				)
 			)
 			.returning();
 		if (!updated) {
-			throw new DatabaseError(`相談回答の更新に失敗しました: consultationId=${data.consultationId}, authorId=${data.authorId}`);
+			throw new NotFoundError(`指定された相談回答(ID:${data.consultationId})は見つかりませんでした`);
 		}
+
 		return updated;
 	}
 }
