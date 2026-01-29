@@ -291,4 +291,14 @@ export class ConsultationRepository {
 
 		return updated;
 	}
+
+	async findFirstDraftAdvice(consultationId: number) {
+		const advice = await this.db.query.advices.findFirst({
+			where: and(eq(advices.consultationId, consultationId), eq(advices.draft, true)),
+		});
+		if (!advice) {
+			throw new NotFoundError(`指定された相談回答(ID:${consultationId})は見つかりませんでした`);
+		}
+		return advice;
+	}
 }

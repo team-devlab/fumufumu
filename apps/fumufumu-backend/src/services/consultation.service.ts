@@ -188,9 +188,13 @@ export class ConsultationService {
 	 * @returns 更新された相談回答のレスポンス
 	 */
 		async updateDraftAdvice(id: number, data: UpdateDraftAdviceContentSchema, authorId: number): Promise<AdviceSavedResponse> {
+			const existingAdvice = await this.repository.findFirstDraftAdvice(id);
+			if (existingAdvice.authorId !== authorId) {
+				throw new ForbiddenError('相談回答の所有者ではないため、更新できません。');
+			}
 			const updatedAdvice = await this.repository.updateDraftAdvice({
 				consultationId: id,
-				authorId,
+				authorId: existingAdvice.authorId ?? authorId,
 				body: data.body,
 				draft: true,
 			});
