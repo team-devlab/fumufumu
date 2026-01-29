@@ -2,6 +2,8 @@
 import type { DbInstance } from "@/index";
 import { ConsultationRepository } from "@/repositories/consultation.repository";
 import { ConsultationService } from "@/services/consultation.service";
+import { UserRepository } from "@/repositories/user.repository";
+import { UserService } from "@/services/user.service";
 
 /**
  * ConsultationServiceのファクトリー関数
@@ -13,5 +15,17 @@ import { ConsultationService } from "@/services/consultation.service";
 export function createConsultationService(db: DbInstance): ConsultationService {
 	const repository = new ConsultationRepository(db);
 	return new ConsultationService(repository);
+}
+
+/**
+ * UserServiceのファクトリー関数
+ * DBインスタンスから依存関係を解決してServiceを生成する
+ * 
+ * @param db - データベースインスタンス（リクエストごとに異なる）
+ * @returns 依存関係が解決されたUserServiceインスタンス
+ */
+export function createUserService(db: DbInstance): UserService {
+	const repository = new UserRepository(db);
+	return new UserService(repository);
 }
 
