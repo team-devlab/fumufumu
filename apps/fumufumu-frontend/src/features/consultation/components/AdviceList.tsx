@@ -20,6 +20,7 @@ export const AdviceList = ({ advices }: Props) => {
       </h2>
       
       {advices.map((advice) => {
+         // TODO: アプリ全体で日付フォーマット処理を統一する（例: date-fnsの導入など）。現在は暫定的にtoLocaleStringを使用。
          const formattedDate = new Date(advice.created_at).toLocaleString("ja-JP");
 
          return (

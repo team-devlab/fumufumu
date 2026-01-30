@@ -7,7 +7,7 @@ type Props = {
 };
 
 export const ConsultationQuestionCard = ({ consultation }: Props) => {
-  // 日付フォーマット (一旦簡易的に)
+  // TODO: アプリ全体で日付フォーマット処理を統一する（例: date-fnsの導入など）。現在は暫定的にtoLocaleStringを使用。
   const formattedDate = new Date(consultation.created_at).toLocaleString("ja-JP", {
     year: "numeric", month: "2-digit", day: "2-digit", hour: "2-digit", minute: "2-digit"
   });
@@ -47,6 +47,7 @@ export const ConsultationQuestionCard = ({ consultation }: Props) => {
 
       {/* タグ (今回は仮置き) */}
       <div className="flex gap-2">
+        {/* TODO: タグ機能はバックエンド未実装のため、仮の静的値を表示 */}
         <span className="px-3 py-1 bg-teal-600 text-white text-sm font-medium rounded-full">
           #React
         </span>

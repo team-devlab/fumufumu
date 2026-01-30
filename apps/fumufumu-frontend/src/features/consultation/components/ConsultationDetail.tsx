@@ -38,6 +38,7 @@ export const ConsultationDetail = async ({ consultationId }: Props) => {
 
         {/* 2. アクションボタンエリア */}
         <div className="flex justify-end mb-10">
+          {/* TODO: 回答投稿フォーム機能は別PRで実装予定。現在はUIのみ実装。 */}
           <button className="bg-amber-400 hover:bg-amber-500 text-gray-900 font-bold py-3 px-8 rounded-full shadow-sm transition-colors duration-200 flex items-center gap-2">
             <span>この相談に対して回答する</span>
           </button>
