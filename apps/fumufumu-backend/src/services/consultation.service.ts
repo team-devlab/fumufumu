@@ -1,4 +1,3 @@
-// Business層: 相談ビジネスロジック
 import type { ConsultationRepository } from "@/repositories/consultation.repository";
 import type { ConsultationFilters } from "@/types/consultation.types";
 import type { ConsultationResponse, ConsultationListResponse, ConsultationSavedResponse } from "@/types/consultation.response";
@@ -6,9 +5,13 @@ import type { ConsultationContent, AdviceContent } from "@/validators/consultati
 import { ForbiddenError } from "@/errors/AppError";
 import type { AdviceResponse } from "@/types/advice.response";
 
+// Repositoryのメソッドの戻り値から型を抽出
 type ConsultationEntity = Awaited<ReturnType<ConsultationRepository["findAll"]>>[number];
 type ConsultationEntityById = Awaited<ReturnType<ConsultationRepository["findFirstById"]>>;
 type AdviceEntity = Awaited<ReturnType<ConsultationRepository["createAdvice"]>>;
+
+// 詳細取得時の `advices` 配列の中身の型を抽出
+type AdviceEntityFromDetail = ConsultationEntityById["advices"][number];
 
 export class ConsultationService {
 	private static readonly BODY_PREVIEW_LENGTH = 100;
@@ -17,11 +20,10 @@ export class ConsultationService {
  
 	/**
 	 * 相談データをレスポンス形式に変換する
-	 * 
-	 * @param consultation - Repository層から取得した相談データ
+	 * * @param consultation - Repository層から取得した相談データ（一覧用 or 詳細用）
 	 * @returns API レスポンス形式の相談データ
 	 */
-	private toConsultationResponse(consultation: ConsultationEntity): ConsultationResponse {
+	private toConsultationResponse(consultation: ConsultationEntity | ConsultationEntityById): ConsultationResponse {
 		return {
 			id: consultation.id,
 			title: consultation.title,
@@ -37,6 +39,7 @@ export class ConsultationService {
 				name: consultation.author.name,
 				disabled: consultation.author.disabled,
 			} : null,
+            // 一覧・詳細どちらのソースでも、このメソッドでは空配列を返す（詳細は呼び出し元で上書き）
 			advices: [],
 		};
 	}
@@ -53,13 +56,12 @@ export class ConsultationService {
 		};
 	}
 
-		/**
+	/**
 	 * 相談回答データをレスポンス形式に変換する
-	 * 
-	 * @param advice - Repository層から取得した相談回答データ
+	 * * @param advice - Repository層から取得した相談回答データ（作成時 or 詳細取得時）
 	 * @returns API レスポンス形式の相談回答データ
 	 */
-	private toAdviceResponse(advice: AdviceEntity): AdviceResponse {
+	private toAdviceResponse(advice: AdviceEntity | AdviceEntityFromDetail): AdviceResponse {
 		return {
 			id: advice.id,
 			body: advice.body,
@@ -78,13 +80,13 @@ export class ConsultationService {
 	async getConsultation(id: number) :Promise<ConsultationResponse> {
 		const consultation = await this.repository.findFirstById(id);
 
-		const baseResponse = this.toConsultationResponse(consultation as any);
+		const baseResponse = this.toConsultationResponse(consultation);
 
 		return {
-            ...baseResponse,
-            // 詳細画面なので、ちゃんとリレーションから変換してセットする
-            advices: consultation.advices.map(advice => this.toAdviceResponse(advice as any)),
-        };
+			...baseResponse,
+			// 詳細画面なので、ちゃんとリレーションから変換してセットする
+			advices: consultation.advices.map(advice => this.toAdviceResponse(advice)),
+		};
 	}
 
 	async listConsultations(filters?: ConsultationFilters): Promise<ConsultationListResponse> {
@@ -140,9 +142,8 @@ export class ConsultationService {
 	): Promise<ConsultationSavedResponse> {
     	const existingConsultation = await this.repository.findFirstById(id);
 
-    	// データ所有者とリクエストユーザーが一致するかチェック
     	if (existingConsultation.authorId !== requestUserId) {
-       		throw new ForbiddenError('相談の所有者ではないため、更新できません。');
+    		throw new ForbiddenError('相談の所有者ではないため、更新できません。');
     	}
     	
 		const updatedConsultation = await this.repository.update({
@@ -157,7 +158,8 @@ export class ConsultationService {
 			updated_at: updatedConsultation.updatedAt.toISOString(),
 		});
 	}
-		/**
+
+	/**
 	 * 
 	 * @param id - 相談ID
 	 * @param data.body - 回答本文
