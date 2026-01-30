@@ -1,4 +1,5 @@
-import { ConsultationDetail } from "../types";
+import type { ConsultationDetail } from "../types";
+
 // 定数ファイルがある場合は適宜 import してください
 // import { CONSULTATION_LABELS } from "@/features/consultation/config/constants";
 
@@ -8,30 +9,47 @@ type Props = {
 
 export const ConsultationQuestionCard = ({ consultation }: Props) => {
   // TODO: アプリ全体で日付フォーマット処理を統一する（例: date-fnsの導入など）。現在は暫定的にtoLocaleStringを使用。
-  const formattedDate = new Date(consultation.created_at).toLocaleString("ja-JP", {
-    year: "numeric", month: "2-digit", day: "2-digit", hour: "2-digit", minute: "2-digit"
-  });
+  const formattedDate = new Date(consultation.created_at).toLocaleString(
+    "ja-JP",
+    {
+      year: "numeric",
+      month: "2-digit",
+      day: "2-digit",
+      hour: "2-digit",
+      minute: "2-digit",
+    },
+  );
 
   return (
     // 一覧画面 (ConsultationItem) と同じスタイルベースを使用
     <div className="bg-white p-6 md:p-8 rounded-xl border border-gray-100 shadow-sm">
-      
       {/* ヘッダーエリア */}
       <div className="flex items-center mb-6">
         {/* アイコン: Teal系の背景色 */}
         <div className="w-12 h-12 rounded-full bg-teal-100 flex items-center justify-center text-teal-600 mr-4">
-           <svg className="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M16 7a4 4 0 11-8 0 4 4 0 018 0zM12 14a7 7 0 00-7 7h14a7 7 0 00-7-7z" />
-           </svg>
+          <svg
+            className="w-6 h-6"
+            fill="none"
+            stroke="currentColor"
+            viewBox="0 0 24 24"
+            role="img"
+            aria-label="ユーザーアイコン"
+          >
+            <title>ユーザーアイコン</title>
+            <path
+              strokeLinecap="round"
+              strokeLinejoin="round"
+              strokeWidth={2}
+              d="M16 7a4 4 0 11-8 0 4 4 0 018 0zM12 14a7 7 0 00-7 7h14a7 7 0 00-7-7z"
+            />
+          </svg>
         </div>
-        
+
         <div>
           <div className="font-bold text-gray-800 text-lg">
-             {consultation.author?.name ?? "退会済みユーザー"}
+            {consultation.author?.name ?? "退会済みユーザー"}
           </div>
-          <div className="text-xs text-gray-400 mt-0.5">
-             {formattedDate}
-          </div>
+          <div className="text-xs text-gray-400 mt-0.5">{formattedDate}</div>
         </div>
       </div>
 

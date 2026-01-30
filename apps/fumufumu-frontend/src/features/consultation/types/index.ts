@@ -64,7 +64,7 @@ export interface ConsultationDetail extends Consultation {
    * ※API改修前は body_preview の内容が入る可能性があります
    */
   body: string;
-  
+
   /**
    * 回答一覧
    * ※API改修前は空配列が入ります

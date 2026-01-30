@@ -27,7 +27,12 @@ export const fetchConsultationDetailApi = async (
   const cookieStore = await cookies();
 
   // APIからは現状の型（Consultation型に近いもの）が返ってくる
-  const data = await apiClient<any>(`/api/consultations/${id}`, {
+  const data = await apiClient<
+    Consultation & {
+      body_preview?: string;
+      advices?: ConsultationDetail["advices"];
+    }
+  >(`/api/consultations/${id}`, {
     method: "GET",
     headers: {
       Cookie: cookieStore.toString(),
