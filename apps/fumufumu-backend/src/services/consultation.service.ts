@@ -39,7 +39,9 @@ export class ConsultationService {
 				name: consultation.author.name,
 				disabled: consultation.author.disabled,
 			} : null,
-            // 一覧・詳細どちらのソースでも、このメソッドでは空配列を返す（詳細は呼び出し元で上書き）
+            // 【NOTE（設計メモ）: パフォーマンス最適化】
+            // 一覧取得APIに advice を含めるとデータ量が大きくなる可能性があるため、レスポンスサイズ削減の観点から意図的に含めていない。
+            // 詳細取得APIで呼び出す場合に限り、上位の getConsultation メソッド内で上書きされる設計とした。
 			advices: [],
 		};
 	}
