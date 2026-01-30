@@ -1,20 +1,17 @@
-import React from "react";
 import { fetchConsultationDetailApi } from "../api/consultationApi";
 import { ConsultationDetail as ConsultationDetailType } from "../types";
+import { ConsultationQuestionCard } from "./ConsultationQuestionCard";
+import { AdviceList } from "./AdviceList";
 
 type Props = {
   consultationId: string;
 };
 
-/**
- * 相談詳細を表示する Server Component
- */
 export const ConsultationDetail = async ({ consultationId }: Props) => {
   let consultation: ConsultationDetailType | null = null;
   let error: string | null = null;
 
   try {
-    // Server Sideで直接データを取得
     consultation = await fetchConsultationDetailApi(consultationId);
   } catch (e) {
     console.error(e);
@@ -30,26 +27,27 @@ export const ConsultationDetail = async ({ consultationId }: Props) => {
   }
 
   return (
-    <div className="max-w-4xl mx-auto p-4">
-      <h1 className="text-2xl font-bold mb-4">データ取得確認 (Server Component)</h1>
-
-      {/* デバッグ用: 生データの表示 */}
-      <div className="bg-gray-100 p-4 rounded mb-8 overflow-auto border border-gray-200">
-        <pre className="text-xs">{JSON.stringify(consultation, null, 2)}</pre>
-      </div>
-
-      {/* 簡易プレビューUI */}
-      <div className="border p-6 rounded-lg shadow-sm bg-white">
-        <h2 className="text-2xl font-bold text-gray-800 mb-2">{consultation.title}</h2>
+    // 全体背景を薄いグレーにしてカードを浮き立たせる
+    <div className="min-h-screen bg-gray-50 pb-20">
+      <div className="max-w-4xl mx-auto px-4 py-8">
         
-        <div className="flex gap-4 text-sm text-gray-500 mb-6 border-b pb-4">
-          <span>Author ID: {consultation.author?.id}</span>
-          <span>Updated: {new Date(consultation.updated_at).toLocaleDateString()}</span>
+        {/* 1. 質問カードエリア */}
+        <div className="mb-6">
+          <ConsultationQuestionCard consultation={consultation} />
         </div>
 
-        <div className="prose max-w-none text-gray-700 whitespace-pre-wrap leading-relaxed">
-          {consultation.body}
+        {/* 2. アクションボタンエリア */}
+        <div className="flex justify-end mb-10">
+          <button className="bg-amber-400 hover:bg-amber-500 text-gray-900 font-bold py-3 px-8 rounded-full shadow-sm transition-colors duration-200 flex items-center gap-2">
+            <span>この相談に対して回答する</span>
+          </button>
         </div>
+
+        {/* 3. 回答一覧エリア */}
+        <div>
+          <AdviceList advices={consultation.advices} />
+        </div>
+        
       </div>
     </div>
   );
