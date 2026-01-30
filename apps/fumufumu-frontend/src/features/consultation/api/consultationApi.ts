@@ -26,27 +26,13 @@ export const fetchConsultationDetailApi = async (
 ): Promise<ConsultationDetail> => {
   const cookieStore = await cookies();
 
-  // APIからは現状の型（Consultation型に近いもの）が返ってくる
-  const data = await apiClient<
-    Consultation & {
-      body_preview?: string;
-      advices?: ConsultationDetail["advices"];
-    }
-  >(`/api/consultations/${id}`, {
+  return apiClient<ConsultationDetail>(`/api/consultations/${id}`, {
     method: "GET",
     headers: {
       Cookie: cookieStore.toString(),
     },
-    cache: "no-store", // 詳細画面は常に最新を見たいのでキャッシュなし
+    cache: "no-store",
   });
-
-  // フロントエンドの型定義(ConsultationDetail)に合わせてデータを補完
-  // ※バックエンド改修までの暫定対応
-  return {
-    ...data,
-    body: data.body || data.body_preview || "",
-    advices: data.advices || [],
-  };
 };
 
 export const createConsultationApi = async (
