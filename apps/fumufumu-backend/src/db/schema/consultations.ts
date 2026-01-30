@@ -1,6 +1,7 @@
 import { sql, relations } from "drizzle-orm";
 import { sqliteTable, text, integer } from "drizzle-orm/sqlite-core";
 import { users } from "./user";
+import { advices } from "./advices";
 
 // 相談テーブル
 export const consultations = sqliteTable("consultations", {
@@ -22,10 +23,10 @@ export const consultations = sqliteTable("consultations", {
 });
 
 // RQB用: Query APIのwith句で利用するためのリレーション設定
-export const consultationsRelations = relations(consultations, ({ one }) => ({
+export const consultationsRelations = relations(consultations, ({ one, many }) => ({
 	author: one(users, {
 		fields: [consultations.authorId],
 		references: [users.id],
 	}),
+	advices: many(advices),
 }));
-

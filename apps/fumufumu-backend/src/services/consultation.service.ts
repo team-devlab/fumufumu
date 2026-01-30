@@ -26,6 +26,7 @@ export class ConsultationService {
 			id: consultation.id,
 			title: consultation.title,
 			body_preview: consultation.body.substring(0, ConsultationService.BODY_PREVIEW_LENGTH),
+			body: consultation.body,
 			draft: consultation.draft,
 			hidden_at: consultation.hiddenAt?.toISOString() ?? null,
 			solved_at: consultation.solvedAt?.toISOString() ?? null,
@@ -35,7 +36,8 @@ export class ConsultationService {
 				id: consultation.author.id,
 				name: consultation.author.name,
 				disabled: consultation.author.disabled,
-			} : null
+			} : null,
+			advices: [],
 		};
 	}
 
@@ -75,7 +77,14 @@ export class ConsultationService {
 
 	async getConsultation(id: number) :Promise<ConsultationResponse> {
 		const consultation = await this.repository.findFirstById(id);
-		return this.toConsultationResponse(consultation as unknown as ConsultationEntityById);
+
+		const baseResponse = this.toConsultationResponse(consultation as any);
+
+		return {
+            ...baseResponse,
+            // 詳細画面なので、ちゃんとリレーションから変換してセットする
+            advices: consultation.advices.map(advice => this.toAdviceResponse(advice as any)),
+        };
 	}
 
 	async listConsultations(filters?: ConsultationFilters): Promise<ConsultationListResponse> {

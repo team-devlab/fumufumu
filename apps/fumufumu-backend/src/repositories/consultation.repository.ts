@@ -14,6 +14,13 @@ export class ConsultationRepository {
 			where: eq(consultations.id, id),
 			with: {
 				author: true,
+                advices: {
+                    with: {
+                        author: true,
+                    },
+                    // 作成日時の古い順（昇順）
+                    orderBy: (advices, { asc }) => [asc(advices.createdAt)],
+                },
 			}
 		});
 
