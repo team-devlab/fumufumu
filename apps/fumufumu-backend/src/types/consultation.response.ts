@@ -32,5 +32,6 @@ export type ConsultationSavedResponse = {
 export type AdviceSavedResponse = {
 	id: number;
 	draft: boolean;
+	created_at: string;
 	updated_at: string;
 };
