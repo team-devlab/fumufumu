@@ -716,7 +716,7 @@ describe('Consultations API Integration Tests', () => {
 				}),
 			});
 			const res = await app.fetch(req, env);
-			expect(res.status).toBe(403);
+			expect(res.status).toBe(404);
 		});
 
 		it('存在しない相談IDに対して下書き更新すると404になる', async () => {

@@ -282,7 +282,6 @@ export class ConsultationRepository {
 				and(
 					eq(advices.consultationId, data.consultationId),
 					eq(advices.authorId, data.authorId),
-					eq(advices.draft, true),
 				)
 			)
 			.returning();
@@ -293,12 +292,12 @@ export class ConsultationRepository {
 		return updated;
 	}
 
-	async findFirstDraftAdvice(consultationId: number) {
+	async findFirstAdviceByConsultation(consultationId: number, authorId: number) {
 		const advice = await this.db.query.advices.findFirst({
-			where: and(eq(advices.consultationId, consultationId), eq(advices.draft, true)),
+			where: and(eq(advices.consultationId, consultationId), eq(advices.authorId, authorId)),
 		});
 		if (!advice) {
-			throw new NotFoundError(`指定された相談回答(ID:${consultationId})は見つかりませんでした`);
+			throw new NotFoundError(`指定された相談回答(consultationId:${consultationId}, authorId:${authorId})は見つかりませんでした`);
 		}
 		return advice;
 	}

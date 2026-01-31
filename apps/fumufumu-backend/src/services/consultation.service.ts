@@ -3,7 +3,7 @@ import type { ConsultationRepository } from "@/repositories/consultation.reposit
 import type { ConsultationFilters } from "@/types/consultation.types";
 import type { ConsultationResponse, ConsultationListResponse, ConsultationSavedResponse, AdviceSavedResponse } from "@/types/consultation.response";
 import type { ConsultationContent, AdviceContent, UpdateDraftAdviceContentSchema } from "@/validators/consultation.validator";
-import { ForbiddenError } from "@/errors/AppError";
+import { ForbiddenError, NotFoundError } from "@/errors/AppError";
 import type { AdviceResponse } from "@/types/advice.response";
 
 type ConsultationEntity = Awaited<ReturnType<ConsultationRepository["findAll"]>>[number];
@@ -191,17 +191,16 @@ export class ConsultationService {
 	 * @returns 更新された相談回答のレスポンス
 	 */
 		async updateDraftAdvice(id: number, data: UpdateDraftAdviceContentSchema, authorId: number): Promise<AdviceSavedResponse> {
-			const existingAdvice = await this.repository.findFirstDraftAdvice(id);
-
-			if (existingAdvice.authorId === null) {
-				throw new ForbiddenError('相談回答の作成者が退会しているため、更新できません。');
+			const existingAdvice = await this.repository.findFirstAdviceByConsultation(id, authorId);
+			if (!existingAdvice) {
+				throw new NotFoundError(`指定された相談回答(consultationId:${id})は見つかりませんでした`);
 			}
-			if (existingAdvice.authorId !== authorId) {
-				throw new ForbiddenError('相談回答の所有者ではないため、更新できません。');
+			if (existingAdvice.draft === false) {
+				throw new NotFoundError('相談回答は公開されているため、更新できません。');
 			}
 			const updatedAdvice = await this.repository.updateDraftAdvice({
 				consultationId: id,
-				authorId: existingAdvice.authorId,
+				authorId: authorId,
 				body: data.body,
 				draft: true,
 			});
