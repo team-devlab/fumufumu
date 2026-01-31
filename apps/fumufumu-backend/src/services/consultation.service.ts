@@ -77,11 +77,13 @@ export class ConsultationService {
 		id: number;
 		draft: boolean;
 		updated_at: string;
+		created_at: string;
 	}): AdviceSavedResponse {
 		return {
 			id: advice.id,
 			draft: advice.draft,
 			updated_at: advice.updated_at,
+			created_at: advice.created_at,
 		};
 	}
 
@@ -203,6 +205,7 @@ export class ConsultationService {
 				id: updatedAdvice.id,
 				draft: updatedAdvice.draft,
 				updated_at: updatedAdvice.updatedAt.toISOString(),
+				created_at: updatedAdvice.createdAt.toISOString(),
 			});
 		}
 	}
