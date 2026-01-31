@@ -655,7 +655,6 @@ describe('Consultations API Integration Tests', () => {
 
 	describe('PUT /api/consultations/:id/advice/draft', () => {
 		let consultationId: number;
-		let adviceId: number;
 
 		beforeAll(async () => {
 			const req = new Request('http://localhost/api/consultations', {
