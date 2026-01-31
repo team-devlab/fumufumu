@@ -14,7 +14,7 @@ export class UserRepository {
 	 * @returns ユーザー情報
 	 * @throws {NotFoundError} ユーザーが見つからない場合
 	 */
-	async findById(id: number) {
+	async findFirstById(id: number) {
 		const user = await this.db.query.users.findFirst({
 			where: eq(users.id, id),
 			columns: {
