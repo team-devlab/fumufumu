@@ -162,7 +162,7 @@ api.route('/protected', protectedRouter);
 // 相談API（/api/consultations）
 api.route('/consultations', consultationsRoute);
 
-// ユーザーAPI（/api/user）
+// ユーザーAPI（/api/users）
 api.route('/users', userRoute);
 
 // メインアプリにAPIルーターをマウント
