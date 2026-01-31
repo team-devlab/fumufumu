@@ -689,7 +689,7 @@ describe('Consultations API Integration Tests', () => {
 			expect(adviceRes.status).toBe(201);
 
 		});
-		it('相談回答を更新できる', async () => {
+		it('下書きの相談回答を更新できる', async () => {
 			const req = new Request(`http://localhost/api/consultations/${consultationId}/advice/draft`, {
 				method: 'PUT',
 				headers: {
