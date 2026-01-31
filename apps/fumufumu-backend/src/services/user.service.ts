@@ -45,7 +45,7 @@ export class UserService {
 	 * @throws {NotFoundError} ユーザーが見つからない場合
 	 */
 	async getCurrentUser(userId: number): Promise<UserResponse> {
-		const user = await this.repository.findById(userId);
+		const user = await this.repository.findFirstById(userId);
 		return this.toUserResponse(user);
 	}
 }
