@@ -192,12 +192,16 @@ export class ConsultationService {
 	 */
 		async updateDraftAdvice(id: number, data: UpdateDraftAdviceContentSchema, authorId: number): Promise<AdviceSavedResponse> {
 			const existingAdvice = await this.repository.findFirstDraftAdvice(id);
+
+			if (existingAdvice.authorId === null) {
+				throw new ForbiddenError('相談回答の作成者が退会しているため、更新できません。');
+			}
 			if (existingAdvice.authorId !== authorId) {
 				throw new ForbiddenError('相談回答の所有者ではないため、更新できません。');
 			}
 			const updatedAdvice = await this.repository.updateDraftAdvice({
 				consultationId: id,
-				authorId: existingAdvice.authorId ?? authorId,
+				authorId: existingAdvice.authorId,
 				body: data.body,
 				draft: true,
 			});
