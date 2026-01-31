@@ -12,7 +12,9 @@ import * as consultationsSchema from '@/db/schema/consultations';
 import { authRouter } from '@/routes/auth.routes';
 import { consultationsRoute } from '@/routes/consultations.controller';
 import { protectedRouter } from '@/routes/protected.routes';
+import { userRoute } from '@/routes/user.controller';
 import type { ConsultationService } from '@/services/consultation.service';
+import type { UserService } from '@/services/user.service';
 
 // Drizzle ORMのスキーマを統合
 const schema = {
@@ -36,6 +38,7 @@ export interface Variables {
   appUserId: number;
   db: DbInstance;
   consultationService: ConsultationService;
+  userService: UserService;
 }
 
 // Hono Bindingsの型定義（他のファイルで使用）
@@ -61,7 +64,7 @@ app.onError((err, c) => {
         message: err.message,
       },
       // AppErrorが持っている statusCode をそのまま使う
-      err.statusCode as any 
+      err.statusCode as any
     );
   }
 
@@ -107,8 +110,8 @@ app.use('/api/*', cors({
   origin: (origin) => {
     // 許可するフロントエンドのドメインを指定
     // 開発環境と本番環境(Vercel)の両方を許可
-    return origin.endsWith('.vercel.app') || origin.includes('localhost') 
-      ? origin 
+    return origin.endsWith('.vercel.app') || origin.includes('localhost')
+      ? origin
       : 'https://fumufumu-phi.vercel.app'; // フォールバック
   },
   allowHeaders: ['Content-Type', 'Authorization', 'Cookie'],
@@ -158,6 +161,9 @@ api.route('/protected', protectedRouter);
 
 // 相談API（/api/consultations）
 api.route('/consultations', consultationsRoute);
+
+// ユーザーAPI（/api/users）
+api.route('/users', userRoute);
 
 // メインアプリにAPIルーターをマウント
 app.route('/api', api);
