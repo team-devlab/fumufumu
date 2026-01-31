@@ -257,6 +257,7 @@ export class ConsultationRepository {
 	}
 
 	/**
+	 * アドバイスの下書きを更新する
 	 * 
 	 * @param data - 更新する相談回答データ
 	 * @param data.consultationId - 相談ID
