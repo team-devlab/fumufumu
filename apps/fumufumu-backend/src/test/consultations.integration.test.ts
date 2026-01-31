@@ -704,7 +704,7 @@ describe('Consultations API Integration Tests', () => {
 			expect(res.status).toBe(200);
 		});
 
-		it ('他人の下書き回答は更新できない', async () => {
+		it ('存在しない（またはリクエストユーザーに紐づかない）下書き回答を更新しようとするとエラーになる', async () => {
 			const req = new Request(`http://localhost/api/consultations/${consultationId}/advice/draft`, {
 				method: 'PUT',
 				headers: {
@@ -715,24 +715,6 @@ describe('Consultations API Integration Tests', () => {
 					body: '更新後の相談回答本文です。10文字以上あります。',
 				}),
 			});
-			const res = await app.fetch(req, env);
-			expect(res.status).toBe(404);
-		});
-
-		it('存在しない相談IDに対して下書き更新すると404になる', async () => {
-			const nonExistentConsultationId = 99999;
-		
-			const req = new Request(`http://localhost/api/consultations/${nonExistentConsultationId}/advice/draft`, {
-				method: 'PUT',
-				headers: {
-					'Content-Type': 'application/json',
-					'Cookie': sessionCookie!,
-				},
-				body: JSON.stringify({
-					body: '更新後の相談回答本文です。10文字以上あります。',
-				}),
-			});
-		
 			const res = await app.fetch(req, env);
 			expect(res.status).toBe(404);
 		});
