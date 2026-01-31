@@ -181,6 +181,7 @@ export class ConsultationService {
 	}
 
 	/**
+	 * アドバイスの下書きを更新する
 	 * 
 	 * @param id - 相談ID
 	 * @param data.body - 回答本文
