@@ -255,4 +255,50 @@ export class ConsultationRepository {
 			throw new DatabaseError(`データベースエラーが発生しました: ${errorString}`);
 		}
 	}
+
+	/**
+	 * アドバイスの下書きを更新する
+	 * 
+	 * @param data - 更新する相談回答データ
+	 * @param data.consultationId - 相談ID
+	 * @param data.authorId - 回答者ID
+	 * @param data.body - 回答本文
+	 * @param data.draft - 下書きフラグ（true: 下書き, false: 公開）
+	 * @returns 更新された相談回答データ
+	 */
+	async updateDraftAdvice(data: {
+		consultationId: number;
+		authorId: number;
+		body: string;
+		draft: boolean;
+	}) {
+		const [updated] = await this.db.update(advices)
+			.set({
+				body: data.body,
+				draft: data.draft,
+				updatedAt: new Date(),
+			})
+			.where(
+				and(
+					eq(advices.consultationId, data.consultationId),
+					eq(advices.authorId, data.authorId),
+				)
+			)
+			.returning();
+		if (!updated) {
+			throw new NotFoundError(`指定された相談回答(consultationId:${data.consultationId}, authorId:${data.authorId})は見つかりませんでした`);
+		}
+
+		return updated;
+	}
+
+	async findFirstAdviceByConsultation(consultationId: number, authorId: number) {
+		const advice = await this.db.query.advices.findFirst({
+			where: and(eq(advices.consultationId, consultationId), eq(advices.authorId, authorId)),
+		});
+		if (!advice) {
+			throw new NotFoundError(`指定された相談回答(consultationId:${consultationId}, authorId:${authorId})は見つかりませんでした`);
+		}
+		return advice;
+	}
 }

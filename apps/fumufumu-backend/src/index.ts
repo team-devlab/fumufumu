@@ -8,7 +8,7 @@ import type { D1Database } from '@cloudflare/workers-types';
 import * as authSchema from '@/db/schema/auth';
 import * as userSchema from '@/db/schema/user';
 import * as consultationsSchema from '@/db/schema/consultations';
-
+import * as advicesSchema from '@/db/schema/advices';
 import { authRouter } from '@/routes/auth.routes';
 import { consultationsRoute } from '@/routes/consultations.controller';
 import { protectedRouter } from '@/routes/protected.routes';
@@ -21,6 +21,7 @@ const schema = {
   ...authSchema,
   ...userSchema,
   ...consultationsSchema,
+  ...advicesSchema,
 }
 
 export type DbInstance = DrizzleD1Database<typeof schema>;
