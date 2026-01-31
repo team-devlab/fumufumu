@@ -287,7 +287,7 @@ export class ConsultationRepository {
 			)
 			.returning();
 		if (!updated) {
-			throw new NotFoundError(`指定された相談回答(ID:${data.consultationId})は見つかりませんでした`);
+			throw new NotFoundError(`指定された相談回答(consultationId:${data.consultationId}, authorId:${data.authorId})は見つかりませんでした`);
 		}
 
 		return updated;
