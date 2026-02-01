@@ -14,18 +14,18 @@ export class ConsultationRepository {
 			where: eq(consultations.id, id),
 			with: {
 				author: true,
-                    // 公開済みかつ非表示でない回答のみ取得
-                    where: (advices, { and, eq, isNull }) => and(
+				advices: {
+					with: {
+						author: true,
+					},
+					where: (advices, { and, eq, isNull }) => and(
                         eq(advices.draft, false),  // 下書きでない
                         isNull(advices.hiddenAt)    // 非表示でない
                     ),
-                    with: {
-                        author: true,
-                    },
-                    // 作成日時の古い順（昇順）
-                    orderBy: (advices, { asc }) => [asc(advices.createdAt)],
-                },
-			}
+					// 作成日時の古い順（昇順）
+					orderBy: (advices, { asc }) => [asc(advices.createdAt)],
+				},
+			},
 		});
 
 		if (!consultation) {
@@ -213,13 +213,13 @@ export class ConsultationRepository {
 				})
 				.returning();
 				
-	      let insertedAdvice;
-	      
-	      if (data.draft) {
-	        // 下書きの時は親の相談更新日時は更新しない
-	        [insertedAdvice] = await insertQuery;
-	      } else {
-	        const [insertResult, updateResult] = await this.db.batch([
+      let insertedAdvice;
+      
+      if (data.draft) {
+        // 下書きの時は親の相談更新日時は更新しない
+        [insertedAdvice] = await insertQuery;
+      } else {
+        const [insertResult, updateResult] = await this.db.batch([
 					insertQuery, // 定義済みの変数を再利用
 					this.db
 						.update(consultations)
