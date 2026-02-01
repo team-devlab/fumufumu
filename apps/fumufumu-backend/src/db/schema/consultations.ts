@@ -1,6 +1,6 @@
 import { sql, relations } from "drizzle-orm";
 import { sqliteTable, text, integer } from "drizzle-orm/sqlite-core";
-import { users } from "./user";
+import { users } from "@/db/schema/user";
 import { advices } from "./advices";
 
 // 相談テーブル
