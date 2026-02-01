@@ -146,6 +146,8 @@ describe('Consultations API Integration Tests', () => {
 			expect(data).toHaveProperty('updated_at');
 			expect(data).toHaveProperty('author');
 			expect(data.author).toHaveProperty('name');
+			expect(data).toHaveProperty('body');
+			expect(data).toHaveProperty('advices');
 		});
 
 		it('下書き作成: draft=trueで相談を作成できる', async () => {
@@ -163,13 +165,13 @@ describe('Consultations API Integration Tests', () => {
 			});
 
 			const res = await app.fetch(req, env);
-			
+
 			// エラー時はレスポンスボディを出力
 			if (res.status !== 201) {
 				const error = await res.json();
 				console.error('Error response:', error);
 			}
-			
+
 			expect(res.status).toBe(201);
 
 			const data = await res.json() as any;
@@ -186,7 +188,6 @@ describe('Consultations API Integration Tests', () => {
 				body: JSON.stringify({
 					title: 'デフォルト相談',
 					body: 'draftを指定していません。',
-					// draft を指定しない
 				}),
 			});
 
@@ -194,11 +195,11 @@ describe('Consultations API Integration Tests', () => {
 			expect(res.status).toBe(201);
 
 			const data = await res.json() as any;
-			expect(data.draft).toBe(false); // デフォルト値
+			expect(data.draft).toBe(false);
 		});
 
 		it('body_previewが100文字に切り出される', async () => {
-			const longBody = 'A'.repeat(200); // 200文字
+			const longBody = 'A'.repeat(200);
 			const req = new Request('http://localhost/api/consultations', {
 				method: 'POST',
 				headers: {
@@ -215,8 +216,12 @@ describe('Consultations API Integration Tests', () => {
 			expect(res.status).toBe(201);
 
 			const data = await res.json() as any;
-			expect(data.body_preview).toBe('A'.repeat(100)); // 100文字に切り出されている
+			expect(data.body_preview).toBe('A'.repeat(100));
 			expect(data.body_preview.length).toBe(100);
+
+			// NOTE: 全文(body)は切り取られずに200文字入っていること
+			expect(data.body).toBe(longBody);
+			expect(data.body.length).toBe(200);
 		});
 
 		it('created_atとupdated_atが自動生成される', async () => {
@@ -279,13 +284,13 @@ describe('Consultations API Integration Tests', () => {
 					'Cookie': sessionCookie!,
 				},
 				body: JSON.stringify({
-					title: '', // 空
+					title: '',
 					body: '本文はあります',
 				}),
 			});
 
 			const res = await app.fetch(req, env);
-			expect(res.status).toBe(400); // zodバリデーションエラー
+			expect(res.status).toBe(400);
 		});
 
 		it('本文が10文字未満の場合400エラーを返す', async () => {
@@ -297,7 +302,7 @@ describe('Consultations API Integration Tests', () => {
 				},
 				body: JSON.stringify({
 					title: 'テスト',
-					body: 'short', // 5文字（10文字未満）
+					body: 'short',
 				}),
 			});
 
@@ -313,7 +318,7 @@ describe('Consultations API Integration Tests', () => {
 					'Cookie': sessionCookie!,
 				},
 				body: JSON.stringify({
-					title: 'A'.repeat(101), // 101文字
+					title: 'A'.repeat(101),
 					body: 'これはテスト本文です。',
 				}),
 			});
@@ -336,12 +341,13 @@ describe('Consultations API Integration Tests', () => {
 			});
 
 			const res = await app.fetch(req, env);
-			expect(res.status).toBe(401); // 認証エラー
+			expect(res.status).toBe(401);
 		});
 	});
 
 	describe('GET /api/consultations/:id', () => {
 		let existingId: number;
+		const testBody = 'テスト本文です。10文字以上にします。';
 
 		beforeAll(async () => {
 			const req = new Request('http://localhost/api/consultations', {
@@ -352,7 +358,7 @@ describe('Consultations API Integration Tests', () => {
 				},
 				body: JSON.stringify({
 					title: 'テスト相談',
-					body: 'テスト本文です。10文字以上にします。',
+					body: testBody,
 					draft: false,
 				}),
 			});
@@ -364,7 +370,7 @@ describe('Consultations API Integration Tests', () => {
 			existingId = data.id;
 		});
 
-		it('相談単体取得: 存在するIDの相談を取得できる', async () => {
+		it('相談単体取得: 存在するIDの相談を取得できる（bodyとadvicesが含まれる）', async () => {
 			const req = new Request(`http://localhost/api/consultations/${existingId}`, {
 				headers: {
 					'Cookie': sessionCookie!,
@@ -379,8 +385,13 @@ describe('Consultations API Integration Tests', () => {
 			expect(data.id).toBe(existingId);
 			expect(data).toHaveProperty('title');
 			expect(data.title).toBe('テスト相談');
+
+			// NOTE: 全文(body)が含まれていること
+			expect(data).toHaveProperty('body');
+			expect(data.body).toBe(testBody);
+
 			expect(data).toHaveProperty('body_preview');
-			expect(data.body_preview).toBe('テスト本文です。10文字以上にします。');
+			expect(data.body_preview).toBe(testBody);
 			expect(data).toHaveProperty('draft');
 			expect(data).toHaveProperty('hidden_at');
 			expect(data.hidden_at).toBeNull();
@@ -391,6 +402,11 @@ describe('Consultations API Integration Tests', () => {
 			expect(data).toHaveProperty('author');
 			expect(data.author).toHaveProperty('name');
 			expect(data.author).toHaveProperty('disabled');
+
+			// NOTE: advices配列が含まれていること（初期状態は空）
+			expect(data).toHaveProperty('advices');
+			expect(Array.isArray(data.advices)).toBe(true);
+			expect(data.advices.length).toBe(0);
 		});
 
 		it('【404 Not Found】存在しないIDを取得しようとするとエラーになる', async () => {
@@ -406,10 +422,45 @@ describe('Consultations API Integration Tests', () => {
 			expect(data.error).toBe('NotFoundError');
 			expect(data.message).toBe('相談が見つかりません: id=999999');
 		});
+
+		it('相談詳細取得時、下書き状態の回答はリストに含まれない', async () => {
+            // 1. 公開回答を作成
+            const res1 = await app.fetch(new Request(`http://localhost/api/consultations/${existingId}/advice`, {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json', 'Cookie': sessionCookie! },
+                body: JSON.stringify({ body: '公開回答のテストです。10文字以上必要です。', draft: false }),
+            }), env);
+            
+            expect(res1.status).toBe(201);
+
+            // 2. 下書き回答を作成
+            const res2 = await app.fetch(new Request(`http://localhost/api/consultations/${existingId}/advice`, {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json', 'Cookie': sessionCookie! },
+                body: JSON.stringify({ body: '下書き回答のテストです。10文字以上必要です。', draft: true }),
+            }), env);
+            expect(res2.status).toBe(201);
+
+            // 3. 詳細を取得
+            const req = new Request(`http://localhost/api/consultations/${existingId}`, {
+                headers: { 'Cookie': sessionCookie! },
+            });
+            const res = await app.fetch(req, env);
+            expect(res.status).toBe(200);
+            
+            const data = await res.json() as any;
+
+            // 検証: 公開回答は含まれるが、下書き回答は含まれないはず
+            const publicAdvice = data.advices.find((a: any) => a.body === '公開回答のテストです。10文字以上必要です。');
+            const draftAdvice = data.advices.find((a: any) => a.body === '下書き回答のテストです。10文字以上必要です。');
+
+            expect(publicAdvice).toBeDefined(); // 公開回答はある
+            expect(draftAdvice).toBeUndefined(); // 下書き回答はない
+        });
 	});
 
 	describe('GET /api/consultations', () => {
-		it('相談一覧を取得できる', async () => {
+		it('相談一覧を取得できる（advicesは空配列、bodyは全文）', async () => {
 			const req = new Request('http://localhost/api/consultations', {
 				headers: {
 					'Cookie': sessionCookie!,
@@ -424,12 +475,23 @@ describe('Consultations API Integration Tests', () => {
 			expect(data).toHaveProperty('data');
 			expect(data.meta).toHaveProperty('total');
 			expect(Array.isArray(data.data)).toBe(true);
+
+			// データの中身を確認
+			if (data.data.length > 0) {
+				const item = data.data[0];
+				// NOTE: 一覧APIでもbodyは返ってくる（型定義上必須になったため）
+				expect(item).toHaveProperty('body');
+				// NOTE: 一覧APIではadvicesは空配列であること（パフォーマンス最適化）
+				expect(item).toHaveProperty('advices');
+				expect(Array.isArray(item.advices)).toBe(true);
+				expect(item.advices.length).toBe(0);
+			}
 		});
 	});
 
 	describe('PUT /api/consultations/:id', () => {
 		let consultationId: number;
-	
+
 		beforeAll(async () => {
 			// 下書き相談を1件作成
 			const req = new Request('http://localhost/api/consultations', {
@@ -444,10 +506,10 @@ describe('Consultations API Integration Tests', () => {
 					draft: true,
 				}),
 			});
-	
+
 			const res = await app.fetch(req, env);
 			expect(res.status).toBe(201);
-	
+
 			const data = await res.json() as any;
 			consultationId = data.id;
 		});
@@ -472,10 +534,10 @@ describe('Consultations API Integration Tests', () => {
 					}),
 				}
 			);
-	
+
 			const res = await app.fetch(req, env);
 			expect(res.status).toBe(200);
-	
+
 			const data = await res.json() as any;
 			expect(data.id).toBe(consultationId);
 			expect(data.draft).toBe(true);
@@ -497,65 +559,56 @@ describe('Consultations API Integration Tests', () => {
 					}),
 				}
 			);
-	
+
 			const res = await app.fetch(req, env);
 			expect(res.status).toBe(200);
-	
+
 			const data = await res.json() as any;
 			expect(data.id).toBe(consultationId);
 			expect(data.draft).toBe(false);
-		});	
+		});
 		it('【403 Forbidden】他人の相談データは更新できない', async () => {
-            // シナリオ: 別の有効なユーザー（攻撃者）になりすましてリクエストを送る
-            const req = new Request(
-                `http://localhost/api/consultations/${consultationId}`, // 存在するID（User Aのもの）
-                {
-                    method: 'PUT',
-                    headers: {
-                        'Content-Type': 'application/json',
-                        'Cookie': attackerCookie!,
-                    },
-                    body: JSON.stringify({
-                        title: '乗っ取りタイトル',
-                        body: '他人のデータを書き換えようとしています',
-                        draft: true,
-                    }),
-                }
-            );
+			const req = new Request(
+				`http://localhost/api/consultations/${consultationId}`,
+				{
+					method: 'PUT',
+					headers: {
+						'Content-Type': 'application/json',
+						'Cookie': attackerCookie!,
+					},
+					body: JSON.stringify({
+						title: '乗っ取りタイトル',
+						body: '他人のデータを書き換えようとしています',
+						draft: true,
+					}),
+				}
+			);
 
-            const res = await app.fetch(req, env);
-            
-            // Service層で明示的にチェックしているため、権限エラー(403)を期待します
-            expect(res.status).toBe(403);
-            
-            // レスポンスボディのエラーメッセージも検証すると尚良し
-            // const data = await res.json() as any;
-            // expect(data.error).toContain('permission');
-        });
-        it('【404 Not Found】存在しないIDを更新しようとするとエラーになる', async () => {
-            const nonExistentId = 999999; // DBに存在しないID
+			const res = await app.fetch(req, env);
+			expect(res.status).toBe(403);
+		});
+		it('【404 Not Found】存在しないIDを更新しようとするとエラーになる', async () => {
+			const nonExistentId = 999999;
 
-            const req = new Request(
-                `http://localhost/api/consultations/${nonExistentId}`,
-                {
-                    method: 'PUT',
-                    headers: {
-                        'Content-Type': 'application/json',
-                        'Cookie': sessionCookie!, // 自分のCookieでも対象がなければエラー
-                    },
-                    body: JSON.stringify({
-                        title: '更新不可',
-                        body: '本文は10文字以上必要です。',
-                        draft: true,
-                    }),
-                }
-            );
+			const req = new Request(
+				`http://localhost/api/consultations/${nonExistentId}`,
+				{
+					method: 'PUT',
+					headers: {
+						'Content-Type': 'application/json',
+						'Cookie': sessionCookie!,
+					},
+					body: JSON.stringify({
+						title: '更新不可',
+						body: '本文は10文字以上必要です。',
+						draft: true,
+					}),
+				}
+			);
 
-            const res = await app.fetch(req, env);
-            
-            // Service層の `!existingConsultation` チェックで弾かれ、404を期待します
-            expect(res.status).toBe(404);
-        });
+			const res = await app.fetch(req, env);
+			expect(res.status).toBe(404);
+		});
 	});
 
 	describe('POST /api/consultations/:id/advice', () => {
@@ -580,7 +633,8 @@ describe('Consultations API Integration Tests', () => {
 			const data = await res.json() as any;
 			consultationId = data.id;
 		})
-		it ('相談回答を作成できる', async () => {
+
+		it('相談回答を作成できる', async () => {
 			const req = new Request(`http://localhost/api/consultations/${consultationId}/advice`, {
 				method: 'POST',
 				headers: {
@@ -594,9 +648,47 @@ describe('Consultations API Integration Tests', () => {
 
 			const res = await app.fetch(req, env);
 			expect(res.status).toBe(201);
+			const data = await res.json() as any;
+			expect(data.body).toBe('相談回答本文です。10文字以上あります。');
 		});
 
-		it ('下書き回答は公開できない', async() => {
+		it('回答投稿後、親の相談詳細を取得すると回答が含まれている', async () => {
+			// まず回答を投稿する
+            const postReq = new Request(`http://localhost/api/consultations/${consultationId}/advice`, {
+                method: 'POST',
+                headers: {
+                    'Content-Type': 'application/json',
+                    'Cookie': sessionCookie!,
+                },
+                body: JSON.stringify({
+                    body: 'テスト用回答：詳細画面での表示確認',
+                }),
+            });
+            const postRes = await app.fetch(postReq, env);
+            expect(postRes.status).toBe(201);
+
+			// 親の相談IDを使ってGETリクエスト
+			const req = new Request(`http://localhost/api/consultations/${consultationId}`, {
+				headers: {
+					'Cookie': sessionCookie!,
+				},
+			});
+
+			const res = await app.fetch(req, env);
+			expect(res.status).toBe(200);
+
+			const data = await res.json() as any;
+
+			// advices配列にデータが入っているか確認
+            expect(data).toHaveProperty('advices');
+            expect(Array.isArray(data.advices)).toBe(true);
+            expect(data.advices.length).toBeGreaterThan(0);
+            
+            // 投稿した内容が含まれているか確認
+            expect(data.advices.some((a: any) => a.body === 'テスト用回答：詳細画面での表示確認')).toBe(true);
+		});
+
+		it('下書き回答は公開できない', async () => {
 			const req = new Request(`http://localhost/api/consultations/${consultationId}/advice`, {
 				method: 'POST',
 				headers: {
@@ -608,12 +700,12 @@ describe('Consultations API Integration Tests', () => {
 					draft: true,
 				}),
 			});
-		const res = await app.fetch(req, env);
+			const res = await app.fetch(req, env);
 			expect(res.status).toBe(201);
 			const data = await res.json() as any;
 			expect(data.draft).toBe(true);
 		});
-		
+
 		it('本文が短すぎる場合（10文字未満）はバリデーションエラー(400)になる', async () => {
 			const req = new Request(`http://localhost/api/consultations/${consultationId}/advice`, {
 				method: 'POST',
@@ -648,8 +740,8 @@ describe('Consultations API Integration Tests', () => {
 			const res = await app.fetch(req, env);
 			expect(res.status).toBe(404);
 
-            const data = await res.json() as any;
-            expect(data.error).toBe('NotFoundError');
+			const data = await res.json() as any;
+			expect(data.error).toBe('NotFoundError');
 		});
 	});
 

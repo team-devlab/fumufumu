@@ -41,3 +41,33 @@ export interface CreateConsultationParams {
   body: string;
   draft: boolean;
 }
+
+export interface Advice {
+  id: number;
+  body: string;
+  draft: boolean;
+  hidden_at: string | null;
+  created_at: string;
+  updated_at: string;
+  author: Author | null;
+}
+
+/**
+ * 詳細画面用の型
+ * * 【設計メモ】
+ * 一覧用データ（Consultation）と整合性を保つため、interfaceの継承を使用しています。
+ * 詳細は docs/design/adr/001-frontend-type-definition-strategy.md を参照。
+ */
+export interface ConsultationDetail extends Consultation {
+  /**
+   * 相談の全文
+   * ※API改修前は body_preview の内容が入る可能性があります
+   */
+  body: string;
+
+  /**
+   * 回答一覧
+   * ※API改修前は空配列が入ります
+   */
+  advices: Advice[];
+}

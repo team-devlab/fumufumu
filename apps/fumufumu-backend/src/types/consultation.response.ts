@@ -1,16 +1,21 @@
 import type { Author } from "@/types/user.types";
+import type { AdviceResponse } from "@/types/advice.response";
 
 // APIレスポンス用の相談データ
 export type ConsultationResponse = {
 	id: number;
 	title: string;
 	body_preview: string;
+    // 本文（全文）
+    body: string;
 	draft: boolean;
 	hidden_at: string | null;
 	solved_at: string | null;
 	created_at: string;
 	updated_at: string;
 	author: Author | null;
+
+    advices: AdviceResponse[];
 };
 
 // 相談リストレスポンス
