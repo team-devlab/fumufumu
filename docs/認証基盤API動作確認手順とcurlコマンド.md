@@ -11,9 +11,9 @@
 **コマンド:**
 
 ```
-curl -v -X POST 'http://localhost:8787/api/signup' \
+curl -v -X POST 'http://localhost:8787/api/auth/signup' \
      -H 'Content-Type: application/json' \
-     -d '{"email": "newuser4@example.com", "password": "password123", "name": "New Test User"}' \
+     -d '{"email": "newuser1@example.com", "password": "password123", "name": "New Test User"}' \
      --cookie-jar cookie_jar.txt
 ```
 
@@ -48,9 +48,9 @@ curl -v 'http://localhost:8787/api/protected' \
 
 **コマンド:**
 
-curl -v -X POST 'http://localhost:8787/api/signin' \
+curl -v -X POST 'http://localhost:8787/api/auth/signin' \
      -H 'Content-Type: application/json' \
-     -d '{"email": "newuser4@example.com", "password": "password123"}' \
+     -d '{"email": "newuser1example.com", "password": "password123"}' \
      --cookie-jar cookie_jar.txt
 
 **期待される結果:**
@@ -73,3 +73,32 @@ curl -v 'http://localhost:8787/api/protected' \
 * **HTTPステータス:** 200 OK  
 * **リクエストヘッダー:** Cookie: ヘッダーが送信されていること。  
 * **レスポンスボディ:** 成功メッセージと appUserId、userName が含まれていること。
+
+### example:
+
+curl -v -X POST 'http://localhost:8787/api/consultations' \
+     -H 'Content-Type: application/json' \
+     --cookie cookie_jar.txt \
+     -d '{"title": "エンジニアのキャリアパスについて", "body": "開発とマネジメント、どちらの道を選ぶべきか悩んでいます...", "draft": false}'
+
+
+curl -v -X POST 'http://localhost:8787/api/consultations' \
+     -H 'Content-Type: application/json' \
+     --cookie cookie_jar.txt \
+     -d '{"title": "あいうえおかきくけこあいうえおかきくけこあいうえおかきくけこあいうえおかきくけこあいうえおかきくけこあいうえおかきくけこあいうえおかきくけこあいうえおかきくけこあいうえおかきくけこあいうえおかきくけこん", "body": "開発とマネジメント、どちらの道を選ぶべきか悩んでいます...", "draft": false}'
+
+curl -v -X POST 'http://localhost:8787/api/consultations' \
+     -H 'Content-Type: application/json' \
+     --cookie cookie_jar.txt \
+     -d '{"title": "", "body": "開発とマネジメント、どちらの道を選ぶべきか悩んでいます...", "draft": false}'
+
+curl -v -X POST 'http://localhost:8787/api/consultations' \
+     -H 'Content-Type: application/json' \
+     --cookie cookie_jar.txt \
+     -d '{"title": "あいうえおかきくけこあいうえおかきくけこあいうえおかきくけこあいうえおかきくけこあいうえおかきくけこあいうえおかきくけこあいうえおかきくけこあいうえおかきくけこあいうえおかきくけこあいうえおかきくけこ", "body": "開発とマネジメント、どちらの道を選ぶべきか悩んでいます...", "draft": false}'
+
+curl -v -X GET 'http://localhost:8787/api/consultations' \ 
+     --cookie cookie_jar.txt
+
+curl -v -X GET 'http://localhost:8787/api/consultations' \ 
+     --cookie cookie_jar.txt
