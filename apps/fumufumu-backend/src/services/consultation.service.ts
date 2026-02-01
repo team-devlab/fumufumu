@@ -39,9 +39,12 @@ export class ConsultationService {
 				name: consultation.author.name,
 				disabled: consultation.author.disabled,
 			} : null,
-            // 【NOTE（設計メモ）: パフォーマンス最適化】
-            // 一覧取得APIに advice を含めるとデータ量が大きくなる可能性があるため、レスポンスサイズ削減の観点から意図的に含めていない。
-            // 詳細取得APIで呼び出す場合に限り、上位の getConsultation メソッド内で上書きされる設計とした。
+			
+			// 【設計メモ：パフォーマンス最適化と実装コスト】
+            // 1. パフォーマンス: 一覧取得APIに advices を含めるとデータ量が大きくなるため、意図的に空配列としている。
+            // 2. 実装方針: 一覧用/詳細用で厳密に型を分けるとService層の変換ロジック(Mapper)が複雑化するため、
+            //    あえて同一のレスポンス型定義を使用し、一覧時はここを空にする運用としている。
+            //    詳細取得APIで呼び出す場合に限り、上位メソッドで正しいデータに上書きされる。
 			advices: [],
 		};
 	}

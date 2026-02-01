@@ -14,18 +14,22 @@ export const ConsultationDetail = async ({ consultationId }: Props) => {
   try {
     consultation = await fetchConsultationDetailApi(consultationId);
   } catch (e) {
-    if (e instanceof Response) {
-        if (e.status === 404) {
-            error = "相談が見つかりませんでした。";
-        } else if (e.status === 403) {
-            error = "この相談を閲覧する権限がありません。";
-        } else {
-            error = "相談データの取得に失敗しました。";
-        }
+    // apiClientはErrorオブジェクトを投げるため、メッセージ内容で判定する
+    if (e instanceof Error) {
+      // バックエンドが返す error.name (例: NotFoundError) やステータスコード文字列をチェック
+      if (e.message === "NotFoundError" || e.message.includes("404")) {
+        error = "相談が見つかりませんでした。";
+      } else if (e.message === "ForbiddenError" || e.message.includes("403")) {
+        error = "この相談を閲覧する権限がありません。";
+      } else {
+        console.error(e); // 予期せぬエラーはログに出す
+        error = "相談データの取得に失敗しました。";
+      }
     } else {
-        console.error(e);
-        error = "予期しないエラーが発生しました。";
+      console.error(e);
+      error = "予期しないエラーが発生しました。";
     }
+  }
 
   if (error) {
     return <div className="p-8 text-center text-red-500">{error}</div>;
