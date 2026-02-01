@@ -422,6 +422,41 @@ describe('Consultations API Integration Tests', () => {
 			expect(data.error).toBe('NotFoundError');
 			expect(data.message).toBe('相談が見つかりません: id=999999');
 		});
+
+		it('相談詳細取得時、下書き状態の回答はリストに含まれない', async () => {
+            // 1. 公開回答を作成
+            const res1 = await app.fetch(new Request(`http://localhost/api/consultations/${existingId}/advice`, {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json', 'Cookie': sessionCookie! },
+                body: JSON.stringify({ body: '公開回答のテストです。10文字以上必要です。', draft: false }),
+            }), env);
+            
+            expect(res1.status).toBe(201);
+
+            // 2. 下書き回答を作成
+            const res2 = await app.fetch(new Request(`http://localhost/api/consultations/${existingId}/advice`, {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json', 'Cookie': sessionCookie! },
+                body: JSON.stringify({ body: '下書き回答のテストです。10文字以上必要です。', draft: true }),
+            }), env);
+            expect(res2.status).toBe(201);
+
+            // 3. 詳細を取得
+            const req = new Request(`http://localhost/api/consultations/${existingId}`, {
+                headers: { 'Cookie': sessionCookie! },
+            });
+            const res = await app.fetch(req, env);
+            expect(res.status).toBe(200);
+            
+            const data = await res.json() as any;
+
+            // 検証: 公開回答は含まれるが、下書き回答は含まれないはず
+            const publicAdvice = data.advices.find((a: any) => a.body === '公開回答のテストです。10文字以上必要です。');
+            const draftAdvice = data.advices.find((a: any) => a.body === '下書き回答のテストです。10文字以上必要です。');
+
+            expect(publicAdvice).toBeDefined(); // 公開回答はある
+            expect(draftAdvice).toBeUndefined(); // 下書き回答はない
+        });
 	});
 
 	describe('GET /api/consultations', () => {
