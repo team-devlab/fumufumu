@@ -1,4 +1,5 @@
 import type { Advice } from "../types";
+import { CONSULTATION_LABELS } from "@/features/consultation/config/constants";
 
 type Props = {
   advices: Advice[];
@@ -53,7 +54,7 @@ export const AdviceList = ({ advices }: Props) => {
                 </div>
                 <div>
                   <div className="text-sm font-bold text-gray-800">
-                    {advice.author?.name ?? "退会済みユーザー"}
+                    {advice.author?.name ?? CONSULTATION_LABELS.ANONYMOUS_USER}
                   </div>
                   <div className="text-xs text-gray-400 mt-0.5">
                     {formattedDate}

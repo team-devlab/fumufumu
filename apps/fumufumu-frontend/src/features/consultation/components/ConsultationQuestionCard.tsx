@@ -1,7 +1,5 @@
 import type { ConsultationDetail } from "../types";
-
-// 定数ファイルがある場合は適宜 import してください
-// import { CONSULTATION_LABELS } from "@/features/consultation/config/constants";
+import { CONSULTATION_LABELS } from "@/features/consultation/config/constants";
 
 type Props = {
   consultation: ConsultationDetail;
@@ -47,7 +45,7 @@ export const ConsultationQuestionCard = ({ consultation }: Props) => {
 
         <div>
           <div className="font-bold text-gray-800 text-lg">
-            {consultation.author?.name ?? "退会済みユーザー"}
+            {consultation.author?.name ?? CONSULTATION_LABELS.ANONYMOUS_USER}
           </div>
           <div className="text-xs text-gray-400 mt-0.5">{formattedDate}</div>
         </div>
