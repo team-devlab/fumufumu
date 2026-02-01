@@ -7,7 +7,7 @@ import type { AppBindings } from "@/index";
 import { authGuard } from "@/middlewares/authGuard.middleware";
 import { injectConsultationService } from "@/middlewares/injectService.middleware";
 import type { ConsultationFilters } from "@/types/consultation.types";
-import { listConsultationsQuerySchema, consultationContentSchema, adviceContentSchema } from "@/validators/consultation.validator";
+import { listConsultationsQuerySchema, consultationContentSchema, adviceContentSchema, updateDraftAdviceContentSchema, consultationIdParamSchema } from "@/validators/consultation.validator";
 import { AppError } from "@/errors/AppError";
 
 // ============================================
@@ -22,10 +22,6 @@ type ListConsultationsContext = Context<
 	string,
 	{ in: { query: unknown }; out: { query: z.output<typeof listConsultationsQuerySchema> } }
 >;
-
-const consultationIdParamSchema = z.object({
-  id: z.coerce.number().int().positive(),
-});
 
 // ============================================
 // ファクトリ作成
@@ -165,6 +161,23 @@ export const createAdviceHandlers = factory.createHandlers(
 	}
 );
 
+export const updateDraftAdviceHandlers = factory.createHandlers(
+	zValidator("param", consultationIdParamSchema, (result) => {
+		if (!result.success) throw result.error;
+	}),
+	zValidator("json", updateDraftAdviceContentSchema, (result) => {
+		if (!result.success) throw result.error;
+	}),
+	async (c) => {
+		const { id } = c.req.valid("param");
+		const validatedBody = c.req.valid("json");
+		const authorId = c.get("appUserId");
+		const service = c.get("consultationService");
+		const result = await service.updateDraftAdvice(id, validatedBody, authorId);
+		return c.json(result, 200);
+	}	
+);
+
 // ============================================
 // ルーター設定
 // ============================================
@@ -182,3 +195,4 @@ consultationsRoute.post("/", ...createConsultationHandlers);
 consultationsRoute.put("/:id", ...updateConsultationHandlers);
 // 相談に対するアドバイス関連
 consultationsRoute.post("/:id/advice", ...createAdviceHandlers);
+consultationsRoute.put("/:id/advice/draft", ...updateDraftAdviceHandlers);

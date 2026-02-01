@@ -1,8 +1,8 @@
 import type { ConsultationRepository } from "@/repositories/consultation.repository";
 import type { ConsultationFilters } from "@/types/consultation.types";
-import type { ConsultationResponse, ConsultationListResponse, ConsultationSavedResponse } from "@/types/consultation.response";
-import type { ConsultationContent, AdviceContent } from "@/validators/consultation.validator";
-import { ForbiddenError } from "@/errors/AppError";
+import type { ConsultationResponse, ConsultationListResponse, ConsultationSavedResponse, AdviceSavedResponse } from "@/types/consultation.response";
+import type { ConsultationContent, AdviceContent, UpdateDraftAdviceContentSchema } from "@/validators/consultation.validator";
+import { ForbiddenError, NotFoundError } from "@/errors/AppError";
 import type { AdviceResponse } from "@/types/advice.response";
 
 // Repositoryのメソッドの戻り値から型を抽出
@@ -79,6 +79,20 @@ export class ConsultationService {
 				name: advice.author.name,
 				disabled: advice.author.disabled,
 			} : null
+		};
+	}
+
+	private toAdviceSavedResponse(advice: {
+		id: number;
+		draft: boolean;
+		updated_at: string;
+		created_at: string;
+	}): AdviceSavedResponse {
+		return {
+			id: advice.id,
+			draft: advice.draft,
+			updated_at: advice.updated_at,
+			created_at: advice.created_at,
 		};
 	}
 
@@ -163,8 +177,10 @@ export class ConsultationService {
 			updated_at: updatedConsultation.updatedAt.toISOString(),
 		});
 	}
-
+	
 	/**
+	 * 
+	 * 相談に対する回答を作成する
 	 * 
 	 * @param id - 相談ID
 	 * @param data.body - 回答本文
@@ -181,4 +197,34 @@ export class ConsultationService {
 
 		return this.toAdviceResponse(createdAdvice);
 	}
-}
+
+	/**
+	 * アドバイスの下書きを更新する
+	 * 
+	 * @param id - 相談ID
+	 * @param data.body - 回答本文
+	 * @param authorId - 回答者ID（認証ユーザー）
+	 * @returns 更新された相談回答のレスポンス
+	 */
+		async updateDraftAdvice(id: number, data: UpdateDraftAdviceContentSchema, authorId: number): Promise<AdviceSavedResponse> {
+			const existingAdvice = await this.repository.findFirstAdviceByConsultation(id, authorId);
+			if (!existingAdvice) {
+				throw new NotFoundError(`指定された相談回答(consultationId:${id})は見つかりませんでした`);
+			}
+			if (existingAdvice.draft === false) {
+				throw new NotFoundError('相談回答は公開されているため、更新できません。');
+			}
+			const updatedAdvice = await this.repository.updateDraftAdvice({
+				consultationId: id,
+				authorId: authorId,
+				body: data.body,
+				draft: true,
+			});
+			return this.toAdviceSavedResponse({
+				id: updatedAdvice.id,
+				draft: updatedAdvice.draft,
+				updated_at: updatedAdvice.updatedAt.toISOString(),
+				created_at: updatedAdvice.createdAt.toISOString(),
+			});
+		}
+	}

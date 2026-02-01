@@ -72,6 +72,16 @@ export const adviceContentSchema = z.object({
 	draft: consultationDraftSchema
 });
 
+export const updateDraftAdviceContentSchema = z.object({
+	body: postBodySchema,
+});
+
+export const consultationIdParamSchema = z.object({
+  id: z.coerce.number().int().positive(),
+});
+
 export type ListConsultationsQuery = z.infer<typeof listConsultationsQuerySchema>;
 export type ConsultationContent = z.infer<typeof consultationContentSchema>;
 export type AdviceContent = z.infer<typeof adviceContentSchema>;
+export type UpdateDraftAdviceContentSchema = z.infer<typeof updateDraftAdviceContentSchema>;
+export type ConsultationIdParam = z.infer<typeof consultationIdParamSchema>;

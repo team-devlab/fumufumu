@@ -709,4 +709,71 @@ describe('Consultations API Integration Tests', () => {
 			expect(data.error).toBe('NotFoundError');
 		});
 	});
+
+	describe('PUT /api/consultations/:id/advice/draft', () => {
+		let consultationId: number;
+
+		beforeAll(async () => {
+			const req = new Request('http://localhost/api/consultations', {
+				method: 'POST',
+				headers: {
+					'Content-Type': 'application/json',
+					'Cookie': sessionCookie!,
+				},
+				body: JSON.stringify({
+					title: 'テスト相談',
+					body: 'テスト本文です。10文字以上あります。',
+					draft: false,
+				}),
+			});
+			const res = await app.fetch(req, env);
+			expect(res.status).toBe(201);
+			const data = await res.json() as any;
+			consultationId = data.id;
+
+			const adviceReq = new Request(`http://localhost/api/consultations/${consultationId}/advice`, {
+				method: 'POST',
+				headers: {
+					'Content-Type': 'application/json',
+					'Cookie': sessionCookie!,
+				},
+				body: JSON.stringify({
+					body: '相談回答本文です。10文字以上あります。',
+					draft: true,
+				}),
+			});
+			const adviceRes = await app.fetch(adviceReq, env);
+			expect(adviceRes.status).toBe(201);
+
+		});
+		it('下書きの相談回答を更新できる', async () => {
+			const req = new Request(`http://localhost/api/consultations/${consultationId}/advice/draft`, {
+				method: 'PUT',
+				headers: {
+					'Content-Type': 'application/json',
+					'Cookie': sessionCookie!,
+				},
+				body: JSON.stringify({
+					body: '更新後の相談回答本文です。10文字以上あります。',
+				}),
+			});
+			const res = await app.fetch(req, env);
+			expect(res.status).toBe(200);
+		});
+
+		it ('存在しない（またはリクエストユーザーに紐づかない）下書き回答を更新しようとするとエラーになる', async () => {
+			const req = new Request(`http://localhost/api/consultations/${consultationId}/advice/draft`, {
+				method: 'PUT',
+				headers: {
+					'Content-Type': 'application/json',
+					'Cookie': attackerCookie!,
+				},
+				body: JSON.stringify({
+					body: '更新後の相談回答本文です。10文字以上あります。',
+				}),
+			});
+			const res = await app.fetch(req, env);
+			expect(res.status).toBe(404);
+		});
+	});
 });
