@@ -14,9 +14,18 @@ export const ConsultationDetail = async ({ consultationId }: Props) => {
   try {
     consultation = await fetchConsultationDetailApi(consultationId);
   } catch (e) {
-    console.error(e);
-    error = "相談データの取得に失敗しました。";
-  }
+    if (e instanceof Response) {
+        if (e.status === 404) {
+            error = "相談が見つかりませんでした。";
+        } else if (e.status === 403) {
+            error = "この相談を閲覧する権限がありません。";
+        } else {
+            error = "相談データの取得に失敗しました。";
+        }
+    } else {
+        console.error(e);
+        error = "予期しないエラーが発生しました。";
+    }
 
   if (error) {
     return <div className="p-8 text-center text-red-500">{error}</div>;

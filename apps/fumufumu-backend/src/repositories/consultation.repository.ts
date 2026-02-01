@@ -14,7 +14,11 @@ export class ConsultationRepository {
 			where: eq(consultations.id, id),
 			with: {
 				author: true,
-                advices: {
+                    // 公開済みかつ非表示でない回答のみ取得
+                    where: (advices, { and, eq, isNull }) => and(
+                        eq(advices.draft, false),  // 下書きでない
+                        isNull(advices.hiddenAt)    // 非表示でない
+                    ),
                     with: {
                         author: true,
                     },
