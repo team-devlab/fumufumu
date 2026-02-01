@@ -1,5 +1,5 @@
-import type { Advice } from "../types";
 import { CONSULTATION_LABELS } from "@/features/consultation/config/constants";
+import type { Advice } from "../types";
 
 type Props = {
   advices: Advice[];

@@ -1,5 +1,5 @@
-import type { ConsultationDetail } from "../types";
 import { CONSULTATION_LABELS } from "@/features/consultation/config/constants";
+import type { ConsultationDetail } from "../types";
 
 type Props = {
   consultation: ConsultationDetail;
