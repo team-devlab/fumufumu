@@ -2,7 +2,6 @@
 
 import { Button } from "@/components/ui/Button";
 import {
-  CONSULTATION_LABELS,
   CONSULTATION_RULES,
 } from "@/features/consultation/config/constants";
 import { useAdviceEntry } from "@/features/consultation/hooks/useAdviceEntry";

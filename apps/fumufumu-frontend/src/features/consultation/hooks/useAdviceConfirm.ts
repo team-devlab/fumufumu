@@ -1,7 +1,7 @@
 "use client";
 
 import { useRouter } from "next/navigation";
-import { useState } from "react"; // useEffect を削除
+import { useState } from "react";
 import toast from "react-hot-toast";
 import { ROUTES } from "@/config/routes";
 import { createAdvice } from "@/features/consultation/api/consultationClientApi";
@@ -9,6 +9,12 @@ import {
   useAdviceActions,
   useAdviceBody,
 } from "@/features/consultation/stores/useAdviceFormStore";
+
+// NOTE: ここで「データがない場合のリダイレクト(useEffect)」を行わない理由
+// Zustandのpersistによるデータ復元(Hydration)は非同期的に行われるため、
+// リロード直後の一瞬は body が空の状態になります。
+// ここでリダイレクトさせると、データ復元前に強制遷移されてしまうため、
+// あえて自動リダイレクトは実装せず、送信ボタン押下時にチェックしています。
 
 export const useAdviceConfirm = (consultationId: number) => {
   const router = useRouter();
