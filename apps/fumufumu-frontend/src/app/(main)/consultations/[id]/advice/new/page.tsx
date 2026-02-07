@@ -28,7 +28,7 @@ export default async function NewAdvicePage({ params }: PageProps) {
   // 認可チェック追加
   if (consultation.draft) {
     // 下書きには回答できない
-    notFound(); // または専用のエラーページ
+    notFound();
   }
 
   if (consultation.hidden_at) {
