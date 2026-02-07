@@ -24,6 +24,9 @@ export const useAdviceEntry = (consultationId: number) => {
 
   const [isProcessing, setIsProcessing] = useState(false);
 
+  // 現在の有効文字数を計算
+  const characterCount = countCharacters(body);
+
   // 誤操作による離脱防止
   const isDirty = hasInput && !isProcessing;
   usePreventUnload(isDirty);
@@ -39,7 +42,7 @@ export const useAdviceEntry = (consultationId: number) => {
   };
 
   const validateBody = () => {
-    if (countCharacters(body) < CONSULTATION_RULES.BODY_MIN_LENGTH) {
+    if (characterCount < CONSULTATION_RULES.BODY_MIN_LENGTH) {
       return false;
     }
     return true;
@@ -89,6 +92,7 @@ export const useAdviceEntry = (consultationId: number) => {
     body,
     setBody,
     isProcessing,
+    characterCount,
     handleBack,
     handleSaveDraft,
     handleConfirm,

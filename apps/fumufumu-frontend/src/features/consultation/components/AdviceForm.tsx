@@ -17,6 +17,7 @@ export const AdviceForm = ({ consultation }: Props) => {
     body,
     setBody,
     isProcessing,
+    characterCount,
     handleBack,
     handleSaveDraft,
     handleConfirm,
@@ -52,7 +53,7 @@ export const AdviceForm = ({ consultation }: Props) => {
               回答内容
             </label>
             <span className="text-sm text-gray-500 font-mono">
-              {body.length} / {CONSULTATION_RULES.BODY_MAX_LENGTH}
+              {characterCount} / {CONSULTATION_RULES.BODY_MAX_LENGTH}
             </span>
           </div>
           <textarea
