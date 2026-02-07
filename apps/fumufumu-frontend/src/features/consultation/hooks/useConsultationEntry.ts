@@ -28,6 +28,10 @@ export const useConsultationEntry = () => {
 
   const [isProcessing, setIsProcessing] = useState(false);
 
+  // 有効文字数を計算
+  const titleCharCount = countCharacters(title);
+  const bodyCharCount = countCharacters(body);
+
   // NOTE: 誤操作による離脱防止
   const isDirty = hasInput && !isProcessing;
   usePreventUnload(isDirty);
@@ -43,7 +47,7 @@ export const useConsultationEntry = () => {
   };
 
   const validateBody = () => {
-    if (countCharacters(body) < CONSULTATION_RULES.BODY_MIN_LENGTH) {
+    if (bodyCharCount < CONSULTATION_RULES.BODY_MIN_LENGTH) {
       return false;
     }
     return true;
@@ -108,6 +112,8 @@ export const useConsultationEntry = () => {
     body,
     setBody,
     isProcessing,
+    titleCharCount,
+    bodyCharCount,
     handleSaveDraft,
     handleConfirm,
     handleBack,

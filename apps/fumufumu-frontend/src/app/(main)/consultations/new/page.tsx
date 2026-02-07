@@ -12,6 +12,8 @@ export default function NewConsultationPage() {
     body,
     setBody,
     isProcessing,
+    titleCharCount,
+    bodyCharCount,
     handleSaveDraft,
     handleConfirm,
     handleBack,
@@ -24,6 +26,8 @@ export default function NewConsultationPage() {
         body={body}
         onChangeTitle={setTitle}
         onChangeBody={setBody}
+        titleCharCount={titleCharCount}
+        bodyCharCount={bodyCharCount}
       />
       <ConsultationFormActions
         onBack={handleBack}

@@ -8,6 +8,8 @@ type Props = {
   body: string;
   onChangeTitle: (value: string) => void;
   onChangeBody: (value: string) => void;
+  titleCharCount: number;
+  bodyCharCount: number;
 };
 
 export const ConsultationForm = ({
@@ -15,6 +17,8 @@ export const ConsultationForm = ({
   body,
   onChangeTitle,
   onChangeBody,
+  titleCharCount,
+  bodyCharCount,
 }: Props) => {
   return (
     <div className="space-y-8 bg-white p-8 rounded-xl shadow-sm border border-gray-100">
@@ -32,7 +36,7 @@ export const ConsultationForm = ({
             {CONSULTATION_LABELS.TITLE}
           </label>
           <span className="text-sm text-gray-500 font-mono">
-            {title.length} / {CONSULTATION_RULES.TITLE_MAX_LENGTH}
+            {titleCharCount} / {CONSULTATION_RULES.TITLE_MAX_LENGTH}
           </span>
         </div>
         <input
@@ -57,7 +61,7 @@ export const ConsultationForm = ({
             {CONSULTATION_LABELS.BODY}
           </label>
           <span className="text-sm text-gray-500 font-mono">
-            {body.length} / {CONSULTATION_RULES.BODY_MAX_LENGTH}
+            {bodyCharCount} / {CONSULTATION_RULES.BODY_MAX_LENGTH}
           </span>
         </div>
         <textarea
