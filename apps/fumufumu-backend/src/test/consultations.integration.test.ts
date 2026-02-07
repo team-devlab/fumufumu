@@ -857,7 +857,10 @@ describe('Consultations API Integration Tests', () => {
 			expect(data.data.length).toBe(20);
 			expect(data.pagination.current_page).toBe(1);
 			expect(data.pagination.per_page).toBe(20);
+			// NOTE: 他テストの beforeAll で作成された相談データを含むため、
+			// 厳密な件数ではなく下限で検証している
 			expect(data.pagination.total_items).toBeGreaterThanOrEqual(30);
+			expect(data.pagination.total_pages).toBeGreaterThanOrEqual(2);
 			expect(data.pagination.has_next).toBe(true);
 			expect(data.pagination.has_prev).toBe(false);
 		});
@@ -898,6 +901,8 @@ describe('Consultations API Integration Tests', () => {
 
 			const data = await res.json() as any;
 			expect(data.data.length).toBe(0);
+			expect(data.pagination.current_page).toBe(999);
+			expect(data.pagination.total_pages).toBeLessThan(999);
 			expect(data.pagination.has_next).toBe(false);
 		});
 
