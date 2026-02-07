@@ -1,5 +1,6 @@
 import { create } from "zustand";
 import { createJSONStorage, persist } from "zustand/middleware";
+import { STORAGE_KEYS } from "@/features/consultation/config/constants";
 
 type AdviceFormState = {
   body: string;
@@ -28,7 +29,7 @@ const useAdviceFormStore = create<AdviceFormState>()(
       },
     }),
     {
-      name: "advice-form-storage", // ストレージのキー名（一意にする）
+      name: STORAGE_KEYS.ADVICE_FORM,
       storage: createJSONStorage(() => sessionStorage),
     },
   ),

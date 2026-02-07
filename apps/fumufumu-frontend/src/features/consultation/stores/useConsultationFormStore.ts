@@ -1,5 +1,6 @@
 import { create } from "zustand";
 import { createJSONStorage, persist } from "zustand/middleware";
+import { STORAGE_KEYS } from "@/features/consultation/config/constants";
 
 type ConsultationFormState = {
   title: string;
@@ -39,7 +40,7 @@ const useConsultationFormStore = create<ConsultationFormState>()(
       },
     }),
     {
-      name: "consultation-form-storage", // 一意なキー名
+      name: STORAGE_KEYS.CONSULTATION_FORM,
       storage: createJSONStorage(() => sessionStorage),
     },
   ),

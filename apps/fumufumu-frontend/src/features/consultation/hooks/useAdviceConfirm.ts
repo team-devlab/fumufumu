@@ -17,11 +17,6 @@ export const useAdviceConfirm = (consultationId: number) => {
   const { reset } = useAdviceActions();
 
   const [isProcessing, setIsProcessing] = useState(false);
-  // isComplete フラグも不要になったので削除
-
-  // ▼ 削除: 自動リダイレクト処理 (useEffect) を削除
-  // persist導入により、リロード時もデータが復元されるため、
-  // ここで強制的に戻す必要がなくなりました。
 
   const handleBack = () => {
     router.back();
