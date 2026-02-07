@@ -1,9 +1,7 @@
 "use client";
 
 import { Button } from "@/components/ui/Button";
-import {
-  CONSULTATION_RULES,
-} from "@/features/consultation/config/constants";
+import { CONSULTATION_RULES } from "@/features/consultation/config/constants";
 import { useAdviceEntry } from "@/features/consultation/hooks/useAdviceEntry";
 import type { ConsultationDetail } from "@/features/consultation/types";
 

@@ -66,7 +66,7 @@ export const useAdviceEntry = (consultationId: number) => {
 
       reset(); // 成功したらフォームをクリア
       toast.success("下書きを保存しました");
-      
+
       // 下書き保存後は親の相談詳細画面に戻る(ユーザー画面ができたら、下書き一覧にいくのがいいかもしれない)
       router.push(ROUTES.CONSULTATION.DETAIL(consultationId));
     } catch (error) {
@@ -83,7 +83,7 @@ export const useAdviceEntry = (consultationId: number) => {
       );
       return;
     }
-    
+
     // 確認画面へ遷移
     router.push(ROUTES.CONSULTATION.ADVICE.CONFIRM(consultationId));
   };

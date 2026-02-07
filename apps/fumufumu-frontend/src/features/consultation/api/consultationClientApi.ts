@@ -13,7 +13,11 @@ export const createConsultation = (params: CreateConsultationParams) => {
   });
 };
 
-export const createAdvice = ({ consultationId, body, draft }: CreateAdviceParams) => {
+export const createAdvice = ({
+  consultationId,
+  body,
+  draft,
+}: CreateAdviceParams) => {
   return apiClient<Advice>(`/api/consultations/${consultationId}/advice`, {
     method: "POST",
     body: JSON.stringify({ body, draft }),

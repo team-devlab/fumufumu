@@ -19,10 +19,10 @@ const useAdviceFormStore = create<AdviceFormState>()(
       ...INITIAL_STATE,
 
       setBody: (body) => set({ body }),
-      
+
       // リセット時は明示的に初期状態に戻す
       reset: () => set(INITIAL_STATE),
-      
+
       hasInput: () => {
         const { body } = get();
         return body.trim() !== "";

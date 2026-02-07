@@ -22,9 +22,9 @@ export const AdviceConfirm = ({ consultation }: Props) => {
 
         {/* --- 親相談のコンテキスト表示 --- */}
         <div className="bg-gray-50 p-6 rounded-lg border border-gray-200 space-y-2">
-           <p className="text-xs text-gray-500">
-              以下の相談に対する回答を投稿します
-            </p>
+          <p className="text-xs text-gray-500">
+            以下の相談に対する回答を投稿します
+          </p>
           <h2 className="text-lg font-bold text-gray-800">
             {consultation.title}
           </h2>
