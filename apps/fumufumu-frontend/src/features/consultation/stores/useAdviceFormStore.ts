@@ -1,4 +1,5 @@
 import { create } from "zustand";
+import { createJSONStorage, persist } from "zustand/middleware";
 
 type AdviceFormState = {
   body: string;
@@ -11,19 +12,29 @@ const INITIAL_STATE = {
   body: "",
 };
 
-const useAdviceFormStore = create<AdviceFormState>((set, get) => ({
-  ...INITIAL_STATE,
+export const useAdviceFormStore = create<AdviceFormState>()(
+  persist(
+    (set, get) => ({
+      ...INITIAL_STATE,
 
-  setBody: (body) => set({ body }),
-  reset: () => set(INITIAL_STATE),
-  hasInput: () => {
-    const { body } = get();
-    return body.trim() !== "";
-  },
-}));
+      setBody: (body) => set({ body }),
+      
+      // リセット時は明示的に初期状態に戻す
+      reset: () => set(INITIAL_STATE),
+      
+      hasInput: () => {
+        const { body } = get();
+        return body.trim() !== "";
+      },
+    }),
+    {
+      name: "advice-form-storage", // ストレージのキー名（一意にする）
+      storage: createJSONStorage(() => sessionStorage),
+    },
+  ),
+);
 
 //-- Selector Hooks --//
-
 export const useAdviceBody = () => useAdviceFormStore((s) => s.body);
 export const useAdviceHasInput = () => useAdviceFormStore((s) => s.hasInput());
 

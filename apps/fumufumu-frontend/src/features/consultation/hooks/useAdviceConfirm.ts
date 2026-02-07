@@ -1,7 +1,7 @@
 "use client";
 
 import { useRouter } from "next/navigation";
-import { useEffect, useState } from "react";
+import { useState } from "react"; // useEffect を削除
 import toast from "react-hot-toast";
 import { ROUTES } from "@/config/routes";
 import { createAdvice } from "@/features/consultation/api/consultationClientApi";
@@ -17,25 +17,23 @@ export const useAdviceConfirm = (consultationId: number) => {
   const { reset } = useAdviceActions();
 
   const [isProcessing, setIsProcessing] = useState(false);
-  // ▼ 追加: 投稿完了フラグ
-  const [isComplete, setIsComplete] = useState(false);
+  // isComplete フラグも不要になったので削除
 
-  // 直接URLを叩いて確認画面に来た場合など、入力がないときは入力画面に戻す
-  useEffect(() => {
-    // ▼ 追加: 投稿完了してリセットされた場合は、リダイレクトしない（詳細画面への遷移を待つ）
-    if (isComplete) return;
-
-    if (!body) {
-      router.replace(ROUTES.CONSULTATION.ADVICE.NEW(consultationId));
-    }
-  }, [body, consultationId, router, isComplete]); // ▼ 依存配列に追加
+  // ▼ 削除: 自動リダイレクト処理 (useEffect) を削除
+  // persist導入により、リロード時もデータが復元されるため、
+  // ここで強制的に戻す必要がなくなりました。
 
   const handleBack = () => {
     router.back();
   };
 
   const handlePublish = async () => {
-    if (!body) return;
+    // 最後の砦として、ボタンを押した瞬間にチェックする
+    if (!body) {
+      toast.error("入力内容が不足しています");
+      router.replace(ROUTES.CONSULTATION.ADVICE.NEW(consultationId));
+      return;
+    }
 
     setIsProcessing(true);
     try {
@@ -45,9 +43,6 @@ export const useAdviceConfirm = (consultationId: number) => {
         draft: false,
       });
 
-      // ▼ 追加: リセット前に完了フラグを立てる
-      setIsComplete(true);
-      
       reset();
       
       toast.success("回答を投稿しました！");
