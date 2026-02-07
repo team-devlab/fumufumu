@@ -25,6 +25,15 @@ export default async function NewAdvicePage({ params }: PageProps) {
   if (!consultation) {
     notFound();
   }
+  // 認可チェック追加
+  if (consultation.draft) {
+    // 下書きには回答できない
+    notFound(); // または専用のエラーページ
+  }
 
+  if (consultation.hidden_at) {
+    // 非表示には回答できない
+    notFound();
+  }
   return <AdviceForm consultation={consultation} />;
 }
