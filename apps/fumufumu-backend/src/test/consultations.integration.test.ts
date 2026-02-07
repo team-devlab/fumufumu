@@ -460,7 +460,7 @@ describe('Consultations API Integration Tests', () => {
 	});
 
 	describe('GET /api/consultations', () => {
-		it('相談一覧を取得できる（advicesは空配列、bodyは全文）', async () => {
+		it('相談一覧を取得できる（ページネーション対応）', async () => {
 			const req = new Request('http://localhost/api/consultations', {
 				headers: {
 					'Cookie': sessionCookie!,
@@ -471,20 +471,33 @@ describe('Consultations API Integration Tests', () => {
 			expect(res.status).toBe(200);
 
 			const data = await res.json() as any;
-			expect(data).toHaveProperty('meta');
+			
+			// レスポンス構造の確認（ページネーション対応）
+			expect(data).toHaveProperty('pagination');
 			expect(data).toHaveProperty('data');
-			expect(data.meta).toHaveProperty('total');
+			expect(data.pagination).toHaveProperty('total_items');
+			expect(data.pagination).toHaveProperty('current_page');
+			expect(data.pagination).toHaveProperty('per_page');
+			expect(data.pagination).toHaveProperty('total_pages');
+			expect(data.pagination).toHaveProperty('has_next');
+			expect(data.pagination).toHaveProperty('has_prev');
 			expect(Array.isArray(data.data)).toBe(true);
 
 			// データの中身を確認
 			if (data.data.length > 0) {
 				const item = data.data[0];
-				// NOTE: 一覧APIでもbodyは返ってくる（型定義上必須になったため）
-				expect(item).toHaveProperty('body');
-				// NOTE: 一覧APIではadvicesは空配列であること（パフォーマンス最適化）
-				expect(item).toHaveProperty('advices');
-				expect(Array.isArray(item.advices)).toBe(true);
-				expect(item.advices.length).toBe(0);
+				// 一覧APIでは基本情報のみ（body、advicesは含まれない）
+				expect(item).toHaveProperty('id');
+				expect(item).toHaveProperty('title');
+				expect(item).toHaveProperty('body_preview');
+				expect(item).toHaveProperty('draft');
+				expect(item).toHaveProperty('created_at');
+				expect(item).toHaveProperty('updated_at');
+				expect(item).toHaveProperty('author');
+				
+				// bodyとadvicesは含まれないことを確認
+				expect(item).not.toHaveProperty('body');
+				expect(item).not.toHaveProperty('advices');
 			}
 		});
 	});
@@ -809,6 +822,101 @@ describe('Consultations API Integration Tests', () => {
 			});
 			const res = await app.fetch(req, env);
 			expect(res.status).toBe(404);
+		});
+	});
+
+	describe('GET /api/consultations - Pagination', () => {
+		beforeAll(async () => {
+			// 30件の相談を作成（テストデータ）
+			for (let i = 1; i <= 30; i++) {
+				const req = new Request('http://localhost/api/consultations', {
+					method: 'POST',
+					headers: {
+						'Content-Type': 'application/json',
+						'Cookie': sessionCookie!,
+					},
+					body: JSON.stringify({
+						title: `テスト相談 ${i}`,
+						body: `これはテスト相談${i}の本文です。`,
+						draft: false,
+					}),
+				});
+				await app.fetch(req, env);
+			}
+		});
+
+		it('デフォルト: page=1, limit=20 で取得できる', async () => {
+			const req = new Request('http://localhost/api/consultations', {
+				headers: { 'Cookie': sessionCookie! },
+			});
+
+			const res = await app.fetch(req, env);
+			expect(res.status).toBe(200);
+
+			const data = await res.json() as any;
+			expect(data.data.length).toBe(20);
+			expect(data.pagination.current_page).toBe(1);
+			expect(data.pagination.per_page).toBe(20);
+			expect(data.pagination.total_items).toBeGreaterThanOrEqual(30);
+			expect(data.pagination.has_next).toBe(true);
+			expect(data.pagination.has_prev).toBe(false);
+		});
+
+		it('page=2 で2ページ目を取得できる', async () => {
+			const req = new Request('http://localhost/api/consultations?page=2', {
+				headers: { 'Cookie': sessionCookie! },
+			});
+
+			const res = await app.fetch(req, env);
+			expect(res.status).toBe(200);
+
+			const data = await res.json() as any;
+			expect(data.pagination.current_page).toBe(2);
+			expect(data.pagination.has_prev).toBe(true);
+		});
+
+		it('limit=10 で件数を指定できる', async () => {
+			const req = new Request('http://localhost/api/consultations?limit=10', {
+				headers: { 'Cookie': sessionCookie! },
+			});
+
+			const res = await app.fetch(req, env);
+			expect(res.status).toBe(200);
+
+			const data = await res.json() as any;
+			expect(data.data.length).toBe(10);
+			expect(data.pagination.per_page).toBe(10);
+		});
+
+		it('存在しないページを指定すると空配列が返る', async () => {
+			const req = new Request('http://localhost/api/consultations?page=999', {
+				headers: { 'Cookie': sessionCookie! },
+			});
+
+			const res = await app.fetch(req, env);
+			expect(res.status).toBe(200);
+
+			const data = await res.json() as any;
+			expect(data.data.length).toBe(0);
+			expect(data.pagination.has_next).toBe(false);
+		});
+
+		it('不正なページ番号（0以下）は400エラー', async () => {
+			const req = new Request('http://localhost/api/consultations?page=0', {
+				headers: { 'Cookie': sessionCookie! },
+			});
+
+			const res = await app.fetch(req, env);
+			expect(res.status).toBe(400);
+		});
+
+		it('limitが100を超えると400エラー', async () => {
+			const req = new Request('http://localhost/api/consultations?limit=101', {
+				headers: { 'Cookie': sessionCookie! },
+			});
+
+			const res = await app.fetch(req, env);
+			expect(res.status).toBe(400);
 		});
 	});
 });
