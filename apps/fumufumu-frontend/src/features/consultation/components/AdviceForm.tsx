@@ -10,7 +10,6 @@ type Props = {
 };
 
 export const AdviceForm = ({ consultation }: Props) => {
-  // フックを使用してロジックを分離
   const {
     body,
     setBody,
