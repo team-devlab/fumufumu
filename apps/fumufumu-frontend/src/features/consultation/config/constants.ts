@@ -26,3 +26,10 @@ export const CONSULTATION_LABELS = {
   ANONYMOUS_USER: "退会済みユーザー",
   MOCK_TAG_CAREER: "キャリア", // 仮実装用
 } as const;
+
+export const STORAGE_KEYS = {
+  // 相談投稿フォームの一時保存用 (SessionStorage)
+  CONSULTATION_FORM: "consultation-form-storage",
+  // アドバイス投稿フォームの一時保存用 (SessionStorage)
+  ADVICE_FORM: "advice-form-storage",
+} as const;
