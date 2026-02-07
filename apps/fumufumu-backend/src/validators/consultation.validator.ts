@@ -59,6 +59,29 @@ export const listConsultationsQuerySchema = z.object({
 	 * - "true" または "false" の文字列をbooleanに変換
 	 */
 	solved: booleanStringSchema.optional(),
+
+	/**
+	 * ページ番号（オプショナル、デフォルト: 1）
+	 * - 1以上の整数のみ許可
+	 */
+	page: z.coerce
+		.number()
+		.int("ページ番号は整数を指定してください")
+		.min(1, "ページ番号は1以上を指定してください")
+		.optional()
+		.default(1),
+
+	/**
+	 * 1ページあたりの件数（オプショナル、デフォルト: 20）
+	 * - 1以上100以下の整数のみ許可
+	 */
+	limit: z.coerce
+		.number()
+		.int("件数は整数を指定してください")
+		.min(1, "件数は1以上を指定してください")
+		.max(100, "件数は100以下を指定してください")
+		.optional()
+		.default(20),
 });
 
 export const consultationContentSchema = z.object({

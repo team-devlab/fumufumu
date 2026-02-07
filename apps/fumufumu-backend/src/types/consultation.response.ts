@@ -1,5 +1,6 @@
 import type { Author } from "@/types/user.types";
 import type { AdviceResponse } from "@/types/advice.response";
+import type { PaginationMeta } from "@/types/consultation.types";
 
 // APIレスポンス用の相談データ
 export type ConsultationResponse = {
@@ -20,9 +21,7 @@ export type ConsultationResponse = {
 
 // 相談リストレスポンス
 export type ConsultationListResponse = {
-	meta: {
-		total: number;
-	};
+	pagination: PaginationMeta;
 	data: ConsultationResponse[];
 };
 

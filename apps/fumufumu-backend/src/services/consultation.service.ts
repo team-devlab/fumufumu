@@ -1,5 +1,5 @@
 import type { ConsultationRepository } from "@/repositories/consultation.repository";
-import type { ConsultationFilters } from "@/types/consultation.types";
+import type { ConsultationFilters, PaginationMeta, PaginationParams } from "@/types/consultation.types";
 import type { ConsultationResponse, ConsultationListResponse, ConsultationSavedResponse, AdviceSavedResponse } from "@/types/consultation.response";
 import type { ConsultationContent, AdviceContent, UpdateDraftAdviceContentSchema } from "@/validators/consultation.validator";
 import { ForbiddenError, NotFoundError } from "@/errors/AppError";
@@ -108,15 +108,43 @@ export class ConsultationService {
 		};
 	}
 
-	async listConsultations(filters?: ConsultationFilters): Promise<ConsultationListResponse> {
-		const consultationList = await this.repository.findAll(filters);
+	async listConsultations(
+		filters?: ConsultationFilters,
+		pagination?: PaginationParams
+	): Promise<ConsultationListResponse> {
+		const { page = 1, limit = 20 } = pagination || {};
+		// 並列で取得（パフォーマンス向上）
+		const [consultationList, totalCount] = await Promise.all([
+			this.repository.findAll(filters, { page, limit }),
+			this.repository.count(filters),
+		]);
 		const responses = consultationList.map(consultation => this.toConsultationResponse(consultation));
 
 		return { 
-			meta: { 
-				total: responses.length
-			}, 
-			data: responses
+			data: responses,
+			pagination: this.calculatePagination({ page, limit }, totalCount),
+		};
+	}
+
+	/**
+	 * ページネーション情報を計算する
+	 * @param pagination - ページネーションパラメータ
+	 * @param totalCount - 総件数
+	 * @returns ページネーション情報
+	 */
+	private calculatePagination(
+		pagination: PaginationParams,
+		totalCount: number,
+	): PaginationMeta {
+		const totalPages = Math.ceil(totalCount / pagination.limit);
+
+		return {
+			current_page: pagination.page,
+			per_page: pagination.limit,
+			total_items: totalCount,
+			total_pages: totalPages,
+			has_next: pagination.page < totalPages,
+			has_prev: pagination.page > 1,
 		};
 	}
 
