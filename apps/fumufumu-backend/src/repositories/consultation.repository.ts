@@ -10,6 +10,31 @@ import type { PaginationParams } from "@/types/consultation.types";
 export class ConsultationRepository {
 	constructor(private db: DbInstance) {}
 
+	/**
+	 * フィルタ条件からWHERE句を構築する（findAll / count 共通）
+	 */
+	private buildWhereConditions(filters?: ConsultationFilters): SQL | undefined {
+		const conditions: SQL[] = [];
+
+		if (filters?.userId !== undefined) {
+			conditions.push(eq(consultations.authorId, filters.userId));
+		}
+
+		if (filters?.draft !== undefined) {
+			conditions.push(eq(consultations.draft, filters.draft));
+		}
+
+		if (filters?.solved !== undefined) {
+			conditions.push(
+				filters.solved
+					? isNotNull(consultations.solvedAt)
+					: isNull(consultations.solvedAt)
+			);
+		}
+
+		return conditions.length > 0 ? and(...conditions) : undefined;
+	}
+
 	async findFirstById(id: number) {
 		const consultation = await this.db.query.consultations.findFirst({
 			where: eq(consultations.id, id),
@@ -47,31 +72,11 @@ export class ConsultationRepository {
 	 * @throws {Error} データベースクエリ実行エラー（上位層で処理）
 	 */
 	async findAll(filters?: ConsultationFilters, pagination?: PaginationParams) {
-		const whereConditions: SQL[] = [];
-
-		if (filters?.userId !== undefined) {
-			whereConditions.push(eq(consultations.authorId, filters.userId));
-		}
-
-		if (filters?.draft !== undefined) {
-			whereConditions.push(eq(consultations.draft, filters.draft));
-		}
-
-		if (filters?.solved !== undefined) {
-			whereConditions.push(
-				filters.solved
-					? isNotNull(consultations.solvedAt)
-					: isNull(consultations.solvedAt)
-			);
-		}
-
-		const { page = 1, limit = 20} = pagination || {};
+		const { page = 1, limit = 20 } = pagination || {};
 		const offset = (page - 1) * limit;
 
 		return await this.db.query.consultations.findMany({
-			where: whereConditions.length > 0 
-				? and(...whereConditions) 
-				: undefined,
+			where: this.buildWhereConditions(filters),
 			orderBy: (fields, { desc }) => [desc(fields.createdAt)],
 			limit: limit,
 			offset: offset,
@@ -87,35 +92,13 @@ export class ConsultationRepository {
 	 * @returns 相談の総件数
 	 */
 	async count(filters?: ConsultationFilters): Promise<number> {
-		const whereConditions: SQL[] = [];
-
-		if (filters?.userId !== undefined) {
-			whereConditions.push(eq(consultations.authorId, filters.userId));
-		}
-
-		if (filters?.draft !== undefined) {
-			whereConditions.push(eq(consultations.draft, filters.draft));
-		}
-
-		if (filters?.solved !== undefined) {
-			whereConditions.push(
-				filters.solved
-					? isNotNull(consultations.solvedAt)
-					: isNull(consultations.solvedAt)
-			);
-		}
-
 		// NOTE: DrizzleのRQBには専用のcount()メソッドが存在しないため、
 		// Core APIを使用してCOUNT(*)クエリを実行しています。
 		// この方法が最もパフォーマンスが良く、Drizzle公式の推奨パターンです。
 		const result = await this.db
 		.select({ count: sql<number>`count(*)` })
 		.from(consultations)
-		.where(
-			whereConditions.length > 0 
-				? and(...whereConditions) 
-				: undefined
-		);
+		.where(this.buildWhereConditions(filters));
 	
 		return result[0]?.count || 0;
 	}
