@@ -12,7 +12,7 @@ const INITIAL_STATE = {
   body: "",
 };
 
-export const useAdviceFormStore = create<AdviceFormState>()(
+const useAdviceFormStore = create<AdviceFormState>()(
   persist(
     (set, get) => ({
       ...INITIAL_STATE,

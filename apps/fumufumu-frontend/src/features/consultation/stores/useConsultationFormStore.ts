@@ -1,4 +1,5 @@
 import { create } from "zustand";
+import { createJSONStorage, persist } from "zustand/middleware";
 
 type ConsultationFormState = {
   title: string;
@@ -20,20 +21,29 @@ const INITIAL_STATE = {
 };
 
 // store自体は export しない（直接使わせない）のが理想
-const useConsultationFormStore = create<ConsultationFormState>((set, get) => ({
-  ...INITIAL_STATE,
+const useConsultationFormStore = create<ConsultationFormState>()(
+  persist(
+    (set, get) => ({
+      ...INITIAL_STATE,
 
-  setTitle: (title) => set({ title }),
-  setBody: (body) => set({ body }),
-  setTags: (tags) => set({ tags }),
+      setTitle: (title) => set({ title }),
+      setBody: (body) => set({ body }),
+      setTags: (tags) => set({ tags }),
 
-  reset: () => set(INITIAL_STATE),
+      // リセット時は明示的に初期状態に戻す
+      reset: () => set(INITIAL_STATE),
 
-  hasInput: () => {
-    const { title, body, tags } = get();
-    return title.trim() !== "" || body.trim() !== "" || tags.length > 0;
-  },
-}));
+      hasInput: () => {
+        const { title, body, tags } = get();
+        return title.trim() !== "" || body.trim() !== "" || tags.length > 0;
+      },
+    }),
+    {
+      name: "consultation-form-storage", // 一意なキー名
+      storage: createJSONStorage(() => sessionStorage),
+    },
+  ),
+);
 
 //-- Selector Hooks (ここから下を利用側でimportする) --//
 
