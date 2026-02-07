@@ -42,6 +42,12 @@ export interface CreateConsultationParams {
   draft: boolean;
 }
 
+export interface CreateAdviceParams {
+  consultationId: number;
+  body: string;
+  draft: boolean;
+}
+
 export interface Advice {
   id: number;
   body: string;
