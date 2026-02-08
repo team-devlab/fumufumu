@@ -40,6 +40,7 @@ describe('Consultations API', () => {
 					limit: undefined,
 				})),
 			},
+			header: vi.fn(),
 			json: vi.fn((data: any, status?: number) => {
 				return {
 					json: async () => data,
