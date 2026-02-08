@@ -68,6 +68,7 @@ export const listConsultationsQuerySchema = z.object({
 		.number()
 		.int("ページ番号は整数を指定してください")
 		.min(1, "ページ番号は1以上を指定してください")
+		.max(1000, "ページ番号は1000以下を指定してください")
 		.optional()
 		.default(1),
 
