@@ -1,13 +1,39 @@
 import { consultations } from "@/db/schema/consultations";
 import { users } from "@/db/schema/user";
 import type { DbInstance } from "@/index";
-import { eq, and, isNull, isNotNull, type SQL } from "drizzle-orm";
-import type { ConsultationFilters } from "@/types/consultation.types";
+import { eq, and, isNull, isNotNull, type SQL, sql } from "drizzle-orm";
+import type { ConsultationFilters, PaginationParams } from "@/types/consultation.types";
+import { PAGINATION_CONFIG } from "@/types/consultation.types";
 import { DatabaseError, ConflictError, NotFoundError } from "@/errors/AppError";
 import { advices } from "@/db/schema/advices";
 
 export class ConsultationRepository {
 	constructor(private db: DbInstance) {}
+
+	/**
+	 * フィルタ条件からWHERE句を構築する（findAll / count 共通）
+	 */
+	private buildWhereConditions(filters?: ConsultationFilters): SQL | undefined {
+		const conditions: SQL[] = [];
+
+		if (filters?.userId !== undefined) {
+			conditions.push(eq(consultations.authorId, filters.userId));
+		}
+
+		if (filters?.draft !== undefined) {
+			conditions.push(eq(consultations.draft, filters.draft));
+		}
+
+		if (filters?.solved !== undefined) {
+			conditions.push(
+				filters.solved
+					? isNotNull(consultations.solvedAt)
+					: isNull(consultations.solvedAt)
+			);
+		}
+
+		return conditions.length > 0 ? and(...conditions) : undefined;
+	}
 
 	async findFirstById(id: number) {
 		const consultation = await this.db.query.consultations.findFirst({
@@ -45,34 +71,36 @@ export class ConsultationRepository {
 	 * @returns 相談データと著者情報の配列（authorは退会済みの場合null）
 	 * @throws {Error} データベースクエリ実行エラー（上位層で処理）
 	 */
-	async findAll(filters?: ConsultationFilters) {
-		const whereConditions: SQL[] = [];
-
-		if (filters?.userId !== undefined) {
-			whereConditions.push(eq(consultations.authorId, filters.userId));
-		}
-
-		if (filters?.draft !== undefined) {
-			whereConditions.push(eq(consultations.draft, filters.draft));
-		}
-
-		if (filters?.solved !== undefined) {
-			whereConditions.push(
-				filters.solved
-					? isNotNull(consultations.solvedAt)
-					: isNull(consultations.solvedAt)
-			);
-		}
+	async findAll(filters?: ConsultationFilters, pagination?: PaginationParams) {
+		const { page = PAGINATION_CONFIG.DEFAULT_PAGE, limit = PAGINATION_CONFIG.DEFAULT_LIMIT } = pagination || {};
+		const offset = (page - 1) * limit;
 
 		return await this.db.query.consultations.findMany({
-			where: whereConditions.length > 0 
-				? and(...whereConditions) 
-				: undefined,
+			where: this.buildWhereConditions(filters),
 			orderBy: (fields, { desc }) => [desc(fields.createdAt)],
+			limit: limit,
+			offset: offset,
 			with: {
 				author: true,
 			},
 		});
+	}
+
+	/**
+	 * 相談の総件数を取得する（フィルタ適用後）
+	 * @param filters - フィルタ条件（オプショナル）
+	 * @returns 相談の総件数
+	 */
+	async count(filters?: ConsultationFilters): Promise<number> {
+		// NOTE: DrizzleのRQBには専用のcount()メソッドが存在しないため、
+		// Core APIを使用してCOUNT(*)クエリを実行しています。
+		// この方法が最もパフォーマンスが良く、Drizzle公式の推奨パターンです。
+		const result = await this.db
+		.select({ count: sql<number>`count(*)` })
+		.from(consultations)
+		.where(this.buildWhereConditions(filters));
+	
+		return result[0]?.count || 0;
 	}
 
 	/**

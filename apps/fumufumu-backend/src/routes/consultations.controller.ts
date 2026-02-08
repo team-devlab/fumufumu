@@ -6,7 +6,7 @@ import { z } from "zod";
 import type { AppBindings } from "@/index";
 import { authGuard } from "@/middlewares/authGuard.middleware";
 import { injectConsultationService } from "@/middlewares/injectService.middleware";
-import type { ConsultationFilters } from "@/types/consultation.types";
+import type { ConsultationFilters, PaginationParams } from "@/types/consultation.types";
 import { listConsultationsQuerySchema, consultationContentSchema, adviceContentSchema, updateDraftAdviceContentSchema, consultationIdParamSchema } from "@/validators/consultation.validator";
 import { AppError } from "@/errors/AppError";
 
@@ -53,9 +53,24 @@ export async function listConsultations(c: ListConsultationsContext) {
 			solved: validatedQuery.solved,
 		};
 
+		const pagination: PaginationParams = {
+			page: validatedQuery.page,
+			limit: validatedQuery.limit,
+		};
+
 		// DIされたサービスを取得
 		const service = c.get("consultationService");
-		const result = await service.listConsultations(filters);
+		const result = await service.listConsultations(filters, pagination);
+		
+		// NOTE: キャッシュ制御 (D1課金対策 & セキュリティ)
+		// 下書き(draft=true)は「個人情報」に近いのでキャッシュしてはいけない。
+		// 公開データの場合のみ、60秒間のキャッシュを許可。
+		if (!filters.draft) {
+			c.header('Cache-Control', 'public, max-age=60');
+		} else {
+			// 下書きの場合はキャッシュしない（明示的に指定）
+			c.header('Cache-Control', 'no-store, max-age=0');
+		}
 
 		return c.json(result, 200);
 	} catch (error) {

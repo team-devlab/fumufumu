@@ -36,8 +36,11 @@ describe('Consultations API', () => {
 					userId: undefined,
 					draft: undefined,
 					solved: undefined,
+					page: undefined,
+					limit: undefined,
 				})),
 			},
+			header: vi.fn(),
 			json: vi.fn((data: any, status?: number) => {
 				return {
 					json: async () => data,
@@ -51,7 +54,7 @@ describe('Consultations API', () => {
 		it('全件取得: すべての相談データを取得できる', async () => {
 			// モックデータの準備
 			const mockData = {
-				meta: { total: 2 },
+				pagination: { current_page: 1, per_page: 20, total_items: 2, total_pages: 1, has_next: false, has_prev: false },
 				data: [
 					{
 						id: 1,
@@ -94,18 +97,24 @@ describe('Consultations API', () => {
 			const data: any = await response.json();
 
 			// アサーション
-			expect(data).toHaveProperty('meta');
+			expect(data).toHaveProperty('pagination');
 			expect(data).toHaveProperty('data');
-			expect(data.meta).toHaveProperty('total');
+			expect(data.pagination).toHaveProperty('total_items');
 			expect(Array.isArray(data.data)).toBe(true);
 			expect(data.data.length).toBe(2);
 
 			// userIdが指定されていない場合はundefined（全ユーザーの相談を取得）
-			expect(mockConsultationService.listConsultations).toHaveBeenCalledWith({
-				userId: undefined,
-				draft: undefined,
-				solved: undefined,
-			});
+			expect(mockConsultationService.listConsultations).toHaveBeenCalledWith(
+				{
+					userId: undefined,
+					draft: undefined,
+					solved: undefined,
+				},
+				{
+					page: undefined,
+					limit: undefined,
+				},
+			);
 
 			// レスポンス構造の確認
 			const firstItem = data.data[0];
@@ -134,11 +143,13 @@ describe('Consultations API', () => {
 				userId: undefined,
 				draft: false,
 				solved: undefined,
+				page: undefined,
+				limit: undefined,
 			}));
 
 			// モックデータの準備（draft=falseのみ）
 			const mockData = {
-				meta: { total: 2 },
+				pagination: { current_page: 1, per_page: 20, total_items: 2, total_pages: 1, has_next: false, has_prev: false },
 				data: [
 					{
 						id: 1,
@@ -173,11 +184,17 @@ describe('Consultations API', () => {
 
 			// アサーション
 			expect(data.data).toBeDefined();
-			expect(mockConsultationService.listConsultations).toHaveBeenCalledWith({
-				userId: undefined, // userIdが指定されていない場合はundefined（全ユーザー）
-				draft: false,
-				solved: undefined,
-			});
+			expect(mockConsultationService.listConsultations).toHaveBeenCalledWith(
+				{
+					userId: undefined, // userIdが指定されていない場合はundefined（全ユーザー）
+					draft: false,
+					solved: undefined,
+				},
+				{
+					page: undefined,
+					limit: undefined,
+				},
+			);
 
 			// すべてのデータがdraft=falseであることを確認
 			data.data.forEach((item: any) => {
@@ -191,11 +208,13 @@ describe('Consultations API', () => {
 				userId: undefined,
 				draft: true,
 				solved: undefined,
+				page: undefined,
+				limit: undefined,
 			}));
 
 			// モックデータの準備（draft=trueのみ）
 			const mockData = {
-				meta: { total: 1 },
+				pagination: { current_page: 1, per_page: 20, total_items: 1, total_pages: 1, has_next: false, has_prev: false },
 				data: [
 					{
 						id: 2,
@@ -219,11 +238,17 @@ describe('Consultations API', () => {
 
 			// アサーション
 			expect(data.data).toBeDefined();
-			expect(mockConsultationService.listConsultations).toHaveBeenCalledWith({
-				userId: undefined, // userIdが指定されていない場合はundefined（全ユーザー）
-				draft: true,
-				solved: undefined,
-			});
+			expect(mockConsultationService.listConsultations).toHaveBeenCalledWith(
+				{
+					userId: undefined, // userIdが指定されていない場合はundefined（全ユーザー）
+					draft: true,
+					solved: undefined,
+				},
+				{
+					page: undefined,
+					limit: undefined,
+				},
+			);
 
 			// すべてのデータがdraft=trueであることを確認
 			data.data.forEach((item: any) => {
@@ -237,11 +262,13 @@ describe('Consultations API', () => {
 				userId: undefined,
 				draft: undefined,
 				solved: true,
+				page: undefined,
+				limit: undefined,
 			}));
 
 			// モックデータの準備（solved_at !== null）
 			const mockData = {
-				meta: { total: 1 },
+				pagination: { current_page: 1, per_page: 20, total_items: 1, total_pages: 1, has_next: false, has_prev: false },
 				data: [
 					{
 						id: 3,
@@ -265,11 +292,17 @@ describe('Consultations API', () => {
 
 			// アサーション
 			expect(data.data).toBeDefined();
-			expect(mockConsultationService.listConsultations).toHaveBeenCalledWith({
-				userId: undefined, // userIdが指定されていない場合はundefined（全ユーザー）
-				draft: undefined,
-				solved: true,
-			});
+			expect(mockConsultationService.listConsultations).toHaveBeenCalledWith(
+				{
+					userId: undefined, // userIdが指定されていない場合はundefined（全ユーザー）
+					draft: undefined,
+					solved: true,
+				},
+				{
+					page: undefined,
+					limit: undefined,
+				},
+			);
 
 			// すべてのデータがsolved_at !== nullであることを確認
 			data.data.forEach((item: any) => {
@@ -283,11 +316,13 @@ describe('Consultations API', () => {
 				userId: undefined,
 				draft: undefined,
 				solved: false,
+				page: undefined,
+				limit: undefined,
 			}));
 
 			// モックデータの準備（solved_at === null）
 			const mockData = {
-				meta: { total: 1 },
+				pagination: { current_page: 1, per_page: 20, total_items: 1, total_pages: 1, has_next: false, has_prev: false },
 				data: [
 					{
 						id: 4,
@@ -311,11 +346,17 @@ describe('Consultations API', () => {
 
 			// アサーション
 			expect(data.data).toBeDefined();
-			expect(mockConsultationService.listConsultations).toHaveBeenCalledWith({
-				userId: undefined, // userIdが指定されていない場合はundefined（全ユーザー）
-				draft: undefined,
-				solved: false,
-			});
+			expect(mockConsultationService.listConsultations).toHaveBeenCalledWith(
+				{
+					userId: undefined, // userIdが指定されていない場合はundefined（全ユーザー）
+					draft: undefined,
+					solved: false,
+				},
+				{
+					page: undefined,
+					limit: undefined,
+				},
+			);
 
 			// すべてのデータがsolved_at === nullであることを確認
 			data.data.forEach((item: any) => {
@@ -331,11 +372,13 @@ describe('Consultations API', () => {
 				userId: userId,
 				draft: undefined,
 				solved: undefined,
+				page: undefined,
+				limit: undefined,
 			}));
 
 			// モックデータの準備（userId = 1のみ）
 			const mockData = {
-				meta: { total: 2 },
+				pagination: { current_page: 1, per_page: 20, total_items: 2, total_pages: 1, has_next: false, has_prev: false },
 				data: [
 					{
 						id: 1,
@@ -370,11 +413,17 @@ describe('Consultations API', () => {
 
 			// アサーション
 			expect(data.data).toBeDefined();
-			expect(mockConsultationService.listConsultations).toHaveBeenCalledWith({
-				userId: 1,
-				draft: undefined,
-				solved: undefined,
-			});
+			expect(mockConsultationService.listConsultations).toHaveBeenCalledWith(
+				{
+					userId: 1,
+					draft: undefined,
+					solved: undefined,
+				},
+				{
+					page: undefined,
+					limit: undefined,
+				},
+			);
 
 			// すべてのデータがauthorId === userIdであることを確認
 			data.data.forEach((item: any) => {
@@ -388,11 +437,13 @@ describe('Consultations API', () => {
 				userId: 1,
 				draft: false,
 				solved: false,
+				page: undefined,
+				limit: undefined,
 			}));
 
 			// モックデータの準備（複合条件）
 			const mockData = {
-				meta: { total: 1 },
+				pagination: { current_page: 1, per_page: 20, total_items: 1, total_pages: 1, has_next: false, has_prev: false },
 				data: [
 					{
 						id: 1,
@@ -416,11 +467,17 @@ describe('Consultations API', () => {
 
 			// アサーション
 			expect(data.data).toBeDefined();
-			expect(mockConsultationService.listConsultations).toHaveBeenCalledWith({
-				userId: 1,
-				draft: false,
-				solved: false,
-			});
+			expect(mockConsultationService.listConsultations).toHaveBeenCalledWith(
+				{
+					userId: 1,
+					draft: false,
+					solved: false,
+				},
+				{
+					page: undefined,
+					limit: undefined,
+				},
+			);
 
 			// すべての条件を満たすことを確認
 			data.data.forEach((item: any) => {
@@ -433,7 +490,7 @@ describe('Consultations API', () => {
 		it('body_previewは100文字に切り取られている', async () => {
 			// モックデータの準備（100文字のbody_preview）
 			const mockData = {
-				meta: { total: 2 },
+				pagination: { current_page: 1, per_page: 20, total_items: 2, total_pages: 1, has_next: false, has_prev: false },
 				data: [
 					{
 						id: 1,
@@ -467,11 +524,17 @@ describe('Consultations API', () => {
 			const data: any = await response.json();
 
 			// アサーション
-			expect(mockConsultationService.listConsultations).toHaveBeenCalledWith({
-				userId: undefined, // userIdが指定されていない場合はundefined（全ユーザー）
-				draft: undefined,
-				solved: undefined,
-			});
+			expect(mockConsultationService.listConsultations).toHaveBeenCalledWith(
+				{
+					userId: undefined, // userIdが指定されていない場合はundefined（全ユーザー）
+					draft: undefined,
+					solved: undefined,
+				},
+				{
+					page: undefined,
+					limit: undefined,
+				},
+			);
 
 			// body_previewが100文字以下であることを確認
 			data.data.forEach((item: any) => {

@@ -43,6 +43,13 @@
       "when": 1769386907983,
       "tag": "0005_absurd_iceman",
       "breakpoints": true
+    },
+    {
+      "idx": 6,
+      "version": "6",
+      "when": 1770519646753,
+      "tag": "0006_lively_iron_monger",
+      "breakpoints": true
     }
   ]
 }

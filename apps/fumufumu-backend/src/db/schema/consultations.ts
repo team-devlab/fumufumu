@@ -1,5 +1,5 @@
 import { sql, relations } from "drizzle-orm";
-import { sqliteTable, text, integer } from "drizzle-orm/sqlite-core";
+import { sqliteTable, text, integer, index } from "drizzle-orm/sqlite-core";
 import { users } from "@/db/schema/user";
 import { advices } from "@/db/schema/advices";
 
@@ -20,7 +20,9 @@ export const consultations = sqliteTable("consultations", {
 		.default(sql`(cast(unixepoch('subsecond') * 1000 as integer))`)
 		.$onUpdate(() => /* @__PURE__ */ new Date())
 		.notNull(),
-});
+}, (table) => [
+	index("idx_consultations_created_at").on(table.createdAt),
+]);
 
 // RQB用: Query APIのwith句で利用するためのリレーション設定
 export const consultationsRelations = relations(consultations, ({ one, many }) => ({
