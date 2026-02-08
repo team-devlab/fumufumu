@@ -1,0 +1,1 @@
+CREATE INDEX `idx_consultations_created_at` ON `consultations` (`created_at`);
