@@ -2,6 +2,7 @@ import { sql, relations } from "drizzle-orm";
 import { sqliteTable, text, integer, index } from "drizzle-orm/sqlite-core";
 import { users } from "@/db/schema/user";
 import { advices } from "@/db/schema/advices";
+import { consultationTaggings } from "@/db/schema/tags";
 
 // 相談テーブル
 export const consultations = sqliteTable("consultations", {
@@ -31,4 +32,5 @@ export const consultationsRelations = relations(consultations, ({ one, many }) =
 		references: [users.id],
 	}),
 	advices: many(advices),
+	consultationTaggings: many(consultationTaggings),
 }));
