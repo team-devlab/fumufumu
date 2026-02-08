@@ -1,4 +1,5 @@
 import { z } from "zod";
+import { PAGINATION_CONFIG } from "@/types/consultation.types";
 
 const VALIDATION_MESSAGES = {
 	POSITIVE_INTEGER: "正の整数を指定してください",
@@ -70,7 +71,7 @@ export const listConsultationsQuerySchema = z.object({
 		.min(1, "ページ番号は1以上を指定してください")
 		.max(1000, "ページ番号は1000以下を指定してください")
 		.optional()
-		.default(1),
+		.default(PAGINATION_CONFIG.DEFAULT_PAGE),
 
 	/**
 	 * 1ページあたりの件数（オプショナル、デフォルト: 20）
@@ -80,9 +81,9 @@ export const listConsultationsQuerySchema = z.object({
 		.number()
 		.int("件数は整数を指定してください")
 		.min(1, "件数は1以上を指定してください")
-		.max(100, "件数は100以下を指定してください")
+		.max(PAGINATION_CONFIG.MAX_LIMIT, `件数は${PAGINATION_CONFIG.MAX_LIMIT}以下を指定してください`)
 		.optional()
-		.default(20),
+		.default(PAGINATION_CONFIG.DEFAULT_LIMIT),
 });
 
 export const consultationContentSchema = z.object({

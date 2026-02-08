@@ -1,3 +1,12 @@
+/**
+ * ページネーション設定の定数
+ */
+export const PAGINATION_CONFIG = {
+	DEFAULT_PAGE: 1,
+	DEFAULT_LIMIT: 20,
+	MAX_LIMIT: 100,
+} as const;
+
 // 相談データのフィルタ条件
 export type ConsultationFilters = {
 	userId?: number;

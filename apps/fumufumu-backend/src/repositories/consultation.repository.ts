@@ -2,10 +2,10 @@ import { consultations } from "@/db/schema/consultations";
 import { users } from "@/db/schema/user";
 import type { DbInstance } from "@/index";
 import { eq, and, isNull, isNotNull, type SQL, sql } from "drizzle-orm";
-import type { ConsultationFilters } from "@/types/consultation.types";
+import type { ConsultationFilters, PaginationParams } from "@/types/consultation.types";
+import { PAGINATION_CONFIG } from "@/types/consultation.types";
 import { DatabaseError, ConflictError, NotFoundError } from "@/errors/AppError";
 import { advices } from "@/db/schema/advices";
-import type { PaginationParams } from "@/types/consultation.types";
 
 export class ConsultationRepository {
 	constructor(private db: DbInstance) {}
@@ -72,7 +72,7 @@ export class ConsultationRepository {
 	 * @throws {Error} データベースクエリ実行エラー（上位層で処理）
 	 */
 	async findAll(filters?: ConsultationFilters, pagination?: PaginationParams) {
-		const { page = 1, limit = 20 } = pagination || {};
+		const { page = PAGINATION_CONFIG.DEFAULT_PAGE, limit = PAGINATION_CONFIG.DEFAULT_LIMIT } = pagination || {};
 		const offset = (page - 1) * limit;
 
 		return await this.db.query.consultations.findMany({
