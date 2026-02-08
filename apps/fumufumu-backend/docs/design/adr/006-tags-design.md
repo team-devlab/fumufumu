@@ -79,7 +79,7 @@ erDiagram
 ### 採用: 管理者がタグの表示順を制御するためのカラム
 
 ```typescript
-// タグ一覧取得時
+// タグ一覧取得時、相談投稿時、相談カード内ではこの順番を守る
 ORDER BY sort_order ASC, id ASC
 ```
 
