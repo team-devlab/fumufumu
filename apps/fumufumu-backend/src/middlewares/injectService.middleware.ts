@@ -1,7 +1,7 @@
 // サービス注入ミドルウェア: Contextにサービスインスタンスを注入する
 import type { Context, Next } from "hono";
 import type { AppBindings } from "@/index";
-import { createConsultationService, createUserService } from "@/services/service.factory";
+import { createConsultationService, createUserService, createTagService } from "@/services/service.factory";
 
 /**
  * ConsultationServiceを注入するミドルウェア
@@ -49,3 +49,25 @@ export async function injectUserService(
 	await next();
 }
 
+/**
+ * TagServiceを注入するミドルウェア
+ * DBインスタンスからTagServiceを生成してContextに格納する
+ * 
+ * 使い方:
+ * ```typescript
+ * app.use("/api/tags/*", injectTagService);
+ * app.get("/api/tags", (c) => {
+ *   const service = c.get("tagService");
+ *   // serviceを使用
+ * });
+ * ```
+ */
+export async function injectTagService(
+	c: Context<AppBindings>,
+	next: Next
+) {
+	const db = c.get("db");
+	const tagService = createTagService(db);
+	c.set("tagService", tagService);
+	await next();
+}
