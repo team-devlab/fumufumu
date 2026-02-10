@@ -4,6 +4,8 @@ import { ConsultationRepository } from "@/repositories/consultation.repository";
 import { ConsultationService } from "@/services/consultation.service";
 import { UserRepository } from "@/repositories/user.repository";
 import { UserService } from "@/services/user.service";
+import { TagRepository } from "@/repositories/tag.repository";
+import { TagService } from "@/services/tag.service";
 
 /**
  * ConsultationServiceのファクトリー関数
@@ -29,3 +31,14 @@ export function createUserService(db: DbInstance): UserService {
 	return new UserService(repository);
 }
 
+/**
+ * TagServiceのファクトリー関数
+ * DBインスタンスから依存関係を解決してServiceを生成する
+ * 
+ * @param db - データベースインスタンス（リクエストごとに異なる）
+ * @returns 依存関係が解決されたTagServiceインスタンス
+ */
+export function createTagService(db: DbInstance): TagService {
+	const repository = new TagRepository(db);
+	return new TagService(repository);
+}

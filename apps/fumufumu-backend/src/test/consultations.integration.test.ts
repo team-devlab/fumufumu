@@ -118,6 +118,10 @@ describe('Consultations API Integration Tests', () => {
 		const setCookieB = attackerSignupRes.headers.get('set-cookie');
 		expect(setCookieB).toBeTruthy();
 		attackerCookie = (setCookieB as string).split(';')[0];
+
+		// テスト用タグを挿入
+		const db = (env as unknown as CloudflareBindings).DB;
+		await db.prepare("INSERT INTO tags (name, sort_order) VALUES (?, ?)").bind('テスト用タグ', 10).run();
 	});
 
 	describe('POST /api/consultations', () => {
@@ -132,6 +136,7 @@ describe('Consultations API Integration Tests', () => {
 					title: '統合テスト相談',
 					body: 'これは統合テストで作成された相談です。実際のDBを使用しています。',
 					draft: false,
+					tagIds: [1],
 				}),
 			});
 
@@ -161,6 +166,7 @@ describe('Consultations API Integration Tests', () => {
 					title: '下書き相談',
 					body: 'これは下書きです。本文を10文字以上にします。',
 					draft: true,
+					tagIds: [1],
 				}),
 			});
 
@@ -188,6 +194,7 @@ describe('Consultations API Integration Tests', () => {
 				body: JSON.stringify({
 					title: 'デフォルト相談',
 					body: 'draftを指定していません。',
+					tagIds: [1],
 				}),
 			});
 
@@ -209,6 +216,7 @@ describe('Consultations API Integration Tests', () => {
 				body: JSON.stringify({
 					title: '長文テスト',
 					body: longBody,
+					tagIds: [1],
 				}),
 			});
 
@@ -234,6 +242,7 @@ describe('Consultations API Integration Tests', () => {
 				body: JSON.stringify({
 					title: 'タイムスタンプテスト',
 					body: 'created_atとupdated_atの自動生成を確認',
+					tagIds: [1],
 				}),
 			});
 
@@ -265,6 +274,7 @@ describe('Consultations API Integration Tests', () => {
 				body: JSON.stringify({
 					title: 'null初期化テスト',
 					body: 'hidden_atとsolved_atがnullで初期化されることを確認',
+					tagIds: [1],
 				}),
 			});
 
@@ -286,6 +296,7 @@ describe('Consultations API Integration Tests', () => {
 				body: JSON.stringify({
 					title: '',
 					body: '本文はあります',
+					tagIds: [1],
 				}),
 			});
 
@@ -303,6 +314,7 @@ describe('Consultations API Integration Tests', () => {
 				body: JSON.stringify({
 					title: 'テスト',
 					body: 'short',
+					tagIds: [1],
 				}),
 			});
 
@@ -320,6 +332,7 @@ describe('Consultations API Integration Tests', () => {
 				body: JSON.stringify({
 					title: 'A'.repeat(101),
 					body: 'これはテスト本文です。',
+					tagIds: [1],
 				}),
 			});
 
@@ -337,6 +350,7 @@ describe('Consultations API Integration Tests', () => {
 				body: JSON.stringify({
 					title: 'テスト',
 					body: '認証なしテスト',
+					tagIds: [1],
 				}),
 			});
 
@@ -360,6 +374,7 @@ describe('Consultations API Integration Tests', () => {
 					title: 'テスト相談',
 					body: testBody,
 					draft: false,
+					tagIds: [1],
 				}),
 			});
 
@@ -517,6 +532,7 @@ describe('Consultations API Integration Tests', () => {
 					title: '更新用下書き',
 					body: '更新前の本文です。10文字以上あります。',
 					draft: true,
+					tagIds: [1],
 				}),
 			});
 
@@ -544,6 +560,7 @@ describe('Consultations API Integration Tests', () => {
 						title: '下書き更新後タイトル',
 						body: '下書き更新後の本文です。10文字以上あります。',
 						draft: true,
+						tagIds: [1],
 					}),
 				}
 			);
@@ -569,6 +586,7 @@ describe('Consultations API Integration Tests', () => {
 						title: '公開タイトル',
 						body: '公開用の本文です。10文字以上あります。',
 						draft: false,
+						tagIds: [1],
 					}),
 				}
 			);
@@ -593,6 +611,7 @@ describe('Consultations API Integration Tests', () => {
 						title: '乗っ取りタイトル',
 						body: '他人のデータを書き換えようとしています',
 						draft: true,
+						tagIds: [1],
 					}),
 				}
 			);
@@ -615,6 +634,7 @@ describe('Consultations API Integration Tests', () => {
 						title: '更新不可',
 						body: '本文は10文字以上必要です。',
 						draft: true,
+						tagIds: [1],
 					}),
 				}
 			);
@@ -638,6 +658,7 @@ describe('Consultations API Integration Tests', () => {
 					title: 'テスト相談',
 					body: 'テスト本文です。10文字以上あります。',
 					draft: false,
+					tagIds: [1],
 				}),
 			});
 
@@ -772,6 +793,7 @@ describe('Consultations API Integration Tests', () => {
 					title: 'テスト相談',
 					body: 'テスト本文です。10文字以上あります。',
 					draft: false,
+					tagIds: [1],
 				}),
 			});
 			const res = await app.fetch(req, env);
@@ -839,6 +861,7 @@ describe('Consultations API Integration Tests', () => {
 						title: `テスト相談 ${i}`,
 						body: `これはテスト相談${i}の本文です。`,
 						draft: false,
+						tagIds: [1],
 					}),
 				});
 				await app.fetch(req, env);

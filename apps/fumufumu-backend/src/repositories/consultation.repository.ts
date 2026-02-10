@@ -6,6 +6,7 @@ import type { ConsultationFilters, PaginationParams } from "@/types/consultation
 import { PAGINATION_CONFIG } from "@/types/consultation.types";
 import { DatabaseError, ConflictError, NotFoundError } from "@/errors/AppError";
 import { advices } from "@/db/schema/advices";
+import { consultationTaggings } from "@/db/schema/tags";
 
 export class ConsultationRepository {
 	constructor(private db: DbInstance) {}
@@ -119,6 +120,7 @@ export class ConsultationRepository {
 		body: string;
 		draft: boolean;
 		authorId: number;
+		tagIds: number[];
 	}) {
 		try {
 			// 1. 相談データをINSERT
@@ -136,7 +138,20 @@ export class ConsultationRepository {
 				throw new DatabaseError("相談の作成に失敗しました: insert操作がデータを返しませんでした");
 			}
 
-			// 2. author情報を別クエリで取得
+			// 2. タグの紐付けをINSERT（中間テーブル: consultation_taggings）
+			// NOTE: D1はDrizzleのtransaction()をサポートしないため、順次実行で対応
+			if (data.tagIds.length > 0) {
+				await this.db
+					.insert(consultationTaggings)
+					.values(
+						data.tagIds.map((tagId) => ({
+							consultationId: inserted.id,
+							tagId,
+						}))
+					);
+			}
+
+			// 3. author情報を別クエリで取得
 			const author = await this.db.query.users.findFirst({
 				where: eq(users.id, data.authorId),
 			});
@@ -145,7 +160,7 @@ export class ConsultationRepository {
 				throw new NotFoundError(`指定されたユーザーが見つかりません: authorId=${data.authorId}`);
 			}
 
-			// 3. inserted データと author を合成して返す
+			// 4. inserted データと author を合成して返す
 			return {
 				...inserted,
 				author,

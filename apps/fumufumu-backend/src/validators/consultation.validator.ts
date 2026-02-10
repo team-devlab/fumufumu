@@ -86,10 +86,29 @@ export const listConsultationsQuerySchema = z.object({
 		.default(PAGINATION_CONFIG.DEFAULT_LIMIT),
 });
 
+const TAG_CONFIG = {
+	MIN_TAGS: 1,
+	MAX_TAGS: 3,
+} as const;
+
 export const consultationContentSchema = z.object({
 	title: consultationTitleSchema,
 	body: postBodySchema,
-	draft: consultationDraftSchema
+	draft: consultationDraftSchema,
+	tagIds: z
+		.array(z.number().int().positive("タグIDは正の整数を指定してください"))
+		.min(TAG_CONFIG.MIN_TAGS, `タグは${TAG_CONFIG.MIN_TAGS}個以上選択してください`)
+		.max(TAG_CONFIG.MAX_TAGS, `タグは${TAG_CONFIG.MAX_TAGS}個以下で選択してください`),
+});
+
+/**
+ * 相談更新リクエストのバリデーションスキーマ
+ * ※タグは作成時のみ設定可能で、更新時には変更できない
+ */
+export const updateConsultationContentSchema = z.object({
+	title: consultationTitleSchema,
+	body: postBodySchema,
+	draft: consultationDraftSchema,
 });
 
 export const adviceContentSchema = z.object({
@@ -107,6 +126,7 @@ export const consultationIdParamSchema = z.object({
 
 export type ListConsultationsQuery = z.infer<typeof listConsultationsQuerySchema>;
 export type ConsultationContent = z.infer<typeof consultationContentSchema>;
+export type UpdateConsultationContent = z.infer<typeof updateConsultationContentSchema>;
 export type AdviceContent = z.infer<typeof adviceContentSchema>;
 export type UpdateDraftAdviceContentSchema = z.infer<typeof updateDraftAdviceContentSchema>;
 export type ConsultationIdParam = z.infer<typeof consultationIdParamSchema>;
