@@ -12,13 +12,16 @@ export class TagService {
 	async listTags(): Promise<TagListResponse> {
 		const tags = await this.repository.findAllWithCount();
 
+		// レスポンス形式へのマッピング
+		const mappedTags = tags.map((tag) => ({
+			id: tag.id,
+			name: tag.name,
+			sort_order: tag.sortOrder,
+			count: tag.count,
+		}));
+
 		return {
-			data: tags.map((tag) => ({
-				id: tag.id,
-				name: tag.name,
-				sort_order: tag.sortOrder,
-				count: tag.count,
-			})),
+			data: mappedTags,
 		};
 	}
 }
