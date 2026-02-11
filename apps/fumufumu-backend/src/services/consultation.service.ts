@@ -121,27 +121,19 @@ export class ConsultationService {
 	): Promise<ConsultationListResponse> {
 		const { page = 1, limit = 20 } = pagination || {};
 
-		// NOTE: 検索条件のコピーを作成（引数を直接変更しないため）
+		// NOTE: 元の引数を変更しないようシャローコピーを作成
         const secureFilters = { ...filters };
 
-		// NOTE: draftパラメータが送られてこない（undefined）ときは、
-        // 開発者がフィルタリングを忘れても良いように、デフォルトで「公開済み(false)」にする。
+		// NOTE(【ポリシー】 Secure by Default): 明示的な指定がない限り、機密性の高い下書きは除外する
         if (secureFilters.draft === undefined) {
             secureFilters.draft = false;
         }
 
-		// NOTE(ビジネスロジック): 下書きを指定している場合、強制的に「自分のデータ」に絞り込む
+		// NOTE(ビジネスロジック): 下書き取得時は、強制的に「自分のデータ」に絞り込む
         if (secureFilters.draft === true) {
-            // requestUserId がない（未ログイン）のに下書きを見ようとした場合は、
-            // 矛盾した条件として userId に -1 などをセットして0件にするか、
-            // ここでは requestUserId をセットする（未定義なら undefined になり、Repository側で全件見えてしまうのを防ぐため必須）
-            
-            // 安全策: requestUserId が渡されていない場合はエラー扱い、または空リストを返すのが理想だが
-            // ここでは requestUserId を強制適用する。
-            // もし requestUserId が undefined なら、後続の Repository は「userId指定なし」とみなして
-            // 全員の下書きが見えてしまうリスクがあるため、明示的にチェックする。
+			// セキュリティガード: requestUserIdが未定義の場合、Repository側で全件露出するリスクを防ぐため、即時空配列を返す
+			// 認証必須のエンドポイントなら本来あり得ないが、安全のため
             if (requestUserId === undefined) {
-                 // 認証必須のエンドポイントなら本来あり得ないが、安全のため空データを返す
                  return {
                     data: [],
                     pagination: this.calculatePagination({ page, limit }, 0)
