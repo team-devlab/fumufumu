@@ -96,27 +96,56 @@ export class ConsultationService {
 		};
 	}
 
-	async getConsultation(id: number) :Promise<ConsultationResponse> {
+	async getConsultation(id: number, requestUserId: number) :Promise<ConsultationResponse> {
 		const consultation = await this.repository.findFirstById(id);
+
+		// NOTE: 権限チェック
+		const isHidden = consultation.draft || consultation.hiddenAt !== null;
+		if (isHidden && consultation.authorId !== requestUserId) {
+			throw new NotFoundError(`相談が見つかりません: id=${id}`);
+		}
 
 		const baseResponse = this.toConsultationResponse(consultation);
 
 		return {
 			...baseResponse,
-			// 詳細画面なので、ちゃんとリレーションから変換してセットする
+			// 詳細情報なので、ちゃんとリレーションから変換してセットする
 			advices: consultation.advices.map(advice => this.toAdviceResponse(advice)),
 		};
 	}
 
 	async listConsultations(
 		filters?: ConsultationFilters,
-		pagination?: PaginationParams
+		pagination?: PaginationParams,
+		requestUserId?: number,
 	): Promise<ConsultationListResponse> {
 		const { page = 1, limit = 20 } = pagination || {};
+
+		// NOTE: 元の引数を変更しないようシャローコピーを作成
+        const secureFilters = { ...filters };
+
+		// NOTE(【ポリシー】 Secure by Default): 明示的な指定がない限り、機密性の高い下書きは除外する
+        if (secureFilters.draft === undefined) {
+            secureFilters.draft = false;
+        }
+
+		// NOTE(ビジネスロジック): 下書き取得時は、強制的に「自分のデータ」に絞り込む
+        if (secureFilters.draft === true) {
+			// セキュリティガード: requestUserIdが未定義の場合、Repository側で全件露出するリスクを防ぐため、即時空配列を返す
+			// 認証必須のエンドポイントなら本来あり得ないが、安全のため
+            if (requestUserId === undefined) {
+                 return {
+                    data: [],
+                    pagination: this.calculatePagination({ page, limit }, 0)
+                 };
+            }
+            secureFilters.userId = requestUserId;
+        }
+
 		// 並列で取得（パフォーマンス向上）
 		const [consultationList, totalCount] = await Promise.all([
-			this.repository.findAll(filters, { page, limit }),
-			this.repository.count(filters),
+			this.repository.findAll(secureFilters, { page, limit }),
+			this.repository.count(secureFilters),
 		]);
 		const responses = consultationList.map(consultation => this.toConsultationResponse(consultation));
 

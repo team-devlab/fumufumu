@@ -58,9 +58,10 @@ export async function listConsultations(c: ListConsultationsContext) {
 			limit: validatedQuery.limit,
 		};
 
-		// DIされたサービスを取得
+		const appUserId = c.get("appUserId");
 		const service = c.get("consultationService");
-		const result = await service.listConsultations(filters, pagination);
+
+		const result = await service.listConsultations(filters, pagination, appUserId);
 		
 		// NOTE: キャッシュ制御 (D1課金対策 & セキュリティ)
 		// 下書き(draft=true)は「個人情報」に近いのでキャッシュしてはいけない。
@@ -109,7 +110,9 @@ export const getConsultationHandlers = factory.createHandlers(
 	async (c) => {
 		const { id } = c.req.valid("param");
 		const service = c.get("consultationService");
-		const result = await service.getConsultation(id);
+		const appUserId = c.get("appUserId");
+
+		const result = await service.getConsultation(id, appUserId);
 		return c.json(result, 200);
 	}
 );

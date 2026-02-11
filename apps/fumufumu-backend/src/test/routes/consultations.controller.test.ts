@@ -114,6 +114,7 @@ describe('Consultations API', () => {
 					page: undefined,
 					limit: undefined,
 				},
+				1
 			);
 
 			// レスポンス構造の確認
@@ -194,6 +195,7 @@ describe('Consultations API', () => {
 					page: undefined,
 					limit: undefined,
 				},
+				1
 			);
 
 			// すべてのデータがdraft=falseであることを確認
@@ -248,6 +250,7 @@ describe('Consultations API', () => {
 					page: undefined,
 					limit: undefined,
 				},
+				1
 			);
 
 			// すべてのデータがdraft=trueであることを確認
@@ -302,6 +305,7 @@ describe('Consultations API', () => {
 					page: undefined,
 					limit: undefined,
 				},
+				1
 			);
 
 			// すべてのデータがsolved_at !== nullであることを確認
@@ -356,6 +360,7 @@ describe('Consultations API', () => {
 					page: undefined,
 					limit: undefined,
 				},
+				1
 			);
 
 			// すべてのデータがsolved_at === nullであることを確認
@@ -423,6 +428,7 @@ describe('Consultations API', () => {
 					page: undefined,
 					limit: undefined,
 				},
+				1
 			);
 
 			// すべてのデータがauthorId === userIdであることを確認
@@ -477,6 +483,7 @@ describe('Consultations API', () => {
 					page: undefined,
 					limit: undefined,
 				},
+				1
 			);
 
 			// すべての条件を満たすことを確認
@@ -534,6 +541,7 @@ describe('Consultations API', () => {
 					page: undefined,
 					limit: undefined,
 				},
+				1
 			);
 
 			// body_previewが100文字以下であることを確認
