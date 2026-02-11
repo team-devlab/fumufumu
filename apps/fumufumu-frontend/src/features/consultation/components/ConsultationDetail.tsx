@@ -49,7 +49,7 @@ export const ConsultationDetail = async ({ consultationId }: Props) => {
 
   // NOTE(多層防御): フロントエンド側での権限チェック
   // バックエンドが万が一データを返してしまっても、ここでブロックする
-  if (consultation.draft) {
+  if (consultation.draft|| consultation.hidden_at !== null) {
     const currentUser = await currentUserPromise;
     
     // 未ログイン、またはIDが不一致の場合は表示しない
