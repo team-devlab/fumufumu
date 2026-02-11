@@ -124,6 +124,12 @@ export class ConsultationService {
 		// NOTE: 検索条件のコピーを作成（引数を直接変更しないため）
         const secureFilters = { ...filters };
 
+		// NOTE: draftパラメータが送られてこない（undefined）ときは、
+        // 開発者がフィルタリングを忘れても良いように、デフォルトで「公開済み(false)」にする。
+        if (secureFilters.draft === undefined) {
+            secureFilters.draft = false;
+        }
+
 		// NOTE(ビジネスロジック): 下書きを指定している場合、強制的に「自分のデータ」に絞り込む
         if (secureFilters.draft === true) {
             // requestUserId がない（未ログイン）のに下書きを見ようとした場合は、
