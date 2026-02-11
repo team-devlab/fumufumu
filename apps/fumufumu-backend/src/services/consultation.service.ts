@@ -120,10 +120,34 @@ export class ConsultationService {
 		requestUserId?: number,
 	): Promise<ConsultationListResponse> {
 		const { page = 1, limit = 20 } = pagination || {};
+
+		// NOTE: 検索条件のコピーを作成（引数を直接変更しないため）
+        const secureFilters = { ...filters };
+
+		// NOTE(ビジネスロジック): 下書きを指定している場合、強制的に「自分のデータ」に絞り込む
+        if (secureFilters.draft === true) {
+            // requestUserId がない（未ログイン）のに下書きを見ようとした場合は、
+            // 矛盾した条件として userId に -1 などをセットして0件にするか、
+            // ここでは requestUserId をセットする（未定義なら undefined になり、Repository側で全件見えてしまうのを防ぐため必須）
+            
+            // 安全策: requestUserId が渡されていない場合はエラー扱い、または空リストを返すのが理想だが
+            // ここでは requestUserId を強制適用する。
+            // もし requestUserId が undefined なら、後続の Repository は「userId指定なし」とみなして
+            // 全員の下書きが見えてしまうリスクがあるため、明示的にチェックする。
+            if (requestUserId === undefined) {
+                 // 認証必須のエンドポイントなら本来あり得ないが、安全のため空データを返す
+                 return {
+                    data: [],
+                    pagination: this.calculatePagination({ page, limit }, 0)
+                 };
+            }
+            secureFilters.userId = requestUserId;
+        }
+
 		// 並列で取得（パフォーマンス向上）
 		const [consultationList, totalCount] = await Promise.all([
-			this.repository.findAll(filters, { page, limit }, requestUserId),
-			this.repository.count(filters, requestUserId),
+			this.repository.findAll(secureFilters, { page, limit }),
+			this.repository.count(secureFilters),
 		]);
 		const responses = consultationList.map(consultation => this.toConsultationResponse(consultation));
 
