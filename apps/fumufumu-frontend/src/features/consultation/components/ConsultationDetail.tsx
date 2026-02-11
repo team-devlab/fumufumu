@@ -1,7 +1,7 @@
 import Link from "next/link";
 import { ROUTES } from "@/config/routes";
-import { fetchConsultationDetailApi } from "../api/consultationApi";
 import { fetchCurrentUserApi } from "@/features/user/api/userApi";
+import { fetchConsultationDetailApi } from "../api/consultationApi";
 import type { ConsultationDetail as ConsultationDetailType } from "../types";
 import { AdviceList } from "./AdviceList";
 import { ConsultationQuestionCard } from "./ConsultationQuestionCard";
@@ -20,7 +20,7 @@ export const ConsultationDetail = async ({ consultationId }: Props) => {
   let error: string | null = null;
 
   try {
-    consultation = await fetchConsultationDetailApi(consultationId);
+    consultation = await consultationPromise;
   } catch (e) {
     // apiClientはErrorオブジェクトを投げるため、メッセージ内容で判定する
     if (e instanceof Error) {
@@ -49,13 +49,17 @@ export const ConsultationDetail = async ({ consultationId }: Props) => {
 
   // NOTE(多層防御): フロントエンド側での権限チェック
   // バックエンドが万が一データを返してしまっても、ここでブロックする
-  if (consultation.draft|| consultation.hidden_at !== null) {
+  if (consultation.draft || consultation.hidden_at !== null) {
     const currentUser = await currentUserPromise;
-    
+
     // 未ログイン、またはIDが不一致の場合は表示しない
     // (consultation.author が null のケースも考慮)
     if (!currentUser || consultation.author?.id !== currentUser.id) {
-      return <div className="p-8 text-center text-red-500">この相談を閲覧する権限がありません。</div>;
+      return (
+        <div className="p-8 text-center text-red-500">
+          この相談を閲覧する権限がありません。
+        </div>
+      );
     }
   }
 

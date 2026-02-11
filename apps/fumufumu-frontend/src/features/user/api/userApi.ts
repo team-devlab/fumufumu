@@ -11,7 +11,7 @@ export const fetchCurrentUserApi = async (): Promise<User | null> => {
       headers: { Cookie: cookieStore.toString() },
       cache: "no-store",
     });
-  } catch (error) {
+  } catch (_error) {
     // 未ログインやエラー時はnullを返して処理を継続させる（画面側で判断）
     // console.warn("Failed to fetch current user:", error);
     return null;

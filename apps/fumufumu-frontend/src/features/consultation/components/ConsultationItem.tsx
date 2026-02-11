@@ -1,6 +1,6 @@
 import Link from "next/link";
-import { ROUTES } from "@/config/routes";
 import type React from "react";
+import { ROUTES } from "@/config/routes";
 import { CONSULTATION_LABELS } from "@/features/consultation/config/constants";
 import type { Consultation } from "@/features/consultation/types";
 
@@ -40,7 +40,8 @@ export const ConsultationItem: React.FC<Props> = ({ consultation }) => {
             </div>
             <div className="flex items-baseline space-x-2">
               <span className="font-semibold text-gray-700">
-                {consultation.author?.name ?? CONSULTATION_LABELS.ANONYMOUS_USER}
+                {consultation.author?.name ??
+                  CONSULTATION_LABELS.ANONYMOUS_USER}
               </span>
               <span className="text-xs text-gray-400">{timeAgo}</span>
             </div>
