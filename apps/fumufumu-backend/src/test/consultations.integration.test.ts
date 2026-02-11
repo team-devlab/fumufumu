@@ -457,7 +457,7 @@ describe('Consultations API Integration Tests', () => {
             expect(publicAdvice).toBeDefined(); // 公開回答はある
             expect(draftAdvice).toBeUndefined(); // 下書き回答はない
         });
-		
+
 		it('自分の下書き相談は取得できる', async () => {
             // 自分の下書きを作成
             const createReq = new Request('http://localhost/api/consultations', {
@@ -558,6 +558,27 @@ describe('Consultations API Integration Tests', () => {
 				expect(item).not.toHaveProperty('advices');
 			}
 		});
+
+		it('draft=true を指定しても、他人の下書きは一覧に含まれない', async () => {
+            // 攻撃者が下書きを作成
+            const createReq = new Request('http://localhost/api/consultations', {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json', 'Cookie': attackerCookie! },
+                body: JSON.stringify({ title: '攻撃者の下書き', body: '見えてはいけない', draft: true }),
+            });
+            await app.fetch(createReq, env);
+
+            // 自分が draft=true で一覧取得
+            const listReq = new Request('http://localhost/api/consultations?draft=true', {
+                headers: { 'Cookie': sessionCookie! },
+            });
+            const listRes = await app.fetch(listReq, env);
+            const data = await listRes.json() as any;
+
+            // 自分のリクエスト結果に、攻撃者の下書きが含まれていないこと
+            const attackerDraft = data.data.find((c: any) => c.title === '攻撃者の下書き');
+            expect(attackerDraft).toBeUndefined();
+        });
 	});
 
 	describe('PUT /api/consultations/:id', () => {

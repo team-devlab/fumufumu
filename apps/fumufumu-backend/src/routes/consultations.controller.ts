@@ -58,9 +58,10 @@ export async function listConsultations(c: ListConsultationsContext) {
 			limit: validatedQuery.limit,
 		};
 
-		// DIされたサービスを取得
+		const appUserId = c.get("appUserId");
 		const service = c.get("consultationService");
-		const result = await service.listConsultations(filters, pagination);
+
+		const result = await service.listConsultations(filters, pagination, appUserId);
 		
 		// NOTE: キャッシュ制御 (D1課金対策 & セキュリティ)
 		// 下書き(draft=true)は「個人情報」に近いのでキャッシュしてはいけない。

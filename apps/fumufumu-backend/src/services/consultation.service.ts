@@ -116,13 +116,14 @@ export class ConsultationService {
 
 	async listConsultations(
 		filters?: ConsultationFilters,
-		pagination?: PaginationParams
+		pagination?: PaginationParams,
+		requestUserId?: number,
 	): Promise<ConsultationListResponse> {
 		const { page = 1, limit = 20 } = pagination || {};
 		// 並列で取得（パフォーマンス向上）
 		const [consultationList, totalCount] = await Promise.all([
-			this.repository.findAll(filters, { page, limit }),
-			this.repository.count(filters),
+			this.repository.findAll(filters, { page, limit }, requestUserId),
+			this.repository.count(filters, requestUserId),
 		]);
 		const responses = consultationList.map(consultation => this.toConsultationResponse(consultation));
 

@@ -13,12 +13,19 @@ export class ConsultationRepository {
 	/**
 	 * フィルタ条件からWHERE句を構築する（findAll / count 共通）
 	 */
-	private buildWhereConditions(filters?: ConsultationFilters): SQL | undefined {
+	private buildWhereConditions(filters?: ConsultationFilters, requestUserId?: number): SQL | undefined {
 		const conditions: SQL[] = [];
 
-		if (filters?.userId !== undefined) {
-			conditions.push(eq(consultations.authorId, filters.userId));
-		}
+		// NOTE（セキュリティ対策）: 下書き(draft=true)の場合は強制的にリクエストユーザー自身のデータに絞り込む
+        if (filters?.draft === true) {
+            // requestUserId が存在する場合のみ絞り込み条件を追加
+            if (requestUserId !== undefined) {
+                conditions.push(eq(consultations.authorId, requestUserId));
+            }
+        } else if (filters?.userId !== undefined) {
+            // draft=true 以外の時は、指定されたuserIdでフィルタリング
+            conditions.push(eq(consultations.authorId, filters.userId));
+        }
 
 		if (filters?.draft !== undefined) {
 			conditions.push(eq(consultations.draft, filters.draft));
@@ -71,12 +78,12 @@ export class ConsultationRepository {
 	 * @returns 相談データと著者情報の配列（authorは退会済みの場合null）
 	 * @throws {Error} データベースクエリ実行エラー（上位層で処理）
 	 */
-	async findAll(filters?: ConsultationFilters, pagination?: PaginationParams) {
+	async findAll(filters?: ConsultationFilters, pagination?: PaginationParams, requestUserId?: number) {
 		const { page = PAGINATION_CONFIG.DEFAULT_PAGE, limit = PAGINATION_CONFIG.DEFAULT_LIMIT } = pagination || {};
 		const offset = (page - 1) * limit;
 
 		return await this.db.query.consultations.findMany({
-			where: this.buildWhereConditions(filters),
+			where: this.buildWhereConditions(filters, requestUserId),
 			orderBy: (fields, { desc }) => [desc(fields.createdAt)],
 			limit: limit,
 			offset: offset,
@@ -91,14 +98,14 @@ export class ConsultationRepository {
 	 * @param filters - フィルタ条件（オプショナル）
 	 * @returns 相談の総件数
 	 */
-	async count(filters?: ConsultationFilters): Promise<number> {
+	async count(filters?: ConsultationFilters, requestUserId?: number): Promise<number> {
 		// NOTE: DrizzleのRQBには専用のcount()メソッドが存在しないため、
 		// Core APIを使用してCOUNT(*)クエリを実行しています。
 		// この方法が最もパフォーマンスが良く、Drizzle公式の推奨パターンです。
 		const result = await this.db
 		.select({ count: sql<number>`count(*)` })
 		.from(consultations)
-		.where(this.buildWhereConditions(filters));
+		.where(this.buildWhereConditions(filters, requestUserId));
 	
 		return result[0]?.count || 0;
 	}
