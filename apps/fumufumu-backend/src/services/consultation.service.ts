@@ -96,14 +96,20 @@ export class ConsultationService {
 		};
 	}
 
-	async getConsultation(id: number) :Promise<ConsultationResponse> {
+	async getConsultation(id: number, requestUserId: number) :Promise<ConsultationResponse> {
 		const consultation = await this.repository.findFirstById(id);
+
+		// NOTE: 権限チェック
+		const isHidden = consultation.draft || consultation.hiddenAt !== null;
+		if (isHidden && consultation.authorId !== requestUserId) {
+			throw new NotFoundError(`相談が見つかりません: id=${id}`);
+		}
 
 		const baseResponse = this.toConsultationResponse(consultation);
 
 		return {
 			...baseResponse,
-			// 詳細画面なので、ちゃんとリレーションから変換してセットする
+			// 詳細情報なので、ちゃんとリレーションから変換してセットする
 			advices: consultation.advices.map(advice => this.toAdviceResponse(advice)),
 		};
 	}

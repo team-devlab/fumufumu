@@ -457,6 +457,64 @@ describe('Consultations API Integration Tests', () => {
             expect(publicAdvice).toBeDefined(); // 公開回答はある
             expect(draftAdvice).toBeUndefined(); // 下書き回答はない
         });
+		
+		it('自分の下書き相談は取得できる', async () => {
+            // 自分の下書きを作成
+            const createReq = new Request('http://localhost/api/consultations', {
+                method: 'POST',
+                headers: {
+                    'Content-Type': 'application/json',
+                    'Cookie': sessionCookie!,
+                },
+                body: JSON.stringify({
+                    title: '自分だけが見れる下書き',
+                    body: 'これは下書きです。他人には見えません。',
+                    draft: true,
+                }),
+            });
+            const createRes = await app.fetch(createReq, env);
+            const createdData = await createRes.json() as any;
+            const draftId = createdData.id;
+
+            // 自分で取得（成功すべき）
+            const getReq = new Request(`http://localhost/api/consultations/${draftId}`, {
+                headers: { 'Cookie': sessionCookie! },
+            });
+            const getRes = await app.fetch(getReq, env);
+            
+            expect(getRes.status).toBe(200);
+            const getData = await getRes.json() as any;
+            expect(getData.id).toBe(draftId);
+            expect(getData.title).toBe('自分だけが見れる下書き');
+        });
+
+        it('【404 Not Found】他人の下書き相談は取得できない', async () => {
+            // User A (sessionCookie) が下書きを作成
+            const createReq = new Request('http://localhost/api/consultations', {
+                method: 'POST',
+                headers: {
+                    'Content-Type': 'application/json',
+                    'Cookie': sessionCookie!,
+                },
+                body: JSON.stringify({
+                    title: '秘密の下書き',
+                    body: 'これは攻撃者には見えてはいけない内容です。',
+                    draft: true,
+                }),
+            });
+            const createRes = await app.fetch(createReq, env);
+            const createdData = await createRes.json() as any;
+            const targetDraftId = createdData.id;
+
+            // User B (attackerCookie) が取得を試みる（失敗すべき）
+            const getReq = new Request(`http://localhost/api/consultations/${targetDraftId}`, {
+                headers: { 'Cookie': attackerCookie! }, // 攻撃者のクッキーを使用
+            });
+            const getRes = await app.fetch(getReq, env);
+
+            // セキュリティ要件通り 404 (存在しない扱い) が返ることを確認
+            expect(getRes.status).toBe(404);
+        });
 	});
 
 	describe('GET /api/consultations', () => {

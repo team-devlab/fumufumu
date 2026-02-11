@@ -109,7 +109,9 @@ export const getConsultationHandlers = factory.createHandlers(
 	async (c) => {
 		const { id } = c.req.valid("param");
 		const service = c.get("consultationService");
-		const result = await service.getConsultation(id);
+		const appUserId = c.get("appUserId");
+
+		const result = await service.getConsultation(id, appUserId);
 		return c.json(result, 200);
 	}
 );
