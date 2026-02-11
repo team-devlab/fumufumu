@@ -1,6 +1,7 @@
 import Link from "next/link";
 import { ROUTES } from "@/config/routes";
 import { fetchConsultationDetailApi } from "../api/consultationApi";
+import { fetchCurrentUserApi } from "@/features/user/api/userApi";
 import type { ConsultationDetail as ConsultationDetailType } from "../types";
 import { AdviceList } from "./AdviceList";
 import { ConsultationQuestionCard } from "./ConsultationQuestionCard";
@@ -10,6 +11,11 @@ type Props = {
 };
 
 export const ConsultationDetail = async ({ consultationId }: Props) => {
+  // 並列でデータ取得（パフォーマンス低下を防ぐ）
+  // ※ catchは個別にハンドリングしたい場合分けますが、今回はシンプルに
+  const consultationPromise = fetchConsultationDetailApi(consultationId);
+  const currentUserPromise = fetchCurrentUserApi();
+
   let consultation: ConsultationDetailType | null = null;
   let error: string | null = null;
 
@@ -39,6 +45,18 @@ export const ConsultationDetail = async ({ consultationId }: Props) => {
 
   if (!consultation) {
     return <div className="p-8 text-center">データが見つかりません</div>;
+  }
+
+  // NOTE(多層防御): フロントエンド側での権限チェック
+  // バックエンドが万が一データを返してしまっても、ここでブロックする
+  if (consultation.draft) {
+    const currentUser = await currentUserPromise;
+    
+    // 未ログイン、またはIDが不一致の場合は表示しない
+    // (consultation.author が null のケースも考慮)
+    if (!currentUser || consultation.author?.id !== currentUser.id) {
+      return <div className="p-8 text-center text-red-500">この相談を閲覧する権限がありません。</div>;
+    }
   }
 
   return (
