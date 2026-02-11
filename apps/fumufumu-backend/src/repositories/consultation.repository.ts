@@ -16,6 +16,9 @@ export class ConsultationRepository {
 	private buildWhereConditions(filters?: ConsultationFilters): SQL | undefined {
 		const conditions: SQL[] = [];
 
+		// NOTE: デフォルトで非表示(hiddenAt)の相談は除外する
+        conditions.push(isNull(consultations.hiddenAt));
+
 		if (filters?.userId !== undefined) {
             conditions.push(eq(consultations.authorId, filters.userId));
         }
