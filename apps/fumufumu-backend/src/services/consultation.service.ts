@@ -1,7 +1,7 @@
 import type { ConsultationRepository } from "@/repositories/consultation.repository";
 import type { ConsultationFilters, PaginationMeta, PaginationParams } from "@/types/consultation.types";
 import type { ConsultationResponse, ConsultationListResponse, ConsultationSavedResponse, AdviceSavedResponse } from "@/types/consultation.response";
-import type { ConsultationContent, UpdateConsultationContent, AdviceContent, UpdateDraftAdviceContentSchema } from "@/validators/consultation.validator";
+import type { ConsultationContent, AdviceContent, UpdateDraftAdviceContentSchema } from "@/validators/consultation.validator";
 import { ForbiddenError, NotFoundError } from "@/errors/AppError";
 import type { AdviceResponse } from "@/types/advice.response";
 
@@ -184,7 +184,7 @@ export class ConsultationService {
 	 */
 	async updateConsultation(
 		id: number,
-		data: UpdateConsultationContent,
+		data: ConsultationContent,
 		requestUserId: number
 	): Promise<ConsultationSavedResponse> {
     	const existingConsultation = await this.repository.findFirstById(id);

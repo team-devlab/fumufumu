@@ -92,17 +92,6 @@ export const consultationContentSchema = z.object({
 	title: consultationTitleSchema,
 	body: postBodySchema,
 	draft: consultationDraftSchema,
-
-});
-
-/**
- * 相談更新リクエストのバリデーションスキーマ
- * ※タグは作成時のみ設定可能で、更新時には変更できない
- */
-export const updateConsultationContentSchema = z.object({
-	title: consultationTitleSchema,
-	body: postBodySchema,
-	draft: consultationDraftSchema,
 });
 
 export const adviceContentSchema = z.object({
@@ -120,7 +109,6 @@ export const consultationIdParamSchema = z.object({
 
 export type ListConsultationsQuery = z.infer<typeof listConsultationsQuerySchema>;
 export type ConsultationContent = z.infer<typeof consultationContentSchema>;
-export type UpdateConsultationContent = z.infer<typeof updateConsultationContentSchema>;
 export type AdviceContent = z.infer<typeof adviceContentSchema>;
 export type UpdateDraftAdviceContentSchema = z.infer<typeof updateDraftAdviceContentSchema>;
 export type ConsultationIdParam = z.infer<typeof consultationIdParamSchema>;

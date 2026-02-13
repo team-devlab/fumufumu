@@ -7,7 +7,7 @@ import type { AppBindings } from "@/index";
 import { authGuard } from "@/middlewares/authGuard.middleware";
 import { injectConsultationService } from "@/middlewares/injectService.middleware";
 import type { ConsultationFilters, PaginationParams } from "@/types/consultation.types";
-import { listConsultationsQuerySchema, consultationContentSchema, updateConsultationContentSchema, adviceContentSchema, updateDraftAdviceContentSchema, consultationIdParamSchema } from "@/validators/consultation.validator";
+import { listConsultationsQuerySchema, consultationContentSchema, adviceContentSchema, updateDraftAdviceContentSchema, consultationIdParamSchema } from "@/validators/consultation.validator";
 import { AppError } from "@/errors/AppError";
 
 // ============================================
@@ -145,7 +145,7 @@ export const updateConsultationHandlers = factory.createHandlers(
   zValidator("param", consultationIdParamSchema, (result) => {
     if (!result.success) throw result.error;
   }),
-  zValidator("json", updateConsultationContentSchema, (result) => {
+  zValidator("json", consultationContentSchema, (result) => {
     if (!result.success) throw result.error;
   }),
 	async (c) => {
