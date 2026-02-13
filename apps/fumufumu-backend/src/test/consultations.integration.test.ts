@@ -118,6 +118,8 @@ describe('Consultations API Integration Tests', () => {
 		const setCookieB = attackerSignupRes.headers.get('set-cookie');
 		expect(setCookieB).toBeTruthy();
 		attackerCookie = (setCookieB as string).split(';')[0];
+
+
 	});
 
 	describe('POST /api/consultations', () => {
@@ -131,7 +133,7 @@ describe('Consultations API Integration Tests', () => {
 				body: JSON.stringify({
 					title: '統合テスト相談',
 					body: 'これは統合テストで作成された相談です。実際のDBを使用しています。',
-					draft: false,
+					draft: false
 				}),
 			});
 
@@ -160,7 +162,7 @@ describe('Consultations API Integration Tests', () => {
 				body: JSON.stringify({
 					title: '下書き相談',
 					body: 'これは下書きです。本文を10文字以上にします。',
-					draft: true,
+					draft: true
 				}),
 			});
 
@@ -187,7 +189,7 @@ describe('Consultations API Integration Tests', () => {
 				},
 				body: JSON.stringify({
 					title: 'デフォルト相談',
-					body: 'draftを指定していません。',
+					body: 'draftを指定していません。'
 				}),
 			});
 
@@ -208,7 +210,7 @@ describe('Consultations API Integration Tests', () => {
 				},
 				body: JSON.stringify({
 					title: '長文テスト',
-					body: longBody,
+					body: longBody
 				}),
 			});
 
@@ -233,7 +235,7 @@ describe('Consultations API Integration Tests', () => {
 				},
 				body: JSON.stringify({
 					title: 'タイムスタンプテスト',
-					body: 'created_atとupdated_atの自動生成を確認',
+					body: 'created_atとupdated_atの自動生成を確認'
 				}),
 			});
 
@@ -264,7 +266,7 @@ describe('Consultations API Integration Tests', () => {
 				},
 				body: JSON.stringify({
 					title: 'null初期化テスト',
-					body: 'hidden_atとsolved_atがnullで初期化されることを確認',
+					body: 'hidden_atとsolved_atがnullで初期化されることを確認'
 				}),
 			});
 
@@ -285,7 +287,7 @@ describe('Consultations API Integration Tests', () => {
 				},
 				body: JSON.stringify({
 					title: '',
-					body: '本文はあります',
+					body: '本文はあります'
 				}),
 			});
 
@@ -302,7 +304,7 @@ describe('Consultations API Integration Tests', () => {
 				},
 				body: JSON.stringify({
 					title: 'テスト',
-					body: 'short',
+					body: 'short'
 				}),
 			});
 
@@ -319,7 +321,7 @@ describe('Consultations API Integration Tests', () => {
 				},
 				body: JSON.stringify({
 					title: 'A'.repeat(101),
-					body: 'これはテスト本文です。',
+					body: 'これはテスト本文です。'
 				}),
 			});
 
@@ -336,7 +338,7 @@ describe('Consultations API Integration Tests', () => {
 				},
 				body: JSON.stringify({
 					title: 'テスト',
-					body: '認証なしテスト',
+					body: '認証なしテスト'
 				}),
 			});
 
@@ -359,7 +361,7 @@ describe('Consultations API Integration Tests', () => {
 				body: JSON.stringify({
 					title: 'テスト相談',
 					body: testBody,
-					draft: false,
+					draft: false
 				}),
 			});
 
@@ -623,7 +625,7 @@ describe('Consultations API Integration Tests', () => {
 				body: JSON.stringify({
 					title: '更新用下書き',
 					body: '更新前の本文です。10文字以上あります。',
-					draft: true,
+					draft: true
 				}),
 			});
 
@@ -650,7 +652,7 @@ describe('Consultations API Integration Tests', () => {
 					body: JSON.stringify({
 						title: '下書き更新後タイトル',
 						body: '下書き更新後の本文です。10文字以上あります。',
-						draft: true,
+						draft: true
 					}),
 				}
 			);
@@ -675,7 +677,7 @@ describe('Consultations API Integration Tests', () => {
 					body: JSON.stringify({
 						title: '公開タイトル',
 						body: '公開用の本文です。10文字以上あります。',
-						draft: false,
+						draft: false
 					}),
 				}
 			);
@@ -699,7 +701,7 @@ describe('Consultations API Integration Tests', () => {
 					body: JSON.stringify({
 						title: '乗っ取りタイトル',
 						body: '他人のデータを書き換えようとしています',
-						draft: true,
+						draft: true
 					}),
 				}
 			);
@@ -721,7 +723,7 @@ describe('Consultations API Integration Tests', () => {
 					body: JSON.stringify({
 						title: '更新不可',
 						body: '本文は10文字以上必要です。',
-						draft: true,
+						draft: true
 					}),
 				}
 			);
@@ -744,7 +746,7 @@ describe('Consultations API Integration Tests', () => {
 				body: JSON.stringify({
 					title: 'テスト相談',
 					body: 'テスト本文です。10文字以上あります。',
-					draft: false,
+					draft: false
 				}),
 			});
 
@@ -878,7 +880,7 @@ describe('Consultations API Integration Tests', () => {
 				body: JSON.stringify({
 					title: 'テスト相談',
 					body: 'テスト本文です。10文字以上あります。',
-					draft: false,
+					draft: false
 				}),
 			});
 			const res = await app.fetch(req, env);
@@ -945,7 +947,7 @@ describe('Consultations API Integration Tests', () => {
 					body: JSON.stringify({
 						title: `テスト相談 ${i}`,
 						body: `これはテスト相談${i}の本文です。`,
-						draft: false,
+						draft: false
 					}),
 				});
 				await app.fetch(req, env);

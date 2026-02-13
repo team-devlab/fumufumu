@@ -7,6 +7,7 @@ import { PAGINATION_CONFIG } from "@/types/consultation.types";
 import { DatabaseError, ConflictError, NotFoundError } from "@/errors/AppError";
 import { advices } from "@/db/schema/advices";
 
+
 export class ConsultationRepository {
 	constructor(private db: DbInstance) {}
 
