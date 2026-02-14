@@ -8,7 +8,6 @@ import { authGuard } from "@/middlewares/authGuard.middleware";
 import { injectConsultationService } from "@/middlewares/injectService.middleware";
 import type { ConsultationFilters, PaginationParams } from "@/types/consultation.types";
 import { listConsultationsQuerySchema, consultationContentSchema, adviceContentSchema, updateDraftAdviceContentSchema, consultationIdParamSchema } from "@/validators/consultation.validator";
-import { AppError } from "@/errors/AppError";
 
 // ============================================
 // 型定義
@@ -29,75 +28,6 @@ type ListConsultationsContext = Context<
 
 const factory = createFactory<AppBindings>();
 
-// ============================================
-// ハンドラー関数
-// ============================================
-
-/**
- * 相談一覧取得ハンドラ
- * 
- * @param c - Honoコンテキスト（バリデーション済みクエリパラメータを含む）
- * @returns 相談一覧のJSONレスポンス
- */
-export async function listConsultations(c: ListConsultationsContext) {
-	try {
-		// バリデーション済みのクエリパラメータを取得
-		const validatedQuery = c.req.valid("query");
-
-		// フィルタオブジェクトを構築
-		// userIdが指定されていない場合はundefined（全ユーザーの相談を取得）
-		// プロフィール画面などで自身の相談のみを取得する場合は、明示的にuserIdを指定する
-		const filters: ConsultationFilters = {
-			userId: validatedQuery.userId,
-			draft: validatedQuery.draft,
-			solved: validatedQuery.solved,
-		};
-
-		const pagination: PaginationParams = {
-			page: validatedQuery.page,
-			limit: validatedQuery.limit,
-		};
-
-		const appUserId = c.get("appUserId");
-		const service = c.get("consultationService");
-
-		const result = await service.listConsultations(filters, pagination, appUserId);
-		
-		// NOTE: キャッシュ制御 (D1課金対策 & セキュリティ)
-		// 下書き(draft=true)は「個人情報」に近いのでキャッシュしてはいけない。
-		// 公開データの場合のみ、60秒間のキャッシュを許可。
-		if (!filters.draft) {
-			c.header('Cache-Control', 'public, max-age=60');
-		} else {
-			// 下書きの場合はキャッシュしない（明示的に指定）
-			c.header('Cache-Control', 'no-store, max-age=0');
-		}
-
-		return c.json(result, 200);
-	} catch (error) {
-		console.error('[listConsultations] Failed to fetch consultations:', error);
-		
-		// AppErrorの場合は適切なステータスコードを返す
-		if (error instanceof AppError) {
-			return c.json(
-				{
-					error: error.name,
-					message: error.message,
-				},
-				error.statusCode as any
-			);
-		}
-
-		// 予期しないエラー
-		return c.json(
-			{
-				error: 'Internal server error',
-				message: 'Failed to fetch consultations',
-			},
-			500
-		);
-	}
-}
 
 // ============================================
 // ハンドラー（createHandlers版）
@@ -118,39 +48,71 @@ export const getConsultationHandlers = factory.createHandlers(
 );
 
 export const listConsultationsHandlers = factory.createHandlers(
-	zValidator("query", listConsultationsQuerySchema),
-	async (c) => listConsultations(c)
-);
-
-export const createConsultationHandlers = factory.createHandlers(
-  // 第3引数にフックを追加して、明示的にエラーをthrowさせる必要があります
-  zValidator("json", consultationContentSchema, (result, c) => {
-    if (!result.success) {
-      // ここで throw することで、app.onError が呼ばれるようになります
-      throw result.error;
-    }
-  }),
+  zValidator("query", listConsultationsQuerySchema),
   async (c) => {
-    // 1. バリデーション済みのデータを取得
-    const validatedBody = c.req.valid("json");
-    
-    // 2. コンテキストから依存を取得
-    const authorId = c.get("appUserId");
+    // バリデーション済みのクエリパラメータを取得
+    const validatedQuery = c.req.valid("query");
+
+    const filters: ConsultationFilters = {
+      userId: validatedQuery.userId,
+      draft: validatedQuery.draft,
+      solved: validatedQuery.solved,
+    };
+
+    const pagination: PaginationParams = {
+      page: validatedQuery.page,
+      limit: validatedQuery.limit,
+    };
+
+    const appUserId = c.get("appUserId");
     const service = c.get("consultationService");
 
-    // 3. サービス実行
-    const result = await service.createConsultation(validatedBody, authorId);
-    return c.json(result, 201);
+    // サービス実行（エラーが発生した場合は global error handler へ飛ぶ）
+    const result = await service.listConsultations(filters, pagination, appUserId);
+    
+    // NOTE: キャッシュ制御 (D1課金対策 & セキュリティ)
+		// 下書き(draft=true)は「個人情報」に近いのでキャッシュしてはいけない。
+		// 公開データの場合のみ、60秒間のキャッシュを許可。
+		if (!filters.draft) {
+			c.header('Cache-Control', 'public, max-age=60');
+		} else {
+			// 下書きの場合はキャッシュしない（明示的に指定）
+			c.header('Cache-Control', 'no-store, max-age=0');
+		}
+
+    return c.json(result, 200);
   }
 );
 
+export const createConsultationHandlers = factory.createHandlers(
+	// 第3引数にフックを追加して、明示的にエラーをthrowさせる必要があります
+	zValidator("json", consultationContentSchema, (result, c) => {
+		if (!result.success) {
+			// ここで throw することで、app.onError が呼ばれるようになります
+			throw result.error;
+		}
+	}),
+	async (c) => {
+		// 1. バリデーション済みのデータを取得
+		const validatedBody = c.req.valid("json");
+
+		// 2. コンテキストから依存を取得
+		const authorId = c.get("appUserId");
+		const service = c.get("consultationService");
+
+		// 3. サービス実行
+		const result = await service.createConsultation(validatedBody, authorId);
+		return c.json(result, 201);
+	}
+);
+
 export const updateConsultationHandlers = factory.createHandlers(
-  zValidator("param", consultationIdParamSchema, (result) => {
-    if (!result.success) throw result.error;
-  }),
-  zValidator("json", consultationContentSchema, (result) => {
-    if (!result.success) throw result.error;
-  }),
+	zValidator("param", consultationIdParamSchema, (result) => {
+		if (!result.success) throw result.error;
+	}),
+	zValidator("json", consultationContentSchema, (result) => {
+		if (!result.success) throw result.error;
+	}),
 	async (c) => {
 		const { id } = c.req.valid("param");
 		const validatedBody = c.req.valid("json");
@@ -193,7 +155,7 @@ export const updateDraftAdviceHandlers = factory.createHandlers(
 		const service = c.get("consultationService");
 		const result = await service.updateDraftAdvice(id, validatedBody, authorId);
 		return c.json(result, 200);
-	}	
+	}
 );
 
 // ============================================
