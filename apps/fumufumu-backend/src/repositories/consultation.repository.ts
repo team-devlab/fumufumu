@@ -12,6 +12,11 @@ import { advices } from "@/db/schema/advices";
 export class ConsultationRepository {
 	constructor(private db: DbInstance) {}
 
+	private formatError(error: unknown): string {
+		if (error instanceof Error) return error.message;
+		return String(error);
+	}
+
 	private async insertConsultation(data: {
 		title: string;
 		body: string;
@@ -73,17 +78,7 @@ export class ConsultationRepository {
 		tagIds: number[];
 		originalError: unknown;
 	}) {
-		try {
-			await this.db.delete(consultations).where(eq(consultations.id, data.consultationId));
-		} catch (rollbackError) {
-			console.error("[consultation.create] rollback failed", {
-				consultationId: data.consultationId,
-				authorId: data.authorId,
-				tagIds: data.tagIds,
-				originalError: data.originalError,
-				rollbackError,
-			});
-		}
+		await this.db.delete(consultations).where(eq(consultations.id, data.consultationId));
 	}
 
 	private async withCompensation<T>(data: {
@@ -92,9 +87,15 @@ export class ConsultationRepository {
 	}) {
 		try {
 			return await data.main();
-		} catch (error) {
-			await data.compensate(error);
-			throw error;
+		} catch (originalError) {
+			try {
+				await data.compensate(originalError);
+			} catch (rollbackError) {
+				throw new DatabaseError(
+					`相談作成は失敗し、さらに作成済みデータの削除（補償処理）にも失敗しました。データ不整合の可能性があります。`,
+				);
+			}
+			throw originalError;
 		}
 	}
 
