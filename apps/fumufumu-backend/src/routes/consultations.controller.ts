@@ -61,14 +61,14 @@ export const listConsultationsHandlers = factory.createHandlers(
     const result = await service.listConsultations(filters, pagination, appUserId);
     
     // NOTE: キャッシュ制御 (D1課金対策 & セキュリティ)
-		// 下書き(draft=true)は「個人情報」に近いのでキャッシュしてはいけない。
-		// 公開データの場合のみ、60秒間のキャッシュを許可。
-		if (!filters.draft) {
-			c.header('Cache-Control', 'public, max-age=60');
-		} else {
-			// 下書きの場合はキャッシュしない（明示的に指定）
-			c.header('Cache-Control', 'no-store, max-age=0');
-		}
+    // 下書き(draft=true)は「個人情報」に近いのでキャッシュしてはいけない。
+	// 公開データの場合のみ、60秒間のキャッシュを許可。
+	if (!filters.draft) {
+		c.header('Cache-Control', 'public, max-age=60');
+	} else {
+		// 下書きの場合はキャッシュしない（明示的に指定）
+		c.header('Cache-Control', 'no-store, max-age=0');
+	}
 
     return c.json(result, 200);
   }
