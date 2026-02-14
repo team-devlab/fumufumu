@@ -1,28 +1,24 @@
 import { notFound } from "next/navigation";
 import { fetchConsultationDetailApi } from "@/features/consultation/api/consultationApi";
-import { AdviceConfirm } from "@/features/consultation/components/AdviceConfirm";
+import { AdviceConfirmContainer } from "@/features/consultation/components/AdviceConfirmContainer";
 
 type PageProps = {
   params: Promise<{ id: string }>;
 };
 
-/**
- * アドバイス投稿確認ページ (Server Component)
- */
+export const metadata = { title: "アドバイス内容確認 | Fumufumu App" };
+
 export default async function AdviceConfirmPage({ params }: PageProps) {
   const { id } = await params;
-
   let consultation = null;
+
   try {
     consultation = await fetchConsultationDetailApi(id);
   } catch (error) {
-    console.error(error);
     notFound();
   }
 
-  if (!consultation) {
-    notFound();
-  }
+  if (!consultation) notFound();
 
-  return <AdviceConfirm consultation={consultation} />;
+  return <AdviceConfirmContainer consultation={consultation} />;
 }
