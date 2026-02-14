@@ -8,7 +8,7 @@ export type ConsultationResponse = {
 	title: string;
 	body_preview: string;
     // 本文（全文）
-    body: string;
+    body?: string;
 	draft: boolean;
 	hidden_at: string | null;
 	solved_at: string | null;
@@ -16,7 +16,7 @@ export type ConsultationResponse = {
 	updated_at: string;
 	author: Author | null;
 
-    advices: AdviceResponse[];
+    advices?: AdviceResponse[];
 };
 
 // 相談リストレスポンス
