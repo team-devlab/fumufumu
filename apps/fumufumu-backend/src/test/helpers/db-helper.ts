@@ -1,7 +1,11 @@
 import { env, applyD1Migrations } from 'cloudflare:test';
 
-// Ensure env has a DB property for testing
-// @ts-ignore
+// Extend the env type to include DB for testing
+declare module 'cloudflare:test' {
+  interface ProvidedEnv {
+    DB: any;
+  }
+}
 
 interface D1Migration {
   name: string;
@@ -65,4 +69,22 @@ function getMigrations(): D1Migration[] {
       queries: queries,
     };
   });
+}
+
+/**
+ * 特定の相談レコードを「解決済み」状態に更新する
+ */
+export async function forceSetSolved(id: number) {
+  await env.DB.prepare(
+    "UPDATE consultations SET solved_at = (cast(unixepoch('subsecond') * 1000 as integer)) WHERE id = ?"
+  ).bind(id).run();
+}
+
+/**
+ * 特定の相談レコードを「非表示」状態に更新する
+ */
+export async function forceSetHidden(id: number) {
+  await env.DB.prepare(
+    "UPDATE consultations SET hidden_at = (cast(unixepoch('subsecond') * 1000 as integer)) WHERE id = ?"
+  ).bind(id).run();
 }
