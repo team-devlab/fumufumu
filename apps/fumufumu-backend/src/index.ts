@@ -9,13 +9,16 @@ import * as authSchema from '@/db/schema/auth';
 import * as userSchema from '@/db/schema/user';
 import * as consultationsSchema from '@/db/schema/consultations';
 import * as advicesSchema from '@/db/schema/advices';
+import * as tagsSchema from '@/db/schema/tags';
 
 import { authRouter } from '@/routes/auth.routes';
 import { consultationsRoute } from '@/routes/consultations.controller';
 import { protectedRouter } from '@/routes/protected.routes';
 import { userRoute } from '@/routes/user.controller';
+import { tagsRoute } from '@/routes/tags.controller';
 import type { ConsultationService } from '@/services/consultation.service';
 import type { UserService } from '@/services/user.service';
+import type { TagService } from '@/services/tag.service';
 
 // Drizzle ORMのスキーマを統合
 const schema = {
@@ -23,6 +26,7 @@ const schema = {
   ...userSchema,
   ...consultationsSchema,
   ...advicesSchema,
+  ...tagsSchema,
 }
 
 export type DbInstance = DrizzleD1Database<typeof schema>;
@@ -41,6 +45,7 @@ export interface Variables {
   db: DbInstance;
   consultationService: ConsultationService;
   userService: UserService;
+  tagService: TagService;
 }
 
 // Hono Bindingsの型定義（他のファイルで使用）
@@ -166,6 +171,9 @@ api.route('/consultations', consultationsRoute);
 
 // ユーザーAPI（/api/users）
 api.route('/users', userRoute);
+
+// タグAPI（/api/tags）
+api.route('/tags', tagsRoute);
 
 // メインアプリにAPIルーターをマウント
 app.route('/api', api);

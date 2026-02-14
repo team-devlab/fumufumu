@@ -86,10 +86,12 @@ export const listConsultationsQuerySchema = z.object({
 		.default(PAGINATION_CONFIG.DEFAULT_LIMIT),
 });
 
+
+
 export const consultationContentSchema = z.object({
 	title: consultationTitleSchema,
 	body: postBodySchema,
-	draft: consultationDraftSchema
+	draft: consultationDraftSchema,
 });
 
 export const adviceContentSchema = z.object({
