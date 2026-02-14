@@ -1,4 +1,3 @@
-
 "use client";
 
 import { ConsultationConfirm } from "@/features/consultation/components/ConsultationConfirm";
@@ -28,4 +27,4 @@ export const ConsultationConfirmContainer = () => {
       />
     </div>
   );
-}
+};

@@ -2,12 +2,12 @@
 
 import { useRouter } from "next/navigation";
 import { useState } from "react";
+import { ROUTES } from "@/config/routes";
 import type {
   SigninCredentials,
   SignupCredentials,
 } from "@/features/auth/types";
 import { authApi } from "../api/authApi";
-import { ROUTES } from "@/config/routes";
 
 export const useAuth = () => {
   const router = useRouter();

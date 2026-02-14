@@ -1,7 +1,7 @@
 "use client";
 
-import { AdviceForm } from "./AdviceForm";
 import type { ConsultationDetail } from "../types";
+import { AdviceForm } from "./AdviceForm";
 
 type Props = {
   consultation: ConsultationDetail;

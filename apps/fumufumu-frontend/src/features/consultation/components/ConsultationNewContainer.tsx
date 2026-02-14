@@ -37,4 +37,4 @@ export const ConsultationNewContainer = () => {
       />
     </div>
   );
-}
+};

@@ -14,7 +14,7 @@ export default async function AdviceConfirmPage({ params }: PageProps) {
 
   try {
     consultation = await fetchConsultationDetailApi(id);
-  } catch (error) {
+  } catch (_error) {
     notFound();
   }
 

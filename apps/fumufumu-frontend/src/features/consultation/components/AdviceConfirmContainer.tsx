@@ -1,7 +1,7 @@
 "use client";
 
-import { AdviceConfirm } from "./AdviceConfirm";
 import type { ConsultationDetail } from "../types";
+import { AdviceConfirm } from "./AdviceConfirm";
 
 type Props = {
   consultation: ConsultationDetail;
