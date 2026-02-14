@@ -10,24 +10,10 @@ import type { ConsultationFilters, PaginationParams } from "@/types/consultation
 import { listConsultationsQuerySchema, consultationContentSchema, adviceContentSchema, updateDraftAdviceContentSchema, consultationIdParamSchema } from "@/validators/consultation.validator";
 
 // ============================================
-// 型定義
-// ============================================
-
-
-// zValidatorを通過した後のContext型
-// in: 入力型（HTTPリクエストの生の文字列）, out: 変換後の型（zodで変換された型）
-type ListConsultationsContext = Context<
-	AppBindings,
-	string,
-	{ in: { query: unknown }; out: { query: z.output<typeof listConsultationsQuerySchema> } }
->;
-
-// ============================================
 // ファクトリ作成
 // ============================================
 
 const factory = createFactory<AppBindings>();
-
 
 // ============================================
 // ハンドラー（createHandlers版）
@@ -48,7 +34,11 @@ export const getConsultationHandlers = factory.createHandlers(
 );
 
 export const listConsultationsHandlers = factory.createHandlers(
-  zValidator("query", listConsultationsQuerySchema),
+  zValidator("query", listConsultationsQuerySchema, (result) => {
+    if (!result.success) {
+      throw result.error;
+    }
+  }),
   async (c) => {
     // バリデーション済みのクエリパラメータを取得
     const validatedQuery = c.req.valid("query");

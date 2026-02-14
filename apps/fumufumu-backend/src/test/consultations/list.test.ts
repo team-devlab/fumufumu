@@ -57,6 +57,9 @@ describe('Consultations API - List & Filtering', () => {
 
     const body = await res.json() as any;
 
+    // データが1件以上返ってきていることを保証（サイレントパス防止）
+    expect(body.data.length).toBeGreaterThan(0);
+
     expect(Array.isArray(body.data)).toBe(true);
     // draft: true はデフォルトで除外されていることを確認
     body.data.forEach((item: any) => {
@@ -117,7 +120,7 @@ describe('Consultations API - List & Filtering', () => {
     const body = await res.json() as any;
     expect(Array.isArray(body.data)).toBe(true);
 
-    // データが1件以上返ってきていることを保証する
+    // データが1件以上返ってきていることを保証（サイレントパス防止）
     expect(body.data.length).toBeGreaterThan(0);
 
     // solved=false の場合、solved_at が null であることを確認
@@ -134,6 +137,9 @@ describe('Consultations API - List & Filtering', () => {
 
     const res = await app.fetch(req, env);
     const body = await res.json() as any;
+
+    // データが1件以上返ってきていることを保証（サイレントパス防止）
+    expect(body.data.length).toBeGreaterThan(0);
 
     expect(body.data.every((item: any) => item.draft === true)).toBe(true);
     expect(body.data.every((item: any) => item.author.id === user.appUserId)).toBe(true);
@@ -157,6 +163,9 @@ describe('Consultations API - List & Filtering', () => {
     });
     const res = await app.fetch(req, env);
     const body = await res.json() as any;
+
+    // データが1件以上返ってきていることを保証（サイレントパス防止）
+    expect(body.data.length).toBeGreaterThan(0);
 
     const leakedDraft = body.data.find((c: any) => c.title === '他人の下書き');
     expect(leakedDraft).toBeUndefined();
@@ -184,6 +193,9 @@ describe('Consultations API - List & Filtering', () => {
     }), env);
     const body = await listRes.json() as any;
 
+    // データが1件以上返ってきていることを保証（サイレントパス防止）
+    expect(body.data.length).toBeGreaterThan(0);
+
     // 検証: 作成した ID が一覧（data）の中に存在しないことを確認する
     const hiddenItem = body.data.find((c: any) => c.id === targetId);
     expect(hiddenItem).toBeUndefined();
@@ -204,6 +216,9 @@ describe('Consultations API - List & Filtering', () => {
 
     const body = await res.json() as any;
     expect(Array.isArray(body.data)).toBe(true);
+
+    // データが1件以上返ってきていることを保証（サイレントパス防止）
+    expect(body.data.length).toBeGreaterThan(0);
 
     // すべてのアイテムの author.id が user.appUserId と等しいことを確認
     body.data.forEach((item: any) => {
@@ -226,6 +241,9 @@ describe('Consultations API - List & Filtering', () => {
 
     const body = await res.json() as any;
     expect(Array.isArray(body.data)).toBe(true);
+
+    // データが1件以上返ってきていることを保証（サイレントパス防止）
+    expect(body.data.length).toBeGreaterThan(0);
 
     // すべてのアイテムが条件を満たすことを確認
     body.data.forEach((item: any) => {
@@ -251,7 +269,9 @@ describe('Consultations API - List & Filtering', () => {
     const res = await app.fetch(req, env);
     const body = await res.json() as any;
 
+    // データが1件以上返ってきていることを保証（サイレントパス防止）
     expect(body.data.length).toBeGreaterThan(0);
+
     const item = body.data[0];
     expect(item.body_preview.length).toBeLessThanOrEqual(100);
     expect(item.body_preview).toBe(longBody.substring(0, 100));
@@ -266,6 +286,9 @@ describe('Consultations API - List & Filtering', () => {
 
     const res = await app.fetch(req, env);
     const body = await res.json() as any;
+
+    // データが1件以上返ってきていることを保証（サイレントパス防止）
+    expect(body.data.length).toBeGreaterThan(0);
 
     // レスポンス構造の確認（ページネーション対応）
     expect(body).toHaveProperty('pagination');
@@ -318,24 +341,30 @@ describe('Consultations API - List & Filtering', () => {
     const res = await app.fetch(req, env);
     const body = await res.json() as any;
 
+    // データが1件以上返ってきていることを保証（サイレントパス防止）
+    expect(body.data.length).toBeGreaterThan(0);
+
     const hasOtherDraft = body.data.some((c: any) => c.title === '他人の下書き');
     expect(hasOtherDraft).toBe(false);
   });
 
-  it('非表示(hiddenAt)が設定されている相談は、一覧に含まれない', async () => {
-    // Repositoryを介さずAPIで確認するため、1件作成した後にDBを直接操作して hiddenAt を入れたいところですが、
-    // 現状は「公開相談を作成して、それが一覧に出る」ことと、
-    // 「Service/Repositoryで hiddenAt IS NULL が効いていること」をコードレビューで担保しつつ、
-    // 将来的な管理者API用として枠を残すか、既存の整合性確認に留めます。
-    const req = createApiRequest('/api/consultations', 'GET', { cookie: user.cookie });
-    const res = await app.fetch(req, env);
-    const body = await res.json() as any;
-    
-    // 少なくとも、ここまでのテストで作成された公開相談が1件以上あるはず
-    expect(body.data.length).toBeGreaterThan(0);
-  });
-
   describe('Pagination Edge Cases', () => {
+    it('認証なしの場合401エラーを返す', async () => {
+      const req = createApiRequest('/api/consultations', 'GET'); // Cookieなし
+      const res = await app.fetch(req, env);
+      
+      expect(res.status).toBe(401);
+      const body = await res.json() as any;
+
+      // 成功時のプロパティ（dataなど）が「存在しない」ことを確認
+      expect(body).not.toHaveProperty('data');
+      expect(body).not.toHaveProperty('pagination');
+
+      // エラー構造が正しいか（index.ts の定義と一致するか）を確認
+      expect(body).toHaveProperty('error');
+      expect(body).toHaveProperty('message');
+    });
+
     it('不正なページ番号（0以下）は400エラーを返す (Zod共通バリデーション)', async () => {
       const req = createApiRequest('/api/consultations', 'GET', {
         cookie: user.cookie,
@@ -343,15 +372,41 @@ describe('Consultations API - List & Filtering', () => {
       });
       const res = await app.fetch(req, env);
       expect(res.status).toBe(400); // 握りつぶさずエラーを拾えているか確認
+      const body = await res.json() as any;
+
+      // index.ts の app.onError で定義したレスポンスを確認
+      expect(body.error).toBe('ValidationError');
+      expect(body.message).toBe('入力内容に誤りがあります');
+
+      // 成功時のプロパティ（dataなど）が「存在しない」ことを確認
+      expect(body).not.toHaveProperty('data');
+      expect(body).not.toHaveProperty('pagination');
+
+      // エラー構造が正しいか（index.ts の定義と一致するか）を確認
+      expect(body).toHaveProperty('error');
+      expect(body).toHaveProperty('message');
     });
 
-    it('limitが最大値(100)を超えると400エラーを返す', async () => {
+    it('limitが最大値(100)を超えると400エラーを返す (Zod共通バリデーション)', async () => {
       const req = createApiRequest('/api/consultations', 'GET', {
         cookie: user.cookie,
         queryParams: { limit: 101 },
       });
       const res = await app.fetch(req, env);
       expect(res.status).toBe(400);
+      const body = await res.json() as any;
+
+      // index.ts の app.onError で定義したレスポンスを確認
+      expect(body.error).toBe('ValidationError');
+      expect(body.message).toBe('入力内容に誤りがあります');
+
+      // 成功時のプロパティ（dataなど）が「存在しない」ことを確認
+      expect(body).not.toHaveProperty('data');
+      expect(body).not.toHaveProperty('pagination');
+
+      // エラー構造が正しいか（index.ts の定義と一致するか）を確認
+      expect(body).toHaveProperty('error');
+      expect(body).toHaveProperty('message');
     });
 
     it('存在しないページを指定すると空配列と正しいメタデータを返す', async () => {
@@ -363,8 +418,13 @@ describe('Consultations API - List & Filtering', () => {
       const body = await res.json() as any;
       
       expect(body.data).toEqual([]);
+      expect(res.status).toBe(200);
       expect(body.pagination.current_page).toBe(999);
       expect(body.pagination.has_next).toBe(false);
+
+      // エラー構造が含まれていないことを確認
+      expect(body).not.toHaveProperty('error');
+      expect(body).not.toHaveProperty('message');
     });
 
     it('エラー処理: Serviceが失敗した場合に500エラーを返す', async () => {
@@ -386,6 +446,14 @@ describe('Consultations API - List & Filtering', () => {
         // index.ts の app.onError で定義したレスポンスを確認
         expect(body.error).toBe('InternalServerError'); 
         expect(body.message).toBe('予期せぬエラーが発生しました');
+
+        // 成功時のプロパティ（dataなど）が「存在しない」ことを確認
+        expect(body).not.toHaveProperty('data');
+        expect(body).not.toHaveProperty('pagination');
+
+        // エラー構造が正しいか（index.ts の定義と一致するか）を確認
+        expect(body).toHaveProperty('error');
+        expect(body).toHaveProperty('message');
 
         // 4. 後始末（重要：スパイを解除しないと、他のテストに影響が出ます）
         spy.mockRestore();
