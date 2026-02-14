@@ -34,44 +34,44 @@ export const getConsultationHandlers = factory.createHandlers(
 );
 
 export const listConsultationsHandlers = factory.createHandlers(
-  zValidator("query", listConsultationsQuerySchema, (result) => {
-    if (!result.success) {
-      throw result.error;
-    }
-  }),
-  async (c) => {
-    // バリデーション済みのクエリパラメータを取得
-    const validatedQuery = c.req.valid("query");
+	zValidator("query", listConsultationsQuerySchema, (result) => {
+		if (!result.success) {
+			throw result.error;
+		}
+	}),
+	async (c) => {
+		// バリデーション済みのクエリパラメータを取得
+		const validatedQuery = c.req.valid("query");
 
-    const filters: ConsultationFilters = {
-      userId: validatedQuery.userId,
-      draft: validatedQuery.draft,
-      solved: validatedQuery.solved,
-    };
+		const filters: ConsultationFilters = {
+			userId: validatedQuery.userId,
+			draft: validatedQuery.draft,
+			solved: validatedQuery.solved,
+		};
 
-    const pagination: PaginationParams = {
-      page: validatedQuery.page,
-      limit: validatedQuery.limit,
-    };
+		const pagination: PaginationParams = {
+			page: validatedQuery.page,
+			limit: validatedQuery.limit,
+		};
 
-    const appUserId = c.get("appUserId");
-    const service = c.get("consultationService");
+		const appUserId = c.get("appUserId");
+		const service = c.get("consultationService");
 
-    // サービス実行（エラーが発生した場合は global error handler へ飛ぶ）
-    const result = await service.listConsultations(filters, pagination, appUserId);
-    
-    // NOTE: キャッシュ制御 (D1課金対策 & セキュリティ)
-    // 下書き(draft=true)は「個人情報」に近いのでキャッシュしてはいけない。
-	// 公開データの場合のみ、60秒間のキャッシュを許可。
-	if (!filters.draft) {
-		c.header('Cache-Control', 'public, max-age=60');
-	} else {
-		// 下書きの場合はキャッシュしない（明示的に指定）
-		c.header('Cache-Control', 'no-store, max-age=0');
+		// サービス実行（エラーが発生した場合は global error handler へ飛ぶ）
+		const result = await service.listConsultations(filters, pagination, appUserId);
+
+		// NOTE: キャッシュ制御 (D1課金対策 & セキュリティ)
+		// 下書き(draft=true)は「個人情報」に近いのでキャッシュしてはいけない。
+		// 公開データの場合のみ、60秒間のキャッシュを許可。
+		if (!filters.draft) {
+			c.header('Cache-Control', 'public, max-age=60');
+		} else {
+			// 下書きの場合はキャッシュしない（明示的に指定）
+			c.header('Cache-Control', 'no-store, max-age=0');
+		}
+
+		return c.json(result, 200);
 	}
-
-    return c.json(result, 200);
-  }
 );
 
 export const createConsultationHandlers = factory.createHandlers(
