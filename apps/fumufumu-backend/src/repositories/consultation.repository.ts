@@ -1,7 +1,8 @@
 import { consultations } from "@/db/schema/consultations";
 import { users } from "@/db/schema/user";
+import { consultationTaggings, tags } from "@/db/schema/tags";
 import type { DbInstance } from "@/index";
-import { eq, and, isNull, isNotNull, type SQL, sql } from "drizzle-orm";
+import { eq, and, isNull, isNotNull, inArray, type SQL, sql } from "drizzle-orm";
 import type { ConsultationFilters, PaginationParams } from "@/types/consultation.types";
 import { PAGINATION_CONFIG } from "@/types/consultation.types";
 import { DatabaseError, ConflictError, NotFoundError } from "@/errors/AppError";
@@ -122,6 +123,7 @@ export class ConsultationRepository {
 		title: string;
 		body: string;
 		draft: boolean;
+		tagIds: number[];
 		authorId: number;
 	}) {
 		try {
@@ -140,23 +142,48 @@ export class ConsultationRepository {
 				throw new DatabaseError("相談の作成に失敗しました: insert操作がデータを返しませんでした");
 			}
 
-			// 2. author情報を別クエリで取得
-			const author = await this.db.query.users.findFirst({
-				where: eq(users.id, data.authorId),
-			});
+			try {
+				// 2. 指定タグを検証し、相談へ紐付け
+				const uniqueTagIds = [...new Set(data.tagIds)];
+				if (uniqueTagIds.length > 0) {
+					const existingTags = await this.db
+						.select({ id: tags.id })
+						.from(tags)
+						.where(inArray(tags.id, uniqueTagIds));
 
-			if (!author) {
-				throw new NotFoundError(`指定されたユーザーが見つかりません: authorId=${data.authorId}`);
+					const existingTagIdSet = new Set(existingTags.map((tag) => tag.id));
+					const missingTagIds = uniqueTagIds.filter((tagId) => !existingTagIdSet.has(tagId));
+					if (missingTagIds.length > 0) {
+						throw new ConflictError(`存在しないタグIDが含まれています: ${missingTagIds.join(", ")}`);
+					}
+
+					await this.db.insert(consultationTaggings).values(
+						uniqueTagIds.map((tagId) => ({ consultationId: inserted.id, tagId })),
+					);
+				}
+
+				// 3. author情報を取得
+				const author = await this.db.query.users.findFirst({
+					where: eq(users.id, data.authorId),
+				});
+
+				if (!author) {
+					throw new NotFoundError(`指定されたユーザーが見つかりません: authorId=${data.authorId}`);
+				}
+
+				// 4. insertedデータとauthorを合成して返す
+				return {
+					...inserted,
+					author,
+				};
+			} catch (error) {
+				// D1では明示的トランザクションの制約があるため、失敗時は相談本体を補償削除する
+				await this.db.delete(consultations).where(eq(consultations.id, inserted.id));
+				throw error;
 			}
-
-			// 3. inserted データと author を合成して返す
-			return {
-				...inserted,
-				author,
-			};
 		} catch (error) {
 			// AppErrorの場合はそのまま再スロー
-			if (error instanceof DatabaseError || error instanceof NotFoundError) {
+			if (error instanceof DatabaseError || error instanceof NotFoundError || error instanceof ConflictError) {
 				throw error;
 			}
 

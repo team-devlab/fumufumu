@@ -6,6 +6,11 @@ const VALIDATION_MESSAGES = {
 	BOOLEAN_STRING: '"true" または "false" を指定してください',
 } as const;
 
+const TAG_CONFIG = {
+	MIN_TAGS: 1,
+	MAX_TAGS: 3,
+} as const;
+
 /**
  * 共通バリデーションスキーマ
  */
@@ -92,6 +97,10 @@ export const consultationContentSchema = z.object({
 	title: consultationTitleSchema,
 	body: postBodySchema,
 	draft: consultationDraftSchema,
+	tagIds: z
+  .array(z.coerce.number().int().positive("タグIDは正の整数を指定してください"))
+  .min(TAG_CONFIG.MIN_TAGS, `タグは${TAG_CONFIG.MIN_TAGS}個以上選択してください`)
+  .max(TAG_CONFIG.MAX_TAGS, `タグは${TAG_CONFIG.MAX_TAGS}個以下で選択してください`),
 });
 
 export const adviceContentSchema = z.object({

@@ -69,6 +69,7 @@ function getMigrations(): D1Migration[] {
 describe('Consultations API Integration Tests', () => {
 	let sessionCookie: string | null = null;
 	let attackerCookie: string | null = null;
+	let existingTagIds: number[] = [];
 
 	// テスト実行前のセットアップ
 	beforeAll(async () => {
@@ -119,7 +120,15 @@ describe('Consultations API Integration Tests', () => {
 		expect(setCookieB).toBeTruthy();
 		attackerCookie = (setCookieB as string).split(';')[0];
 
+		// テスト用のタグをDBに直接挿入
+		const db = (env as unknown as CloudflareBindings).DB;
+		await db.prepare("INSERT INTO tags (name) VALUES (?)").bind('TagForTest1').run();
+		await db.prepare("INSERT INTO tags (name) VALUES (?)").bind('TagForTest2').run();
 
+        const tags = await db.prepare("SELECT id FROM tags WHERE name LIKE 'TagForTest%'").all();
+        // @ts-ignore
+        existingTagIds = tags.results.map(r => r.id);
+        expect(existingTagIds.length).toBe(2);
 	});
 
 	describe('POST /api/consultations', () => {
@@ -130,11 +139,12 @@ describe('Consultations API Integration Tests', () => {
 					'Content-Type': 'application/json',
 					'Cookie': sessionCookie!,
 				},
-				body: JSON.stringify({
-					title: '統合テスト相談',
-					body: 'これは統合テストで作成された相談です。実際のDBを使用しています。',
-					draft: false
-				}),
+					body: JSON.stringify({
+						title: '統合テスト相談',
+						body: 'これは統合テストで作成された相談です。実際のDBを使用しています。',
+						draft: false,
+						tagIds: [existingTagIds[0]],
+					}),
 			});
 
 			const res = await app.fetch(req, env);
@@ -159,11 +169,12 @@ describe('Consultations API Integration Tests', () => {
 					'Content-Type': 'application/json',
 					'Cookie': sessionCookie!,
 				},
-				body: JSON.stringify({
-					title: '下書き相談',
-					body: 'これは下書きです。本文を10文字以上にします。',
-					draft: true
-				}),
+					body: JSON.stringify({
+						title: '下書き相談',
+						body: 'これは下書きです。本文を10文字以上にします。',
+						draft: true,
+						tagIds: [existingTagIds[0]],
+					}),
 			});
 
 			const res = await app.fetch(req, env);
@@ -187,10 +198,11 @@ describe('Consultations API Integration Tests', () => {
 					'Content-Type': 'application/json',
 					'Cookie': sessionCookie!,
 				},
-				body: JSON.stringify({
-					title: 'デフォルト相談',
-					body: 'draftを指定していません。'
-				}),
+					body: JSON.stringify({
+						title: 'デフォルト相談',
+						body: 'draftを指定していません。',
+						tagIds: [existingTagIds[0]],
+					}),
 			});
 
 			const res = await app.fetch(req, env);
@@ -208,10 +220,11 @@ describe('Consultations API Integration Tests', () => {
 					'Content-Type': 'application/json',
 					'Cookie': sessionCookie!,
 				},
-				body: JSON.stringify({
-					title: '長文テスト',
-					body: longBody
-				}),
+					body: JSON.stringify({
+						title: '長文テスト',
+						body: longBody,
+						tagIds: [existingTagIds[0]],
+					}),
 			});
 
 			const res = await app.fetch(req, env);
@@ -233,10 +246,11 @@ describe('Consultations API Integration Tests', () => {
 					'Content-Type': 'application/json',
 					'Cookie': sessionCookie!,
 				},
-				body: JSON.stringify({
-					title: 'タイムスタンプテスト',
-					body: 'created_atとupdated_atの自動生成を確認'
-				}),
+					body: JSON.stringify({
+						title: 'タイムスタンプテスト',
+						body: 'created_atとupdated_atの自動生成を確認',
+						tagIds: [existingTagIds[0]],
+					}),
 			});
 
 			const res = await app.fetch(req, env);
@@ -264,10 +278,11 @@ describe('Consultations API Integration Tests', () => {
 					'Content-Type': 'application/json',
 					'Cookie': sessionCookie!,
 				},
-				body: JSON.stringify({
-					title: 'null初期化テスト',
-					body: 'hidden_atとsolved_atがnullで初期化されることを確認'
-				}),
+					body: JSON.stringify({
+						title: 'null初期化テスト',
+						body: 'hidden_atとsolved_atがnullで初期化されることを確認',
+						tagIds: [existingTagIds[0]],
+					}),
 			});
 
 			const res = await app.fetch(req, env);
@@ -285,10 +300,11 @@ describe('Consultations API Integration Tests', () => {
 					'Content-Type': 'application/json',
 					'Cookie': sessionCookie!,
 				},
-				body: JSON.stringify({
-					title: '',
-					body: '本文はあります'
-				}),
+					body: JSON.stringify({
+						title: '',
+						body: '本文はあります',
+						tagIds: [existingTagIds[0]],
+					}),
 			});
 
 			const res = await app.fetch(req, env);
@@ -302,10 +318,11 @@ describe('Consultations API Integration Tests', () => {
 					'Content-Type': 'application/json',
 					'Cookie': sessionCookie!,
 				},
-				body: JSON.stringify({
-					title: 'テスト',
-					body: 'short'
-				}),
+					body: JSON.stringify({
+						title: 'テスト',
+						body: 'short',
+						tagIds: [existingTagIds[0]],
+					}),
 			});
 
 			const res = await app.fetch(req, env);
@@ -319,10 +336,11 @@ describe('Consultations API Integration Tests', () => {
 					'Content-Type': 'application/json',
 					'Cookie': sessionCookie!,
 				},
-				body: JSON.stringify({
-					title: 'A'.repeat(101),
-					body: 'これはテスト本文です。'
-				}),
+					body: JSON.stringify({
+						title: 'A'.repeat(101),
+						body: 'これはテスト本文です。',
+						tagIds: [existingTagIds[0]],
+					}),
 			});
 
 			const res = await app.fetch(req, env);
@@ -336,14 +354,97 @@ describe('Consultations API Integration Tests', () => {
 					'Content-Type': 'application/json',
 					// Cookieなし
 				},
-				body: JSON.stringify({
-					title: 'テスト',
-					body: '認証なしテスト'
-				}),
+					body: JSON.stringify({
+						title: 'テスト',
+						body: '認証なしテスト',
+						tagIds: [existingTagIds[0]],
+					}),
 			});
 
 			const res = await app.fetch(req, env);
 			expect(res.status).toBe(401);
+		});
+
+		it('タグ付き相談作成: tagIdsが空配列の場合は400エラーを返す', async () => {
+			const req = new Request('http://localhost/api/consultations', {
+				method: 'POST',
+				headers: {
+					'Content-Type': 'application/json',
+					'Cookie': sessionCookie!,
+				},
+				body: JSON.stringify({
+					title: 'タグなし相談',
+					body: 'tagIdsが空配列です。',
+					draft: false,
+					tagIds: [],
+				}),
+			});
+
+			const res = await app.fetch(req, env);
+			expect(res.status).toBe(400);
+		});
+
+		it('タグ付き相談作成: 存在するタグIDを複数指定して相談を作成できる', async () => {
+			const req = new Request('http://localhost/api/consultations', {
+				method: 'POST',
+				headers: {
+					'Content-Type': 'application/json',
+					'Cookie': sessionCookie!,
+				},
+				body: JSON.stringify({
+					title: 'タグ付き相談テスト',
+					body: 'これは複数のタグが付いた相談です。',
+					draft: false,
+					tagIds: existingTagIds, // 事前に作成したタグID
+				}),
+			});
+
+			const res = await app.fetch(req, env);
+			// レスポンスボディを詳細に出力
+			if (res.status !== 201) {
+				const error = await res.json();
+				console.error('Error creating consultation with tags:', error);
+			}
+			expect(res.status).toBe(201);
+
+			const data = await res.json() as any;
+			expect(data).toHaveProperty('id');
+			expect(data.title).toBe('タグ付き相談テスト');
+		});
+
+		it('タグ付き相談作成(失敗): 存在しないタグIDが含まれると409を返し、相談本体もロールバックされる', async () => {
+			const nonExistentTagId = 99999;
+			const tagIds = [...existingTagIds, nonExistentTagId];
+			const rollbackTitle = `失敗するタグ付き相談-${Date.now()}`;
+			const db = (env as unknown as CloudflareBindings).DB;
+
+			const req = new Request('http://localhost/api/consultations', {
+				method: 'POST',
+				headers: {
+					'Content-Type': 'application/json',
+					'Cookie': sessionCookie!,
+				},
+				body: JSON.stringify({
+					title: rollbackTitle,
+					body: '存在しないタグIDが含まれています。',
+					draft: false,
+					tagIds: tagIds,
+				}),
+			});
+
+			const res = await app.fetch(req, env);
+			expect(res.status).toBe(409); // ConflictError
+
+			const error = await res.json() as any;
+			expect(error.error).toBe('ConflictError');
+			expect(error.message).toContain(`存在しないタグIDが含まれています: ${nonExistentTagId}`);
+
+			const remained = await db
+				.prepare("SELECT id FROM consultations WHERE title = ?")
+				.bind(rollbackTitle)
+				.all();
+			// @ts-ignore
+			expect(remained.results.length).toBe(0);
 		});
 	});
 
@@ -358,11 +459,12 @@ describe('Consultations API Integration Tests', () => {
 					'Content-Type': 'application/json',
 					'Cookie': sessionCookie!,
 				},
-				body: JSON.stringify({
-					title: 'テスト相談',
-					body: testBody,
-					draft: false
-				}),
+					body: JSON.stringify({
+						title: 'テスト相談',
+						body: testBody,
+						draft: false,
+						tagIds: [existingTagIds[0]],
+					}),
 			});
 
 			const res = await app.fetch(req, env);
@@ -468,11 +570,12 @@ describe('Consultations API Integration Tests', () => {
                     'Content-Type': 'application/json',
                     'Cookie': sessionCookie!,
                 },
-                body: JSON.stringify({
-                    title: '自分だけが見れる下書き',
-                    body: 'これは下書きです。他人には見えません。',
-                    draft: true,
-                }),
+	                body: JSON.stringify({
+	                    title: '自分だけが見れる下書き',
+	                    body: 'これは下書きです。他人には見えません。',
+	                    draft: true,
+						tagIds: [existingTagIds[0]],
+	                }),
             });
             const createRes = await app.fetch(createReq, env);
             const createdData = await createRes.json() as any;
@@ -498,11 +601,12 @@ describe('Consultations API Integration Tests', () => {
                     'Content-Type': 'application/json',
                     'Cookie': sessionCookie!,
                 },
-                body: JSON.stringify({
-                    title: '秘密の下書き',
-                    body: 'これは攻撃者には見えてはいけない内容です。',
-                    draft: true,
-                }),
+	                body: JSON.stringify({
+	                    title: '秘密の下書き',
+	                    body: 'これは攻撃者には見えてはいけない内容です。',
+	                    draft: true,
+						tagIds: [existingTagIds[0]],
+	                }),
             });
             const createRes = await app.fetch(createReq, env);
             const createdData = await createRes.json() as any;
@@ -565,9 +669,9 @@ describe('Consultations API Integration Tests', () => {
             // 攻撃者が下書きを作成
             const createReq = new Request('http://localhost/api/consultations', {
                 method: 'POST',
-                headers: { 'Content-Type': 'application/json', 'Cookie': attackerCookie! },
-                body: JSON.stringify({ title: '攻撃者の下書き', body: '見えてはいけない', draft: true }),
-            });
+	                headers: { 'Content-Type': 'application/json', 'Cookie': attackerCookie! },
+	                body: JSON.stringify({ title: '攻撃者の下書き', body: '見えてはいけない', draft: true, tagIds: [existingTagIds[0]] }),
+	            });
             await app.fetch(createReq, env);
 
             // 自分が draft=true で一覧取得
@@ -586,9 +690,9 @@ describe('Consultations API Integration Tests', () => {
             // 通常の公開相談を作成
             const res1 = await app.fetch(new Request('http://localhost/api/consultations', {
                 method: 'POST',
-                headers: { 'Content-Type': 'application/json', 'Cookie': sessionCookie! },
-                body: JSON.stringify({ title: '見える相談', body: 'これは表示されるはずです。', draft: false }),
-            }), env);
+	                headers: { 'Content-Type': 'application/json', 'Cookie': sessionCookie! },
+	                body: JSON.stringify({ title: '見える相談', body: 'これは表示されるはずです。', draft: false, tagIds: [existingTagIds[0]] }),
+	            }), env);
             const publicData = await res1.json() as any;
 
             // 本来ならここでDBを直接操作して hiddenAt を入れたいところですが、
@@ -622,11 +726,12 @@ describe('Consultations API Integration Tests', () => {
 					'Content-Type': 'application/json',
 					'Cookie': sessionCookie!,
 				},
-				body: JSON.stringify({
-					title: '更新用下書き',
-					body: '更新前の本文です。10文字以上あります。',
-					draft: true
-				}),
+					body: JSON.stringify({
+						title: '更新用下書き',
+						body: '更新前の本文です。10文字以上あります。',
+						draft: true,
+						tagIds: [existingTagIds[0]],
+					}),
 			});
 
 			const res = await app.fetch(req, env);
@@ -649,11 +754,12 @@ describe('Consultations API Integration Tests', () => {
 						'Content-Type': 'application/json',
 						'Cookie': sessionCookie!,
 					},
-					body: JSON.stringify({
-						title: '下書き更新後タイトル',
-						body: '下書き更新後の本文です。10文字以上あります。',
-						draft: true
-					}),
+						body: JSON.stringify({
+							title: '下書き更新後タイトル',
+							body: '下書き更新後の本文です。10文字以上あります。',
+							draft: true,
+							tagIds: [existingTagIds[0]],
+						}),
 				}
 			);
 
@@ -674,11 +780,12 @@ describe('Consultations API Integration Tests', () => {
 						'Content-Type': 'application/json',
 						'Cookie': sessionCookie!,
 					},
-					body: JSON.stringify({
-						title: '公開タイトル',
-						body: '公開用の本文です。10文字以上あります。',
-						draft: false
-					}),
+						body: JSON.stringify({
+							title: '公開タイトル',
+							body: '公開用の本文です。10文字以上あります。',
+							draft: false,
+							tagIds: [existingTagIds[0]],
+						}),
 				}
 			);
 
@@ -698,11 +805,12 @@ describe('Consultations API Integration Tests', () => {
 						'Content-Type': 'application/json',
 						'Cookie': attackerCookie!,
 					},
-					body: JSON.stringify({
-						title: '乗っ取りタイトル',
-						body: '他人のデータを書き換えようとしています',
-						draft: true
-					}),
+						body: JSON.stringify({
+							title: '乗っ取りタイトル',
+							body: '他人のデータを書き換えようとしています',
+							draft: true,
+							tagIds: [existingTagIds[0]],
+						}),
 				}
 			);
 
@@ -720,11 +828,12 @@ describe('Consultations API Integration Tests', () => {
 						'Content-Type': 'application/json',
 						'Cookie': sessionCookie!,
 					},
-					body: JSON.stringify({
-						title: '更新不可',
-						body: '本文は10文字以上必要です。',
-						draft: true
-					}),
+						body: JSON.stringify({
+							title: '更新不可',
+							body: '本文は10文字以上必要です。',
+							draft: true,
+							tagIds: [existingTagIds[0]],
+						}),
 				}
 			);
 
@@ -743,11 +852,12 @@ describe('Consultations API Integration Tests', () => {
 					'Content-Type': 'application/json',
 					'Cookie': sessionCookie!,
 				},
-				body: JSON.stringify({
-					title: 'テスト相談',
-					body: 'テスト本文です。10文字以上あります。',
-					draft: false
-				}),
+					body: JSON.stringify({
+						title: 'テスト相談',
+						body: 'テスト本文です。10文字以上あります。',
+						draft: false,
+						tagIds: [existingTagIds[0]],
+					}),
 			});
 
 			const res = await app.fetch(req, env);
@@ -877,11 +987,12 @@ describe('Consultations API Integration Tests', () => {
 					'Content-Type': 'application/json',
 					'Cookie': sessionCookie!,
 				},
-				body: JSON.stringify({
-					title: 'テスト相談',
-					body: 'テスト本文です。10文字以上あります。',
-					draft: false
-				}),
+					body: JSON.stringify({
+						title: 'テスト相談',
+						body: 'テスト本文です。10文字以上あります。',
+						draft: false,
+						tagIds: [existingTagIds[0]],
+					}),
 			});
 			const res = await app.fetch(req, env);
 			expect(res.status).toBe(201);
@@ -944,11 +1055,12 @@ describe('Consultations API Integration Tests', () => {
 						'Content-Type': 'application/json',
 						'Cookie': sessionCookie!,
 					},
-					body: JSON.stringify({
-						title: `テスト相談 ${i}`,
-						body: `これはテスト相談${i}の本文です。`,
-						draft: false
-					}),
+						body: JSON.stringify({
+							title: `テスト相談 ${i}`,
+							body: `これはテスト相談${i}の本文です。`,
+							draft: false,
+							tagIds: [existingTagIds[0]],
+						}),
 				});
 				await app.fetch(req, env);
 			}
