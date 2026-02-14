@@ -12,6 +12,92 @@ import { advices } from "@/db/schema/advices";
 export class ConsultationRepository {
 	constructor(private db: DbInstance) {}
 
+	private async insertConsultation(data: {
+		title: string;
+		body: string;
+		draft: boolean;
+		authorId: number;
+	}) {
+		const [inserted] = await this.db
+			.insert(consultations)
+			.values({
+				title: data.title,
+				body: data.body,
+				draft: data.draft,
+				authorId: data.authorId,
+			})
+			.returning();
+
+		if (!inserted) {
+			throw new DatabaseError("相談の作成に失敗しました: insert操作がデータを返しませんでした");
+		}
+
+		return inserted;
+	}
+
+	private async validateAndInsertTaggings(consultationId: number, tagIds: number[]) {
+		const uniqueTagIds = [...new Set(tagIds)];
+		if (uniqueTagIds.length === 0) return;
+
+		const existingTags = await this.db
+			.select({ id: tags.id })
+			.from(tags)
+			.where(inArray(tags.id, uniqueTagIds));
+
+		const existingTagIdSet = new Set(existingTags.map((tag) => tag.id));
+		const missingTagIds = uniqueTagIds.filter((tagId) => !existingTagIdSet.has(tagId));
+		if (missingTagIds.length > 0) {
+			throw new ConflictError(`存在しないタグIDが含まれています: ${missingTagIds.join(", ")}`);
+		}
+
+		await this.db.insert(consultationTaggings).values(
+			uniqueTagIds.map((tagId) => ({ consultationId, tagId })),
+		);
+	}
+
+	private async findAuthorOrThrow(authorId: number) {
+		const author = await this.db.query.users.findFirst({
+			where: eq(users.id, authorId),
+		});
+
+		if (!author) {
+			throw new NotFoundError(`指定されたユーザーが見つかりません: authorId=${authorId}`);
+		}
+
+		return author;
+	}
+
+	private async compensateDeleteConsultation(data: {
+		consultationId: number;
+		authorId: number;
+		tagIds: number[];
+		originalError: unknown;
+	}) {
+		try {
+			await this.db.delete(consultations).where(eq(consultations.id, data.consultationId));
+		} catch (rollbackError) {
+			console.error("[consultation.create] rollback failed", {
+				consultationId: data.consultationId,
+				authorId: data.authorId,
+				tagIds: data.tagIds,
+				originalError: data.originalError,
+				rollbackError,
+			});
+		}
+	}
+
+	private async withCompensation<T>(data: {
+		main: () => Promise<T>;
+		compensate: (error: unknown) => Promise<void>;
+	}) {
+		try {
+			return await data.main();
+		} catch (error) {
+			await data.compensate(error);
+			throw error;
+		}
+	}
+
 	/**
 	 * フィルタ条件からWHERE句を構築する（findAll / count 共通）
 	 */
@@ -127,60 +213,25 @@ export class ConsultationRepository {
 		authorId: number;
 	}) {
 		try {
-			// 1. 相談データをINSERT
-			const [inserted] = await this.db
-				.insert(consultations)
-				.values({
-					title: data.title,
-					body: data.body,
-					draft: data.draft,
-					authorId: data.authorId,
-				})
-				.returning();
-
-			if (!inserted) {
-				throw new DatabaseError("相談の作成に失敗しました: insert操作がデータを返しませんでした");
-			}
-
-			try {
-				// 2. 指定タグを検証し、相談へ紐付け
-				const uniqueTagIds = [...new Set(data.tagIds)];
-				if (uniqueTagIds.length > 0) {
-					const existingTags = await this.db
-						.select({ id: tags.id })
-						.from(tags)
-						.where(inArray(tags.id, uniqueTagIds));
-
-					const existingTagIdSet = new Set(existingTags.map((tag) => tag.id));
-					const missingTagIds = uniqueTagIds.filter((tagId) => !existingTagIdSet.has(tagId));
-					if (missingTagIds.length > 0) {
-						throw new ConflictError(`存在しないタグIDが含まれています: ${missingTagIds.join(", ")}`);
-					}
-
-					await this.db.insert(consultationTaggings).values(
-						uniqueTagIds.map((tagId) => ({ consultationId: inserted.id, tagId })),
-					);
-				}
-
-				// 3. author情報を取得
-				const author = await this.db.query.users.findFirst({
-					where: eq(users.id, data.authorId),
-				});
-
-				if (!author) {
-					throw new NotFoundError(`指定されたユーザーが見つかりません: authorId=${data.authorId}`);
-				}
-
-				// 4. insertedデータとauthorを合成して返す
-				return {
-					...inserted,
-					author,
-				};
-			} catch (error) {
-				// D1では明示的トランザクションの制約があるため、失敗時は相談本体を補償削除する
-				await this.db.delete(consultations).where(eq(consultations.id, inserted.id));
-				throw error;
-			}
+			const inserted = await this.insertConsultation(data);
+			return await this.withCompensation({
+				main: async () => {
+					await this.validateAndInsertTaggings(inserted.id, data.tagIds);
+					const author = await this.findAuthorOrThrow(data.authorId);
+					return {
+						...inserted,
+						author,
+					};
+				},
+				compensate: async (originalError) => {
+					await this.compensateDeleteConsultation({
+						consultationId: inserted.id,
+						authorId: data.authorId,
+						tagIds: data.tagIds,
+						originalError,
+					});
+				},
+			});
 		} catch (error) {
 			// AppErrorの場合はそのまま再スロー
 			if (error instanceof DatabaseError || error instanceof NotFoundError || error instanceof ConflictError) {

@@ -7,7 +7,14 @@ import type { AppBindings } from "@/index";
 import { authGuard } from "@/middlewares/authGuard.middleware";
 import { injectConsultationService } from "@/middlewares/injectService.middleware";
 import type { ConsultationFilters, PaginationParams } from "@/types/consultation.types";
-import { listConsultationsQuerySchema, consultationContentSchema, adviceContentSchema, updateDraftAdviceContentSchema, consultationIdParamSchema } from "@/validators/consultation.validator";
+import {
+	listConsultationsQuerySchema,
+	createConsultationSchema,
+	updateConsultationSchema,
+	adviceContentSchema,
+	updateDraftAdviceContentSchema,
+	consultationIdParamSchema,
+} from "@/validators/consultation.validator";
 import { AppError } from "@/errors/AppError";
 
 // ============================================
@@ -124,7 +131,7 @@ export const listConsultationsHandlers = factory.createHandlers(
 
 export const createConsultationHandlers = factory.createHandlers(
   // 第3引数にフックを追加して、明示的にエラーをthrowさせる必要があります
-  zValidator("json", consultationContentSchema, (result, c) => {
+  zValidator("json", createConsultationSchema, (result, c) => {
     if (!result.success) {
       // ここで throw することで、app.onError が呼ばれるようになります
       throw result.error;
@@ -148,7 +155,7 @@ export const updateConsultationHandlers = factory.createHandlers(
   zValidator("param", consultationIdParamSchema, (result) => {
     if (!result.success) throw result.error;
   }),
-  zValidator("json", consultationContentSchema, (result) => {
+  zValidator("json", updateConsultationSchema, (result) => {
     if (!result.success) throw result.error;
   }),
 	async (c) => {

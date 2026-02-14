@@ -43,6 +43,10 @@ const postBodySchema = z
 	.max(10000, "本文は10,000文字以内で入力してください");
 
 const consultationDraftSchema = z.boolean().optional().default(false);
+const tagIdsSchema = z
+	.array(z.coerce.number().int().positive("タグIDは正の整数を指定してください"))
+	.max(TAG_CONFIG.MAX_TAGS, `タグは${TAG_CONFIG.MAX_TAGS}個以下で選択してください`)
+	.optional();
 
 /**
  * 相談一覧取得のクエリパラメータバリデーションスキーマ
@@ -93,15 +97,42 @@ export const listConsultationsQuerySchema = z.object({
 
 
 
-export const consultationContentSchema = z.object({
+const consultationBaseSchema = z.object({
+	title: consultationTitleSchema,
+	body: postBodySchema,
+	draft: consultationDraftSchema,
+	tagIds: tagIdsSchema,
+});
+
+const createConsultationBaseSchema = z.object({
 	title: consultationTitleSchema,
 	body: postBodySchema,
 	draft: consultationDraftSchema,
 	tagIds: z
-  .array(z.coerce.number().int().positive("タグIDは正の整数を指定してください"))
-  .min(TAG_CONFIG.MIN_TAGS, `タグは${TAG_CONFIG.MIN_TAGS}個以上選択してください`)
-  .max(TAG_CONFIG.MAX_TAGS, `タグは${TAG_CONFIG.MAX_TAGS}個以下で選択してください`),
+		.array(z.coerce.number().int().positive("タグIDは正の整数を指定してください"))
+		.min(TAG_CONFIG.MIN_TAGS, `タグは${TAG_CONFIG.MIN_TAGS}個以上選択してください`)
+		.max(TAG_CONFIG.MAX_TAGS, `タグは${TAG_CONFIG.MAX_TAGS}個以下で選択してください`),
 });
+
+const requireTagsForPublicPost = (
+	data: { draft: boolean; tagIds?: number[] },
+	ctx: z.RefinementCtx,
+) => {
+	// 公開投稿時（新規公開/下書きから公開）はタグ必須
+	if (!data.draft && (!data.tagIds || data.tagIds.length < TAG_CONFIG.MIN_TAGS)) {
+		ctx.addIssue({
+			code: z.ZodIssueCode.custom,
+			path: ["tagIds"],
+			message: `タグは${TAG_CONFIG.MIN_TAGS}個以上選択してください`,
+		});
+	}
+};
+
+export const createConsultationSchema = createConsultationBaseSchema;
+export const updateConsultationSchema = consultationBaseSchema.superRefine(requireTagsForPublicPost);
+
+// 後方互換
+export const consultationContentSchema = createConsultationSchema;
 
 export const adviceContentSchema = z.object({
 	body: postBodySchema,
@@ -117,7 +148,9 @@ export const consultationIdParamSchema = z.object({
 });
 
 export type ListConsultationsQuery = z.infer<typeof listConsultationsQuerySchema>;
-export type ConsultationContent = z.infer<typeof consultationContentSchema>;
+export type CreateConsultationContent = z.infer<typeof createConsultationSchema>;
+export type UpdateConsultationContent = z.infer<typeof updateConsultationSchema>;
+export type ConsultationContent = CreateConsultationContent;
 export type AdviceContent = z.infer<typeof adviceContentSchema>;
 export type UpdateDraftAdviceContentSchema = z.infer<typeof updateDraftAdviceContentSchema>;
 export type ConsultationIdParam = z.infer<typeof consultationIdParamSchema>;
