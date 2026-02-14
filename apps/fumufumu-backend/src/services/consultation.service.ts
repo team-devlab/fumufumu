@@ -1,7 +1,12 @@
 import type { ConsultationRepository } from "@/repositories/consultation.repository";
 import type { ConsultationFilters, PaginationMeta, PaginationParams } from "@/types/consultation.types";
 import type { ConsultationResponse, ConsultationListResponse, ConsultationSavedResponse, AdviceSavedResponse } from "@/types/consultation.response";
-import type { ConsultationContent, AdviceContent, UpdateDraftAdviceContentSchema } from "@/validators/consultation.validator";
+import type {
+	CreateConsultationContent,
+	UpdateConsultationContent,
+	AdviceContent,
+	UpdateDraftAdviceContentSchema,
+} from "@/validators/consultation.validator";
 import { ForbiddenError, NotFoundError } from "@/errors/AppError";
 import type { AdviceResponse } from "@/types/advice.response";
 
@@ -189,11 +194,14 @@ export class ConsultationService {
 	 * @throws {Error} 作成失敗時
 	 */
 	async createConsultation(
-		data: ConsultationContent,
+		data: CreateConsultationContent,
 		authorId: number
 	): Promise<ConsultationResponse> {
 		const createdConsultation = await this.repository.create({
-			...data,
+			title: data.title,
+			body: data.body,
+			draft: data.draft,
+			tagIds: data.tagIds ?? [],
 			authorId,
 		});
 
@@ -213,7 +221,7 @@ export class ConsultationService {
 	 */
 	async updateConsultation(
 		id: number,
-		data: ConsultationContent,
+		data: UpdateConsultationContent,
 		requestUserId: number
 	): Promise<ConsultationSavedResponse> {
     	const existingConsultation = await this.repository.findFirstById(id);
@@ -224,7 +232,9 @@ export class ConsultationService {
     	
 		const updatedConsultation = await this.repository.update({
 			id,
-			...data,
+			title: data.title,
+			body: data.body,
+			draft: data.draft,
 			authorId: existingConsultation.authorId ?? requestUserId,
 		});
 
