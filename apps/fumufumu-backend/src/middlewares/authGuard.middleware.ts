@@ -23,7 +23,10 @@ export const authGuard = async (c: AppContext, next: Next) => {
   // セッションが存在しないか、ユーザー情報がない場合は認証失敗
   const authUserId = session?.user?.id;
   if (!authUserId) {
-    return c.json({ error: 'Unauthorized. Session invalid or missing.' }, 401);
+    return c.json({ 
+      error: 'Unauthorized', 
+      message: 'Session invalid or missing.' 
+    }, 401);
   }
 
   const mapping = await db.query.authMappings.findFirst({
@@ -32,8 +35,10 @@ export const authGuard = async (c: AppContext, next: Next) => {
 
   // 業務ユーザーIDとのマッピングがない場合は認証失敗
   if (!mapping) {
-    console.error(`AuthMapping not found for authUserId: ${authUserId}`);
-    return c.json({ error: 'Unauthorized. App User ID mapping missing.' }, 401);
+    return c.json({ 
+      error: 'Unauthorized', 
+      message: 'App User ID mapping missing.' 
+    }, 401);
   }
 
   // appUserId (業務ID) をコンテキストに格納
