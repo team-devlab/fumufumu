@@ -24,6 +24,16 @@ export class DatabaseError extends AppError {
 }
 
 /**
+ * 補償処理失敗エラー（500 Internal Server Error）
+ */
+export class CompensationFailedError extends AppError {
+	constructor(message: string) {
+		super(message, 500);
+		this.name = "CompensationFailedError";
+	}
+}
+
+/**
  * リソースが見つからない（404 Not Found）
  */
 export class NotFoundError extends AppError {
@@ -62,4 +72,3 @@ export class ValidationError extends AppError {
 		this.name = "ValidationError";
 	}
 }
-

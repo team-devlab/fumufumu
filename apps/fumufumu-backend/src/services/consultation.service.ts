@@ -7,7 +7,7 @@ import type {
 	AdviceContent,
 	UpdateDraftAdviceContentSchema,
 } from "@/validators/consultation.validator";
-import { ForbiddenError, NotFoundError } from "@/errors/AppError";
+import { CompensationFailedError, ForbiddenError, NotFoundError } from "@/errors/AppError";
 import type { AdviceResponse } from "@/types/advice.response";
 
 // Repositoryのメソッドの戻り値から型を抽出
@@ -201,9 +201,21 @@ export class ConsultationService {
 			title: data.title,
 			body: data.body,
 			draft: data.draft,
-			tagIds: data.tagIds ?? [],
 			authorId,
 		});
+
+		try {
+			await this.repository.attachTags(createdConsultation.id, data.tagIds);
+		} catch (originalError) {
+			try {
+				await this.repository.deleteById(createdConsultation.id);
+			} catch {
+				throw new CompensationFailedError(
+					`相談作成のタグ処理で失敗し、補償削除にも失敗しました。対象: consultationId=${createdConsultation.id}, tagIds=[${data.tagIds.join(",")}].`,
+				);
+			}
+			throw originalError;
+		}
 
 		return this.toConsultationResponse(createdConsultation);
 	}

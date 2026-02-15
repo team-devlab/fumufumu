@@ -12,11 +12,6 @@ import { advices } from "@/db/schema/advices";
 export class ConsultationRepository {
 	constructor(private db: DbInstance) {}
 
-	private formatError(error: unknown): string {
-		if (error instanceof Error) return error.message;
-		return String(error);
-	}
-
 	private async insertConsultation(data: {
 		title: string;
 		body: string;
@@ -70,33 +65,6 @@ export class ConsultationRepository {
 		}
 
 		return author;
-	}
-
-	private async compensateDeleteConsultation(data: {
-		consultationId: number;
-		authorId: number;
-		tagIds: number[];
-		originalError: unknown;
-	}) {
-		await this.db.delete(consultations).where(eq(consultations.id, data.consultationId));
-	}
-
-	private async withCompensation<T>(data: {
-		main: () => Promise<T>;
-		compensate: (error: unknown) => Promise<void>;
-	}) {
-		try {
-			return await data.main();
-		} catch (originalError) {
-			try {
-				await data.compensate(originalError);
-			} catch (rollbackError) {
-				throw new DatabaseError(
-					`相談作成は失敗し、さらに作成済みデータの削除（補償処理）にも失敗しました。データ不整合の可能性があります。`,
-				);
-			}
-			throw originalError;
-		}
 	}
 
 	/**
@@ -210,29 +178,15 @@ export class ConsultationRepository {
 		title: string;
 		body: string;
 		draft: boolean;
-		tagIds: number[];
 		authorId: number;
 	}) {
 		try {
 			const inserted = await this.insertConsultation(data);
-			return await this.withCompensation({
-				main: async () => {
-					await this.validateAndInsertTaggings(inserted.id, data.tagIds);
-					const author = await this.findAuthorOrThrow(data.authorId);
-					return {
-						...inserted,
-						author,
-					};
-				},
-				compensate: async (originalError) => {
-					await this.compensateDeleteConsultation({
-						consultationId: inserted.id,
-						authorId: data.authorId,
-						tagIds: data.tagIds,
-						originalError,
-					});
-				},
-			});
+			const author = await this.findAuthorOrThrow(data.authorId);
+			return {
+				...inserted,
+				author,
+			};
 		} catch (error) {
 			// AppErrorの場合はそのまま再スロー
 			if (error instanceof DatabaseError || error instanceof NotFoundError || error instanceof ConflictError) {
@@ -255,6 +209,31 @@ export class ConsultationRepository {
 			// その他のデータベースエラー
 			throw new DatabaseError(`データベースエラーが発生しました: ${errorMessage}`);
 		}
+	}
+
+	async attachTags(consultationId: number, tagIds: number[]) {
+		try {
+			await this.validateAndInsertTaggings(consultationId, tagIds);
+		} catch (error) {
+			if (error instanceof DatabaseError || error instanceof NotFoundError || error instanceof ConflictError) {
+				throw error;
+			}
+
+			const errorMessage = (error as Error).message || String(error);
+			if (errorMessage.includes("UNIQUE constraint failed")) {
+				throw new ConflictError("同じタグ付けが既に存在します");
+			}
+
+			if (errorMessage.includes("FOREIGN KEY constraint failed")) {
+				throw new ConflictError("指定されたタグまたは相談が存在しません");
+			}
+
+			throw new DatabaseError(`タグ付け処理でデータベースエラーが発生しました: ${errorMessage}`);
+		}
+	}
+
+	async deleteById(id: number) {
+		await this.db.delete(consultations).where(eq(consultations.id, id));
 	}
 
 	/**
