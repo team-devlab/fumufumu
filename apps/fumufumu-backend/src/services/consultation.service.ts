@@ -1,8 +1,13 @@
 import type { ConsultationRepository } from "@/repositories/consultation.repository";
 import type { ConsultationFilters, PaginationMeta, PaginationParams } from "@/types/consultation.types";
 import type { ConsultationResponse, ConsultationListResponse, ConsultationSavedResponse, AdviceSavedResponse } from "@/types/consultation.response";
-import type { ConsultationContent, AdviceContent, UpdateDraftAdviceContentSchema } from "@/validators/consultation.validator";
-import { ForbiddenError, NotFoundError } from "@/errors/AppError";
+import type {
+	CreateConsultationContent,
+	UpdateConsultationContent,
+	AdviceContent,
+	UpdateDraftAdviceContentSchema,
+} from "@/validators/consultation.validator";
+import { CompensationFailedError, ForbiddenError, NotFoundError } from "@/errors/AppError";
 import type { AdviceResponse } from "@/types/advice.response";
 
 // Repositoryのメソッドの戻り値から型を抽出
@@ -197,13 +202,38 @@ export class ConsultationService {
 	 * @throws {Error} 作成失敗時
 	 */
 	async createConsultation(
-		data: ConsultationContent,
+		data: CreateConsultationContent,
 		authorId: number
 	): Promise<ConsultationResponse> {
 		const createdConsultation = await this.repository.create({
-			...data,
+			title: data.title,
+			body: data.body,
+			draft: data.draft,
 			authorId,
 		});
+
+		try {
+			await this.repository.attachTags(createdConsultation.id, data.tagIds);
+		} catch (originalError) {
+			try {
+				await this.repository.deleteById(createdConsultation.id);
+			} catch (rollbackError) {
+			    // NOTE: 構造化ログを出力して原因追求に必要な情報の消失を防ぐ
+                console.error("Critical: Compensation failed during consultation creation.", {
+                    event: "CONSULTATION_CREATION_COMPENSATION_FAILURE",
+                    consultationId: createdConsultation.id,
+                    authorId,
+                    tagIds: data.tagIds,
+                    originalError: originalError instanceof Error ? { message: originalError.message, stack: originalError.stack } : originalError,
+                    rollbackError: rollbackError instanceof Error ? { message: rollbackError.message, stack: rollbackError.stack } : rollbackError,
+                });
+                
+                throw new CompensationFailedError(
+                    `相談作成のタグ処理で失敗し、補償削除(ID:${createdConsultation.id})にも失敗しました。手動でのデータ削除(SQL etc.)が必要です。`
+                );
+			}
+			throw originalError;
+		}
 
 		return this.toConsultationResponse(createdConsultation, true);
 	}
@@ -221,7 +251,7 @@ export class ConsultationService {
 	 */
 	async updateConsultation(
 		id: number,
-		data: ConsultationContent,
+		data: UpdateConsultationContent,
 		requestUserId: number
 	): Promise<ConsultationSavedResponse> {
     	const existingConsultation = await this.repository.findFirstById(id);
@@ -232,7 +262,9 @@ export class ConsultationService {
     	
 		const updatedConsultation = await this.repository.update({
 			id,
-			...data,
+			title: data.title,
+			body: data.body,
+			draft: data.draft,
 			authorId: existingConsultation.authorId ?? requestUserId,
 		});
 

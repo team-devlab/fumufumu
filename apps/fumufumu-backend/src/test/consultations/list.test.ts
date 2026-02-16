@@ -9,33 +9,41 @@ import { ConsultationService } from '@/services/consultation.service';
 describe('Consultations API - List & Filtering', () => {
   let user: Awaited<ReturnType<typeof createAndLoginUser>>;
   let solvedId: number;
+  let tagId: number;
 
   beforeAll(async () => {
     // DBセットアップとテストユーザー作成
     await setupIntegrationTest();
     user = await createAndLoginUser();
+    const tagName = `list-test-tag-${Date.now()}`;
+    await env.DB.prepare('INSERT INTO tags (name) VALUES (?)').bind(tagName).run();
+    const createdTag = await env.DB.prepare('SELECT id FROM tags WHERE name = ?').bind(tagName).first() as { id: number } | null;
+    expect(createdTag?.id).toBeDefined();
+    tagId = createdTag!.id;
 
     // 公開相談（未解決）を作成
     await app.fetch(createApiRequest('/api/consultations', 'POST', {
       cookie: user.cookie,
-      body: { title: '未解決の相談', body: 'これは未解決の本文です（10文字以上）', draft: false }
+      body: { title: '未解決の相談', body: 'これは未解決の本文です（10文字以上）', draft: false, tagIds: [tagId] }
     }), env);
 
     // 解決済みにするための相談を作成
     const res = await app.fetch(createApiRequest('/api/consultations', 'POST', {
       cookie: user.cookie,
-      body: { title: '解決済みの相談', body: 'この相談はSQLで解決済みにされます。', draft: false }
+      body: { title: '解決済みの相談', body: 'この相談はSQLで解決済みにされます。', draft: false, tagIds: [tagId] }
     }), env);
+    expect(res.status).toBe(201);
 
     const data = await res.json() as any;
+    expect(data.id).toBeDefined();
     solvedId = data.id;
 
     await forceSetSolved(solvedId);
 
     // テストデータの投入（必要に応じてここで複数件作成）
     const posts = [
-      { title: '公開済み相談', body: 'これは公開済みの本文です（10文字以上）', draft: false },
-      { title: '下書き相談', body: 'これは下書きの本文です（10文字以上）', draft: true },
+      { title: '公開済み相談', body: 'これは公開済みの本文です（10文字以上）', draft: false, tagIds: [tagId] },
+      { title: '下書き相談', body: 'これは下書きの本文です（10文字以上）', draft: true, tagIds: [tagId] },
     ];
 
     for (const post of posts) {
@@ -152,7 +160,7 @@ describe('Consultations API - List & Filtering', () => {
     // 他人が下書きを作成
     const createReq = createApiRequest('/api/consultations', 'POST', {
       cookie: otherUser.cookie,
-      body: { title: '他人の下書き', body: '見えてはいけない本文内容です', draft: true },
+      body: { title: '他人の下書き', body: '見えてはいけない本文内容です', draft: true, tagIds: [tagId] },
     });
     await app.fetch(createReq, env);
 
@@ -178,7 +186,8 @@ describe('Consultations API - List & Filtering', () => {
         body: { 
             title: '非表示テスト用の相談', 
             body: 'この相談は作成後に SQL で非表示化されます。', 
-            draft: false 
+            draft: false,
+            tagIds: [tagId],
         }
     }), env);
     const createdData = await createRes.json() as any;
@@ -258,7 +267,7 @@ describe('Consultations API - List & Filtering', () => {
     const longBody = 'A'.repeat(150);
     await app.fetch(createApiRequest('/api/consultations', 'POST', {
       cookie: user.cookie,
-      body: { title: '長い本文の相談', body: longBody, draft: false },
+      body: { title: '長い本文の相談', body: longBody, draft: false, tagIds: [tagId] },
     }), env);
 
     // 一覧を取得して、body_previewが100文字に切り取られていることを確認
@@ -329,7 +338,7 @@ describe('Consultations API - List & Filtering', () => {
     // 他人が下書きを作成
     const createReq = createApiRequest('/api/consultations', 'POST', {
       cookie: otherUser.cookie,
-      body: { title: '他人の下書き', body: '見えてはいけない本文内容です', draft: true },
+      body: { title: '他人の下書き', body: '見えてはいけない本文内容です', draft: true, tagIds: [tagId] },
     });
     await app.fetch(createReq, env);
 

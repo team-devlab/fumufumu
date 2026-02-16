@@ -1,7 +1,8 @@
 import { consultations } from "@/db/schema/consultations";
 import { users } from "@/db/schema/user";
+import { consultationTaggings, tags } from "@/db/schema/tags";
 import type { DbInstance } from "@/index";
-import { eq, and, isNull, isNotNull, type SQL, sql } from "drizzle-orm";
+import { eq, and, isNull, isNotNull, inArray, type SQL, sql } from "drizzle-orm";
 import type { ConsultationFilters, PaginationParams } from "@/types/consultation.types";
 import { PAGINATION_CONFIG } from "@/types/consultation.types";
 import { DatabaseError, ConflictError, NotFoundError } from "@/errors/AppError";
@@ -10,6 +11,61 @@ import { advices } from "@/db/schema/advices";
 
 export class ConsultationRepository {
 	constructor(private db: DbInstance) {}
+
+	private async insertConsultation(data: {
+		title: string;
+		body: string;
+		draft: boolean;
+		authorId: number;
+	}) {
+		const [inserted] = await this.db
+			.insert(consultations)
+			.values({
+				title: data.title,
+				body: data.body,
+				draft: data.draft,
+				authorId: data.authorId,
+			})
+			.returning();
+
+		if (!inserted) {
+			throw new DatabaseError("相談の作成に失敗しました: insert操作がデータを返しませんでした");
+		}
+
+		return inserted;
+	}
+
+	private async validateAndInsertTaggings(consultationId: number, tagIds: number[]) {
+		const uniqueTagIds = [...new Set(tagIds)];
+		if (uniqueTagIds.length === 0) return;
+
+		const existingTags = await this.db
+			.select({ id: tags.id })
+			.from(tags)
+			.where(inArray(tags.id, uniqueTagIds));
+
+		const existingTagIdSet = new Set(existingTags.map((tag) => tag.id));
+		const missingTagIds = uniqueTagIds.filter((tagId) => !existingTagIdSet.has(tagId));
+		if (missingTagIds.length > 0) {
+			throw new ConflictError(`存在しないタグIDが含まれています: ${missingTagIds.join(", ")}`);
+		}
+
+		await this.db.insert(consultationTaggings).values(
+			uniqueTagIds.map((tagId) => ({ consultationId, tagId })),
+		);
+	}
+
+	private async findAuthorOrThrow(authorId: number) {
+		const author = await this.db.query.users.findFirst({
+			where: eq(users.id, authorId),
+		});
+
+		if (!author) {
+			throw new NotFoundError(`指定されたユーザーが見つかりません: authorId=${authorId}`);
+		}
+
+		return author;
+	}
 
 	/**
 	 * フィルタ条件からWHERE句を構築する（findAll / count 共通）
@@ -125,38 +181,15 @@ export class ConsultationRepository {
 		authorId: number;
 	}) {
 		try {
-			// 1. 相談データをINSERT
-			const [inserted] = await this.db
-				.insert(consultations)
-				.values({
-					title: data.title,
-					body: data.body,
-					draft: data.draft,
-					authorId: data.authorId,
-				})
-				.returning();
-
-			if (!inserted) {
-				throw new DatabaseError("相談の作成に失敗しました: insert操作がデータを返しませんでした");
-			}
-
-			// 2. author情報を別クエリで取得
-			const author = await this.db.query.users.findFirst({
-				where: eq(users.id, data.authorId),
-			});
-
-			if (!author) {
-				throw new NotFoundError(`指定されたユーザーが見つかりません: authorId=${data.authorId}`);
-			}
-
-			// 3. inserted データと author を合成して返す
+			const inserted = await this.insertConsultation(data);
+			const author = await this.findAuthorOrThrow(data.authorId);
 			return {
 				...inserted,
 				author,
 			};
 		} catch (error) {
 			// AppErrorの場合はそのまま再スロー
-			if (error instanceof DatabaseError || error instanceof NotFoundError) {
+			if (error instanceof DatabaseError || error instanceof NotFoundError || error instanceof ConflictError) {
 				throw error;
 			}
 
@@ -176,6 +209,31 @@ export class ConsultationRepository {
 			// その他のデータベースエラー
 			throw new DatabaseError(`データベースエラーが発生しました: ${errorMessage}`);
 		}
+	}
+
+	async attachTags(consultationId: number, tagIds: number[]) {
+		try {
+			await this.validateAndInsertTaggings(consultationId, tagIds);
+		} catch (error) {
+			if (error instanceof DatabaseError || error instanceof NotFoundError || error instanceof ConflictError) {
+				throw error;
+			}
+
+			const errorMessage = (error as Error).message || String(error);
+			if (errorMessage.includes("UNIQUE constraint failed")) {
+				throw new ConflictError("同じタグ付けが既に存在します");
+			}
+
+			if (errorMessage.includes("FOREIGN KEY constraint failed")) {
+				throw new ConflictError("指定されたタグまたは相談が存在しません");
+			}
+
+			throw new DatabaseError(`タグ付け処理でデータベースエラーが発生しました: ${errorMessage}`);
+		}
+	}
+
+	async deleteById(id: number) {
+		await this.db.delete(consultations).where(eq(consultations.id, id));
 	}
 
 	/**
