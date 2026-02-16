@@ -2,6 +2,7 @@
 
 import { useRouter } from "next/navigation";
 import { useState } from "react";
+import { ROUTES } from "@/config/routes";
 import type {
   SigninCredentials,
   SignupCredentials,
@@ -18,8 +19,7 @@ export const useAuth = () => {
     setError(null);
     try {
       await authApi.signin(credentials);
-      // ログイン成功後はメイン画面へ遷移
-      router.push("/experiment");
+      router.push(ROUTES.CONSULTATION.LIST);
     } catch (err) {
       setError(err instanceof Error ? err.message : "ログインに失敗しました");
     } finally {
@@ -32,7 +32,7 @@ export const useAuth = () => {
     setError(null);
     try {
       await authApi.signup(credentials);
-      router.push("/experiment");
+      router.push(ROUTES.CONSULTATION.LIST);
     } catch (err) {
       setError(
         err instanceof Error ? err.message : "サインアップに失敗しました",

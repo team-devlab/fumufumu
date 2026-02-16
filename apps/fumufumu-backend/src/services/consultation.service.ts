@@ -28,30 +28,38 @@ export class ConsultationService {
 	 * * @param consultation - Repository層から取得した相談データ（一覧用 or 詳細用）
 	 * @returns API レスポンス形式の相談データ
 	 */
-	private toConsultationResponse(consultation: ConsultationEntity | ConsultationEntityById): ConsultationResponse {
-		return {
-			id: consultation.id,
-			title: consultation.title,
-			body_preview: consultation.body.substring(0, ConsultationService.BODY_PREVIEW_LENGTH),
-			body: consultation.body,
-			draft: consultation.draft,
-			hidden_at: consultation.hiddenAt?.toISOString() ?? null,
-			solved_at: consultation.solvedAt?.toISOString() ?? null,
-			created_at: consultation.createdAt.toISOString(),
-			updated_at: consultation.updatedAt.toISOString(),
-			author: consultation.author ? {
-				id: consultation.author.id,
-				name: consultation.author.name,
-				disabled: consultation.author.disabled,
-			} : null,
-			
+	private toConsultationResponse(
+		consultation: ConsultationEntity | ConsultationEntityById,
+		isDetail: boolean = false
+	): ConsultationResponse {
+		const response: ConsultationResponse = {
+            id: consultation.id,
+            title: consultation.title,
+            body_preview: consultation.body.substring(0, ConsultationService.BODY_PREVIEW_LENGTH),
+            draft: consultation.draft,
+            hidden_at: consultation.hiddenAt?.toISOString() ?? null,
+            solved_at: consultation.solvedAt?.toISOString() ?? null,
+            created_at: consultation.createdAt.toISOString(),
+            updated_at: consultation.updatedAt.toISOString(),
+            author: consultation.author ? {
+                id: consultation.author.id,
+                name: consultation.author.name,
+                disabled: consultation.author.disabled,
+            } : null,
+        };
+
+        // 詳細時のみ body プロパティを追加する
+        if (isDetail) {
+            response.body = consultation.body;
 			// 【設計メモ：パフォーマンス最適化と実装コスト】
             // 1. パフォーマンス: 一覧取得APIに advices を含めるとデータ量が大きくなるため、意図的に空配列としている。
             // 2. 実装方針: 一覧用/詳細用で厳密に型を分けるとService層の変換ロジック(Mapper)が複雑化するため、
             //    あえて同一のレスポンス型定義を使用し、一覧時はここを空にする運用としている。
             //    詳細取得APIで呼び出す場合に限り、上位メソッドで正しいデータに上書きされる。
-			advices: [],
-		};
+           	response.advices = [];
+        }
+
+        return response;
 	}
 
 	private toConsultationSavedResponse(consultation: {
@@ -110,7 +118,7 @@ export class ConsultationService {
 			throw new NotFoundError(`相談が見つかりません: id=${id}`);
 		}
 
-		const baseResponse = this.toConsultationResponse(consultation);
+		const baseResponse = this.toConsultationResponse(consultation, true);
 
 		return {
 			...baseResponse,
@@ -152,7 +160,7 @@ export class ConsultationService {
 			this.repository.findAll(secureFilters, { page, limit }),
 			this.repository.count(secureFilters),
 		]);
-		const responses = consultationList.map(consultation => this.toConsultationResponse(consultation));
+		const responses = consultationList.map(consultation => this.toConsultationResponse(consultation, false));
 
 		return { 
 			data: responses,
@@ -227,7 +235,7 @@ export class ConsultationService {
 			throw originalError;
 		}
 
-		return this.toConsultationResponse(createdConsultation);
+		return this.toConsultationResponse(createdConsultation, true);
 	}
 
 	/**
