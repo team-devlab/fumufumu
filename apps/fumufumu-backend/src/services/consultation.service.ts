@@ -209,10 +209,20 @@ export class ConsultationService {
 		} catch (originalError) {
 			try {
 				await this.repository.deleteById(createdConsultation.id);
-			} catch {
-				throw new CompensationFailedError(
-					`相談作成のタグ処理で失敗し、補償削除にも失敗しました。対象: consultationId=${createdConsultation.id}, tagIds=[${data.tagIds.join(",")}].`,
-				);
+			} catch (rollbackError) {
+			    // NOTE: 構造化ログを出力して原因追求に必要な情報の消失を防ぐ
+                console.error("Critical: Compensation failed during consultation creation.", {
+                    event: "CONSULTATION_CREATION_COMPENSATION_FAILURE",
+                    consultationId: createdConsultation.id,
+                    authorId,
+                    tagIds: data.tagIds,
+                    originalError: originalError instanceof Error ? { message: originalError.message, stack: originalError.stack } : originalError,
+                    rollbackError: rollbackError instanceof Error ? { message: rollbackError.message, stack: rollbackError.stack } : rollbackError,
+                });
+                
+                throw new CompensationFailedError(
+                    `相談作成のタグ処理で失敗し、補償削除(ID:${createdConsultation.id})にも失敗しました。手動でのデータ削除(SQL etc.)が必要です。`
+                );
 			}
 			throw originalError;
 		}
