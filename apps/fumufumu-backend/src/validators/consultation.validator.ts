@@ -102,6 +102,7 @@ const createConsultationBaseSchema = z.object({
 });
 
 export const createConsultationSchema = createConsultationBaseSchema;
+// update: 公開時のみ tagIds 必須
 export const updateConsultationSchema = z.object({
 	title: consultationTitleSchema,
 	body: postBodySchema,
