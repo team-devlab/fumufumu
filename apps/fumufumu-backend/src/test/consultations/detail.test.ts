@@ -1,7 +1,7 @@
 import { env } from 'cloudflare:test';
 import { describe, it, expect, beforeAll } from 'vitest';
 import app from '../../index';
-import { setupIntegrationTest } from '../helpers/db-helper';
+import { setupIntegrationTest, forceSetHidden } from '../helpers/db-helper';
 import { createAndLoginUser } from '../helpers/auth-helper';
 import { createApiRequest } from '../helpers/request-helper';
 
@@ -175,5 +175,86 @@ describe('Consultations API - Detail (GET /:id)', () => {
     const getRes = await app.fetch(getReq, env);
 
     expect(getRes.status).toBe(404);
+  });
+
+  it('自分のhidden相談は取得できる', async () => {
+    const createReq = createApiRequest('/api/consultations', 'POST', {
+      cookie: user.cookie,
+      body: {
+        title: '自分のhidden相談',
+        body: 'これは本人だけが閲覧できるhidden相談です。',
+        draft: false,
+        tagIds: [tagId],
+      },
+    });
+
+    const createRes = await app.fetch(createReq, env);
+    expect(createRes.status).toBe(201);
+
+    const created = await createRes.json() as any;
+    await forceSetHidden(created.id);
+
+    const getReq = createApiRequest(`/api/consultations/${created.id}`, 'GET', {
+      cookie: user.cookie,
+    });
+    const getRes = await app.fetch(getReq, env);
+
+    expect(getRes.status).toBe(200);
+    const data = await getRes.json() as any;
+    expect(data.id).toBe(created.id);
+    expect(data.hidden_at).not.toBeNull();
+  });
+
+  it('【404 Not Found】他人のhidden相談は取得できない', async () => {
+    const createReq = createApiRequest('/api/consultations', 'POST', {
+      cookie: user.cookie,
+      body: {
+        title: '他人には見えないhidden相談',
+        body: 'これは他人には閲覧できないhidden相談です。',
+        draft: false,
+        tagIds: [tagId],
+      },
+    });
+
+    const createRes = await app.fetch(createReq, env);
+    expect(createRes.status).toBe(201);
+
+    const created = await createRes.json() as any;
+    await forceSetHidden(created.id);
+
+    const getReq = createApiRequest(`/api/consultations/${created.id}`, 'GET', {
+      cookie: attacker.cookie,
+    });
+    const getRes = await app.fetch(getReq, env);
+
+    expect(getRes.status).toBe(404);
+  });
+
+  it('認証なしの場合401エラーを返す', async () => {
+    const req = createApiRequest(`/api/consultations/${existingId}`, 'GET');
+    const res = await app.fetch(req, env);
+
+    expect(res.status).toBe(401);
+    const body = await res.json() as any;
+    expect(body).toHaveProperty('error');
+    expect(body).toHaveProperty('message');
+  });
+
+  it('不正なID(0/-1/abc)を指定した場合400エラーを返す', async () => {
+    const invalidIds = ['0', '-1', 'abc'];
+
+    for (const invalidId of invalidIds) {
+      const req = createApiRequest(`/api/consultations/${invalidId}`, 'GET', {
+        cookie: user.cookie,
+      });
+      const res = await app.fetch(req, env);
+
+      expect(res.status).toBe(400);
+      const body = await res.json() as any;
+      expect(body.error).toBe('ValidationError');
+      expect(body.message).toBe('入力内容に誤りがあります');
+      expect(body).not.toHaveProperty('id');
+      expect(body).not.toHaveProperty('title');
+    }
   });
 });
