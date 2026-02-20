@@ -520,9 +520,9 @@ describe('Consultations API - List & Filtering', () => {
       
       expect(body.data).toEqual([]);
       expect(res.status).toBe(200);
-			expect(body.data.length).toBe(0);
+      expect(body.data.length).toBe(0);
       expect(body.pagination.current_page).toBe(999);
-			expect(body.pagination.total_pages).toBeLessThan(999);
+      expect(body.pagination.total_pages).toBeLessThan(999);
       expect(body.pagination.has_next).toBe(false);
 
       // エラー構造が含まれていないことを確認
