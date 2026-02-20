@@ -257,4 +257,100 @@ describe('Consultations API - Detail (GET /:id)', () => {
       expect(body).not.toHaveProperty('title');
     }
   });
+
+  it('相談詳細取得時、hidden状態の回答はリストに含まれない', async () => {
+    const consultationRes = await app.fetch(createApiRequest('/api/consultations', 'POST', {
+      cookie: user.cookie,
+      body: {
+        title: 'hidden回答検証用の相談',
+        body: 'hidden回答の除外を確認するための本文です。',
+        draft: false,
+        tagIds: [tagId],
+      },
+    }), env);
+    expect(consultationRes.status).toBe(201);
+    const consultation = await consultationRes.json() as any;
+
+    const visibleAdviceBody = '表示される公開回答です。10文字以上必要です。';
+    const hiddenAdviceBody = '非表示にする公開回答です。10文字以上必要です。';
+
+    const visibleAdviceRes = await app.fetch(createApiRequest(`/api/consultations/${consultation.id}/advice`, 'POST', {
+      cookie: user.cookie,
+      body: { body: visibleAdviceBody, draft: false },
+    }), env);
+    expect(visibleAdviceRes.status).toBe(201);
+
+    const hiddenAdviceRes = await app.fetch(createApiRequest(`/api/consultations/${consultation.id}/advice`, 'POST', {
+      cookie: user.cookie,
+      body: { body: hiddenAdviceBody, draft: false },
+    }), env);
+    expect(hiddenAdviceRes.status).toBe(201);
+    const hiddenAdvice = await hiddenAdviceRes.json() as any;
+
+    await env.DB
+      .prepare("UPDATE advices SET hidden_at = (cast(unixepoch('subsecond') * 1000 as integer)) WHERE id = ?")
+      .bind(hiddenAdvice.id)
+      .run();
+
+    const detailRes = await app.fetch(createApiRequest(`/api/consultations/${consultation.id}`, 'GET', {
+      cookie: user.cookie,
+    }), env);
+    expect(detailRes.status).toBe(200);
+    const detail = await detailRes.json() as any;
+
+    const visibleAdvice = detail.advices.find((a: any) => a.body === visibleAdviceBody);
+    const hiddenAdviceInResponse = detail.advices.find((a: any) => a.body === hiddenAdviceBody);
+    expect(visibleAdvice).toBeDefined();
+    expect(hiddenAdviceInResponse).toBeUndefined();
+  });
+
+  it('相談詳細の回答はcreated_atの昇順で返る', async () => {
+    const consultationRes = await app.fetch(createApiRequest('/api/consultations', 'POST', {
+      cookie: user.cookie,
+      body: {
+        title: '回答順序検証用の相談',
+        body: '回答の並び順を確認するための本文です。',
+        draft: false,
+        tagIds: [tagId],
+      },
+    }), env);
+    expect(consultationRes.status).toBe(201);
+    const consultation = await consultationRes.json() as any;
+
+    const newerBody = '新しい時刻を持つ回答です。10文字以上必要です。';
+    const olderBody = '古い時刻を持つ回答です。10文字以上必要です。';
+
+    const newerAdviceRes = await app.fetch(createApiRequest(`/api/consultations/${consultation.id}/advice`, 'POST', {
+      cookie: user.cookie,
+      body: { body: newerBody, draft: false },
+    }), env);
+    expect(newerAdviceRes.status).toBe(201);
+    const newerAdvice = await newerAdviceRes.json() as any;
+
+    const olderAdviceRes = await app.fetch(createApiRequest(`/api/consultations/${consultation.id}/advice`, 'POST', {
+      cookie: user.cookie,
+      body: { body: olderBody, draft: false },
+    }), env);
+    expect(olderAdviceRes.status).toBe(201);
+    const olderAdvice = await olderAdviceRes.json() as any;
+
+    const now = Date.now();
+    const olderTs = now - 100000;
+    const newerTs = now - 50000;
+    await env.DB.prepare('UPDATE advices SET created_at = ? WHERE id = ?').bind(olderTs, olderAdvice.id).run();
+    await env.DB.prepare('UPDATE advices SET created_at = ? WHERE id = ?').bind(newerTs, newerAdvice.id).run();
+
+    const detailRes = await app.fetch(createApiRequest(`/api/consultations/${consultation.id}`, 'GET', {
+      cookie: user.cookie,
+    }), env);
+    expect(detailRes.status).toBe(200);
+    const detail = await detailRes.json() as any;
+
+    const adviceBodies = detail.advices.map((a: any) => a.body);
+    const olderIndex = adviceBodies.indexOf(olderBody);
+    const newerIndex = adviceBodies.indexOf(newerBody);
+    expect(olderIndex).toBeGreaterThanOrEqual(0);
+    expect(newerIndex).toBeGreaterThanOrEqual(0);
+    expect(olderIndex).toBeLessThan(newerIndex);
+  });
 });
