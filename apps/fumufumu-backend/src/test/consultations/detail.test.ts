@@ -1,0 +1,179 @@
+import { env } from 'cloudflare:test';
+import { describe, it, expect, beforeAll } from 'vitest';
+import app from '../../index';
+import { setupIntegrationTest } from '../helpers/db-helper';
+import { createAndLoginUser } from '../helpers/auth-helper';
+import { createApiRequest } from '../helpers/request-helper';
+
+describe('Consultations API - Detail (GET /:id)', () => {
+  let user: Awaited<ReturnType<typeof createAndLoginUser>>;
+  let attacker: Awaited<ReturnType<typeof createAndLoginUser>>;
+  let tagId: number;
+  let existingId: number;
+
+  const testBody = 'テスト本文です。10文字以上にします。';
+
+  beforeAll(async () => {
+    await setupIntegrationTest();
+
+    user = await createAndLoginUser();
+    attacker = await createAndLoginUser({ name: 'Attacker' });
+
+    const tagName = `detail-test-tag-${Date.now()}`;
+    await env.DB.prepare('INSERT INTO tags (name) VALUES (?)').bind(tagName).run();
+
+    const createdTag = await env.DB
+      .prepare('SELECT id FROM tags WHERE name = ?')
+      .bind(tagName)
+      .first() as { id: number } | null;
+
+    expect(createdTag?.id).toBeDefined();
+    tagId = createdTag!.id;
+
+    const createRes = await app.fetch(createApiRequest('/api/consultations', 'POST', {
+      cookie: user.cookie,
+      body: {
+        title: 'テスト相談',
+        body: testBody,
+        draft: false,
+        tagIds: [tagId],
+      },
+    }), env);
+
+    expect(createRes.status).toBe(201);
+    const created = await createRes.json() as any;
+    existingId = created.id;
+  });
+
+  it('相談単体取得: 存在するIDの相談を取得できる（bodyとadvicesが含まれる）', async () => {
+    const req = createApiRequest(`/api/consultations/${existingId}`, 'GET', {
+      cookie: user.cookie,
+    });
+
+    const res = await app.fetch(req, env);
+    expect(res.status).toBe(200);
+
+    const data = await res.json() as any;
+    expect(data).toHaveProperty('id');
+    expect(data.id).toBe(existingId);
+    expect(data).toHaveProperty('title');
+    expect(data.title).toBe('テスト相談');
+
+    expect(data).toHaveProperty('body');
+    expect(data.body).toBe(testBody);
+
+    expect(data).toHaveProperty('body_preview');
+    expect(data.body_preview).toBe(testBody);
+    expect(data).toHaveProperty('draft');
+    expect(data).toHaveProperty('hidden_at');
+    expect(data.hidden_at).toBeNull();
+    expect(data).toHaveProperty('solved_at');
+    expect(data.solved_at).toBeNull();
+    expect(data).toHaveProperty('created_at');
+    expect(data).toHaveProperty('updated_at');
+    expect(data).toHaveProperty('author');
+    expect(data.author).toHaveProperty('name');
+    expect(data.author).toHaveProperty('disabled');
+
+    expect(data).toHaveProperty('advices');
+    expect(Array.isArray(data.advices)).toBe(true);
+    expect(data.advices.length).toBe(0);
+  });
+
+  it('【404 Not Found】存在しないIDを取得しようとするとエラーになる', async () => {
+    const req = createApiRequest('/api/consultations/999999', 'GET', {
+      cookie: user.cookie,
+    });
+
+    const res = await app.fetch(req, env);
+    expect(res.status).toBe(404);
+
+    const data = await res.json() as any;
+    expect(data.error).toBe('NotFoundError');
+    expect(data.message).toBe('相談が見つかりません: id=999999');
+  });
+
+  it('相談詳細取得時、下書き状態の回答はリストに含まれない', async () => {
+    const publicAdviceBody = '公開回答のテストです。10文字以上必要です。';
+    const draftAdviceBody = '下書き回答のテストです。10文字以上必要です。';
+
+    const createPublicAdviceReq = createApiRequest(`/api/consultations/${existingId}/advice`, 'POST', {
+      cookie: user.cookie,
+      body: { body: publicAdviceBody, draft: false },
+    });
+    const publicRes = await app.fetch(createPublicAdviceReq, env);
+    expect(publicRes.status).toBe(201);
+
+    const createDraftAdviceReq = createApiRequest(`/api/consultations/${existingId}/advice`, 'POST', {
+      cookie: user.cookie,
+      body: { body: draftAdviceBody, draft: true },
+    });
+    const draftRes = await app.fetch(createDraftAdviceReq, env);
+    expect(draftRes.status).toBe(201);
+
+    const detailReq = createApiRequest(`/api/consultations/${existingId}`, 'GET', {
+      cookie: user.cookie,
+    });
+    const detailRes = await app.fetch(detailReq, env);
+    expect(detailRes.status).toBe(200);
+
+    const data = await detailRes.json() as any;
+
+    // 検証: 公開回答は含まれるが、下書き回答は含まれないはず
+    const publicAdvice = data.advices.find((a: any) => a.body === publicAdviceBody);
+    const draftAdvice = data.advices.find((a: any) => a.body === draftAdviceBody);
+    expect(publicAdvice).toBeDefined();
+    expect(draftAdvice).toBeUndefined();
+  });
+
+  it('自分の下書き相談は取得できる', async () => {
+    const createReq = createApiRequest('/api/consultations', 'POST', {
+      cookie: user.cookie,
+      body: {
+        title: '自分だけが見れる下書き',
+        body: 'これは下書きです。他人には見えません。',
+        draft: true,
+        tagIds: [tagId],
+      },
+    });
+
+    const createRes = await app.fetch(createReq, env);
+    expect(createRes.status).toBe(201);
+
+    const created = await createRes.json() as any;
+    const draftId = created.id;
+
+    const getReq = createApiRequest(`/api/consultations/${draftId}`, 'GET', {
+      cookie: user.cookie,
+    });
+    const getRes = await app.fetch(getReq, env);
+
+    expect(getRes.status).toBe(200);
+    const data = await getRes.json() as any;
+    expect(data.id).toBe(draftId);
+    expect(data.title).toBe('自分だけが見れる下書き');
+  });
+
+  it('【404 Not Found】他人の下書き相談は取得できない', async () => {
+    const createReq = createApiRequest('/api/consultations', 'POST', {
+      cookie: user.cookie,
+      body: {
+        title: '秘密の下書き',
+        body: 'これは攻撃者には見えてはいけない内容です。',
+        draft: true,
+        tagIds: [tagId],
+      },
+    });
+
+    const createRes = await app.fetch(createReq, env);
+    expect(createRes.status).toBe(201);
+    const created = await createRes.json() as any;
+
+    const getReq = createApiRequest(`/api/consultations/${created.id}`, 'GET', {
+      cookie: attacker.cookie,
+    });
+    const getRes = await app.fetch(getReq, env);
+
+    expect(getRes.status).toBe(404);
+  });
+});
