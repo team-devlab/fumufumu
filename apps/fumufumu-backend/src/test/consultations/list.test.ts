@@ -331,6 +331,98 @@ describe('Consultations API - List & Filtering', () => {
     expect(body.pagination.per_page).toBe(1);
   });
 
+  describe('Pagination Basics', () => {
+    beforeAll(async () => {
+      // ページネーション検証用に公開相談を追加投入
+      for (let i = 1; i <= 30; i++) {
+        const createRes = await app.fetch(createApiRequest('/api/consultations', 'POST', {
+          cookie: user.cookie,
+          body: {
+            title: `ページネーション検証用相談 ${i}`,
+            body: `これはページネーション検証用相談${i}の本文です。`,
+            draft: false,
+            tagIds: [tagId],
+          },
+        }), env);
+        expect(createRes.status).toBe(201);
+      }
+    });
+
+    it('デフォルト: page=1, limit=20 で取得できる', async () => {
+      const req = createApiRequest('/api/consultations', 'GET', {
+        cookie: user.cookie,
+      });
+      const res = await app.fetch(req, env);
+      expect(res.status).toBe(200);
+
+      const body = await res.json() as any;
+      expect(body.data.length).toBe(20);
+      expect(body.pagination.current_page).toBe(1);
+      expect(body.pagination.per_page).toBe(20);
+
+      // レスポンス構造の確認（ページネーション対応）
+			expect(body).toHaveProperty('pagination');
+			expect(body).toHaveProperty('data');
+			expect(body.pagination).toHaveProperty('total_items');
+			expect(body.pagination).toHaveProperty('current_page');
+			expect(body.pagination).toHaveProperty('per_page');
+			expect(body.pagination).toHaveProperty('total_pages');
+			expect(body.pagination).toHaveProperty('has_next');
+			expect(body.pagination).toHaveProperty('has_prev');
+			expect(Array.isArray(body.data)).toBe(true);
+
+      // 既存データも混在するため、厳密値ではなく下限で検証
+      expect(body.pagination.total_items).toBeGreaterThanOrEqual(30);
+      expect(body.pagination.total_pages).toBeGreaterThanOrEqual(2);
+      expect(body.pagination.has_next).toBe(true);
+      expect(body.pagination.has_prev).toBe(false);
+
+      // データの中身を確認
+			if (body.data.length > 0) {
+				const item = body.data[0];
+				// 一覧APIでは基本情報のみ（body、advicesは含まれない）
+				expect(item).toHaveProperty('id');
+				expect(item).toHaveProperty('title');
+				expect(item).toHaveProperty('body_preview');
+				expect(item).toHaveProperty('draft');
+				expect(item).toHaveProperty('created_at');
+				expect(item).toHaveProperty('updated_at');
+				expect(item).toHaveProperty('author');
+				
+				// bodyとadvicesは含まれないことを確認
+				expect(item).not.toHaveProperty('body');
+				expect(item).not.toHaveProperty('advices');
+			}
+    });
+
+    it('page=2 で2ページ目を取得できる', async () => {
+      const req = createApiRequest('/api/consultations', 'GET', {
+        cookie: user.cookie,
+        queryParams: { page: 2 },
+      });
+      const res = await app.fetch(req, env);
+      expect(res.status).toBe(200);
+
+      const body = await res.json() as any;
+      expect(body.data.length).toBeGreaterThan(0);
+      expect(body.pagination.current_page).toBe(2);
+      expect(body.pagination.has_prev).toBe(true);
+    });
+
+    it('limit=10 で件数を指定できる', async () => {
+      const req = createApiRequest('/api/consultations', 'GET', {
+        cookie: user.cookie,
+        queryParams: { limit: 10 },
+      });
+      const res = await app.fetch(req, env);
+      expect(res.status).toBe(200);
+
+      const body = await res.json() as any;
+      expect(body.data.length).toBe(10);
+      expect(body.pagination.per_page).toBe(10);
+    });
+  });
+
   it('セキュリティ: 他人の下書きは一覧に含まれない', async () => {
     // 別のユーザーを作成
     const otherUser = await createAndLoginUser({ name: 'Other User' });
@@ -428,7 +520,9 @@ describe('Consultations API - List & Filtering', () => {
       
       expect(body.data).toEqual([]);
       expect(res.status).toBe(200);
+      expect(body.data.length).toBe(0);
       expect(body.pagination.current_page).toBe(999);
+      expect(body.pagination.total_pages).toBeLessThan(999);
       expect(body.pagination.has_next).toBe(false);
 
       // エラー構造が含まれていないことを確認
