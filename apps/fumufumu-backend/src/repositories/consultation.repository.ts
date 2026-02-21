@@ -67,6 +67,22 @@ export class ConsultationRepository {
 		return author;
 	}
 
+	private async findVisibleConsultationOrThrow(consultationId: number) {
+		const consultation = await this.db.query.consultations.findFirst({
+			columns: { id: true },
+			where: and(
+				eq(consultations.id, consultationId),
+				isNull(consultations.hiddenAt),
+			),
+		});
+
+		if (!consultation) {
+			throw new NotFoundError(`指定された相談(ID:${consultationId})は見つかりませんでした`);
+		}
+
+		return consultation;
+	}
+
 	/**
 	 * フィルタ条件からWHERE句を構築する（findAll / count 共通）
 	 */
@@ -286,14 +302,18 @@ export class ConsultationRepository {
 	 * @returns 作成された相談回答データ（authorリレーション含む）
 	 * @throws {Error} データベースエラー、作成失敗時
 	 */
-	async createAdvice(data: {
-		consultationId: number;
-		authorId: number;
-		body: string;
-		draft: boolean;
-	}) {
+		async createAdvice(data: {
+			consultationId: number;
+			authorId: number;
+			body: string;
+			draft: boolean;
+		}) {
 		try {
-		  const insertQuery = this.db
+			if (!data.draft) {
+				await this.findVisibleConsultationOrThrow(data.consultationId);
+			}
+
+			const insertQuery = this.db
 				.insert(advices)
 				.values({
 					body: data.body,
@@ -302,43 +322,43 @@ export class ConsultationRepository {
 					consultationId: data.consultationId,
 				})
 				.returning();
-				
-      let insertedAdvice;
-      
-      if (data.draft) {
-        // 下書きの時は親の相談更新日時は更新しない
-        [insertedAdvice] = await insertQuery;
-      } else {
-        const [insertResult, updateResult] = await this.db.batch([
+
+			let insertedAdvice;
+
+			if (data.draft) {
+				// 下書きの時は親の相談更新日時は更新しない
+				[insertedAdvice] = await insertQuery;
+			} else {
+				const [insertResult, updateResult] = await this.db.batch([
 					insertQuery, // 定義済みの変数を再利用
 					this.db
 						.update(consultations)
 						.set({ updatedAt: new Date() })
 						.where(and(eq(consultations.id, data.consultationId), isNull(consultations.hiddenAt)))
 						.returning({ id: consultations.id }),
-		    ]);
-		    
-		    // 親が見つからない（または非表示）のチェック
-		    if (updateResult.length === 0) {
-				throw new NotFoundError(`指定された相談(ID:${data.consultationId})は見つかりませんでした`);
-			}
-			insertedAdvice = insertResult[0];
-		}
-		
-		if (!insertedAdvice) {
-			throw new DatabaseError("相談回答の作成に失敗しました");
-		}
-		
-		const author = await this.db.query.users.findFirst({
-      where: eq(users.id, data.authorId),
-    });
-		if (!author) {
-			throw new NotFoundError("指定されたユーザーが見つかりません");
-		}
+				]);
 
-		return {
-			...insertedAdvice,
-			author,
+				// 親が見つからない（または非表示）のチェック
+				if (updateResult.length === 0) {
+					throw new NotFoundError(`指定された相談(ID:${data.consultationId})は見つかりませんでした`);
+				}
+				insertedAdvice = insertResult[0];
+			}
+
+			if (!insertedAdvice) {
+				throw new DatabaseError("相談回答の作成に失敗しました");
+			}
+
+			const author = await this.db.query.users.findFirst({
+				where: eq(users.id, data.authorId),
+			});
+			if (!author) {
+				throw new NotFoundError("指定されたユーザーが見つかりません");
+			}
+
+			return {
+				...insertedAdvice,
+				author,
 			};
 		} catch (error) {
 			const errorString = error instanceof Error
