@@ -22,6 +22,17 @@ export class ConsultationService {
 	private static readonly BODY_PREVIEW_LENGTH = 100;
 
 	constructor(private repository: ConsultationRepository) {}
+
+	private static toLogError(error: unknown) {
+		if (error instanceof Error) {
+			return {
+				name: error.name,
+				message: error.message,
+				stack: error.stack,
+			};
+		}
+		return { value: error };
+	}
  
 	/**
 	 * 相談データをレスポンス形式に変換する
@@ -221,6 +232,14 @@ export class ConsultationService {
 				await this.repository.attachTags(createdConsultation.id, data.tagIds);
 			}
 		} catch (originalError) {
+			console.error("Consultation tag attach failed.", {
+				event: "CONSULTATION_CREATION_TAG_ATTACH_FAILED",
+				consultationId: createdConsultation.id,
+				authorId,
+				tagIds: data.tagIds,
+				error: ConsultationService.toLogError(originalError),
+			});
+
 			try {
 				await this.repository.deleteById(createdConsultation.id);
 			} catch (rollbackError) {
@@ -230,8 +249,8 @@ export class ConsultationService {
                     consultationId: createdConsultation.id,
                     authorId,
                     tagIds: data.tagIds,
-                    originalError: originalError instanceof Error ? { message: originalError.message, stack: originalError.stack } : originalError,
-                    rollbackError: rollbackError instanceof Error ? { message: rollbackError.message, stack: rollbackError.stack } : rollbackError,
+                    originalError: ConsultationService.toLogError(originalError),
+                    rollbackError: ConsultationService.toLogError(rollbackError),
                 });
                 
                 throw new CompensationFailedError(
@@ -279,7 +298,19 @@ export class ConsultationService {
 		});
 
 		if (data.tagIds !== undefined) {
-			await this.repository.replaceTags(id, data.tagIds);
+			try {
+				await this.repository.replaceTags(id, data.tagIds);
+			} catch (error) {
+				console.error("Consultation tag replace failed.", {
+					event: "CONSULTATION_UPDATE_TAG_REPLACE_FAILED",
+					consultationId: id,
+					requestUserId,
+					draft: data.draft,
+					tagIds: data.tagIds,
+					error: ConsultationService.toLogError(error),
+				});
+				throw error;
+			}
 		}
 
 		return this.toConsultationSavedResponse({
