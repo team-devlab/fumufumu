@@ -7,7 +7,7 @@ import type {
 	AdviceContent,
 	UpdateDraftAdviceContentSchema,
 } from "@/validators/consultation.validator";
-import { CompensationFailedError, ForbiddenError, NotFoundError } from "@/errors/AppError";
+import { CompensationFailedError, ForbiddenError, NotFoundError, ValidationError } from "@/errors/AppError";
 import type { AdviceResponse } from "@/types/advice.response";
 
 // Repositoryのメソッドの戻り値から型を抽出
@@ -205,6 +205,10 @@ export class ConsultationService {
 		data: CreateConsultationContent,
 		authorId: number
 	): Promise<ConsultationResponse> {
+		if (!data.draft && (!data.tagIds || data.tagIds.length === 0)) {
+			throw new ValidationError("公開時はタグを1つ以上選択してください。");
+		}
+
 		const createdConsultation = await this.repository.create({
 			title: data.title,
 			body: data.body,
@@ -213,7 +217,9 @@ export class ConsultationService {
 		});
 
 		try {
-			await this.repository.attachTags(createdConsultation.id, data.tagIds);
+			if (data.tagIds && data.tagIds.length > 0) {
+				await this.repository.attachTags(createdConsultation.id, data.tagIds);
+			}
 		} catch (originalError) {
 			try {
 				await this.repository.deleteById(createdConsultation.id);
@@ -259,6 +265,10 @@ export class ConsultationService {
     	if (existingConsultation.authorId !== requestUserId) {
     		throw new ForbiddenError('相談の所有者ではないため、更新できません。');
     	}
+
+		if (!data.draft && (!data.tagIds || data.tagIds.length === 0)) {
+			throw new ValidationError("公開時はタグを1つ以上選択してください。");
+		}
     	
 		const updatedConsultation = await this.repository.update({
 			id,
@@ -267,6 +277,10 @@ export class ConsultationService {
 			draft: data.draft,
 			authorId: existingConsultation.authorId ?? requestUserId,
 		});
+
+		if (data.tagIds !== undefined) {
+			await this.repository.replaceTags(id, data.tagIds);
+		}
 
 		return this.toConsultationSavedResponse({
 			id: updatedConsultation.id,

@@ -191,6 +191,27 @@ describe('Consultations API Integration Tests', () => {
 			expect(data.draft).toBe(true);
 		});
 
+		it('下書き作成: draft=true かつ tagIds未指定でも作成できる', async () => {
+			const req = new Request('http://localhost/api/consultations', {
+				method: 'POST',
+				headers: {
+					'Content-Type': 'application/json',
+					'Cookie': sessionCookie!,
+				},
+				body: JSON.stringify({
+					title: '下書き相談（タグ未指定）',
+					body: '下書き保存時はタグ任意の挙動確認です。',
+					draft: true,
+				}),
+			});
+
+			const res = await app.fetch(req, env);
+			expect(res.status).toBe(201);
+
+			const data = await res.json() as any;
+			expect(data.draft).toBe(true);
+		});
+
 		it('draftを指定しない場合、デフォルトでfalseになる', async () => {
 			const req = new Request('http://localhost/api/consultations', {
 				method: 'POST',
@@ -377,6 +398,24 @@ describe('Consultations API Integration Tests', () => {
 					body: 'tagIdsが空配列です。',
 					draft: false,
 					tagIds: [],
+				}),
+			});
+
+			const res = await app.fetch(req, env);
+			expect(res.status).toBe(400);
+		});
+
+		it('公開作成: draft=false かつ tagIds未指定の場合は400エラーを返す', async () => {
+			const req = new Request('http://localhost/api/consultations', {
+				method: 'POST',
+				headers: {
+					'Content-Type': 'application/json',
+					'Cookie': sessionCookie!,
+				},
+				body: JSON.stringify({
+					title: '公開相談（タグ未指定）',
+					body: '公開時にタグ未指定のバリデーション確認です。',
+					draft: false,
 				}),
 			});
 

@@ -43,6 +43,10 @@ const postBodySchema = z
 	.max(10000, "本文は10,000文字以内で入力してください");
 
 const consultationDraftSchema = z.boolean().optional().default(false);
+const consultationTagIdsSchema = z
+	.array(z.coerce.number().int().positive("タグIDは正の整数を指定してください"))
+	.max(TAG_CONFIG.MAX_TAGS, `タグは${TAG_CONFIG.MAX_TAGS}個以下で選択してください`)
+	.optional();
 
 /**
  * 相談一覧取得のクエリパラメータバリデーションスキーマ
@@ -95,18 +99,34 @@ const createConsultationBaseSchema = z.object({
 	title: consultationTitleSchema,
 	body: postBodySchema,
 	draft: consultationDraftSchema,
-	tagIds: z
-		.array(z.coerce.number().int().positive("タグIDは正の整数を指定してください"))
-		.min(TAG_CONFIG.MIN_TAGS, `タグは${TAG_CONFIG.MIN_TAGS}個以上選択してください`)
-		.max(TAG_CONFIG.MAX_TAGS, `タグは${TAG_CONFIG.MAX_TAGS}個以下で選択してください`),
+	tagIds: consultationTagIdsSchema,
 });
 
-export const createConsultationSchema = createConsultationBaseSchema;
-// update: 公開時のみ tagIds 必須
-export const updateConsultationSchema = z.object({
+export const createConsultationSchema = createConsultationBaseSchema.superRefine((data, ctx) => {
+	if (!data.draft && (!data.tagIds || data.tagIds.length < TAG_CONFIG.MIN_TAGS)) {
+		ctx.addIssue({
+			code: z.ZodIssueCode.custom,
+			path: ["tagIds"],
+			message: `タグは${TAG_CONFIG.MIN_TAGS}個以上選択してください`,
+		});
+	}
+});
+
+const updateConsultationBaseSchema = z.object({
 	title: consultationTitleSchema,
 	body: postBodySchema,
 	draft: consultationDraftSchema,
+	tagIds: consultationTagIdsSchema,
+});
+
+export const updateConsultationSchema = updateConsultationBaseSchema.superRefine((data, ctx) => {
+	if (!data.draft && (!data.tagIds || data.tagIds.length < TAG_CONFIG.MIN_TAGS)) {
+		ctx.addIssue({
+			code: z.ZodIssueCode.custom,
+			path: ["tagIds"],
+			message: `タグは${TAG_CONFIG.MIN_TAGS}個以上選択してください`,
+		});
+	}
 });
 
 export const consultationContentSchema = createConsultationSchema;

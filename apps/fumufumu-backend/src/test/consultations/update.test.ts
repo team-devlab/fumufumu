@@ -73,6 +73,7 @@ describe('Consultations API - Update (PUT /:id)', () => {
         title: '公開タイトル',
         body: '公開用の本文です。10文字以上あります。',
         draft: false,
+        tagIds: [tagId],
       },
     });
     const res = await app.fetch(req, env);
@@ -83,7 +84,35 @@ describe('Consultations API - Update (PUT /:id)', () => {
     expect(data.draft).toBe(false);
   });
 
-  it('draft未指定で更新した場合、false（公開）として扱われる', async () => {
+  it('下書き状態から公開更新時、tagIds未指定なら400エラーを返す', async () => {
+    const createRes = await app.fetch(createApiRequest('/api/consultations', 'POST', {
+      cookie: user.cookie,
+      body: {
+        title: '公開時タグ未指定確認用',
+        body: '公開時タグ未指定確認用の本文です。10文字以上あります。',
+        draft: true,
+        tagIds: [tagId],
+      },
+    }), env);
+    expect(createRes.status).toBe(201);
+    const created = await createRes.json() as any;
+
+    const req = createApiRequest(`/api/consultations/${created.id}`, 'PUT', {
+      cookie: user.cookie,
+      body: {
+        title: '公開時タグ未指定',
+        body: '公開に切り替えるがタグを送らないケースです。',
+        draft: false,
+      },
+    });
+    const res = await app.fetch(req, env);
+    expect(res.status).toBe(400);
+
+    const body = await res.json() as any;
+    expect(body.error).toBe('ValidationError');
+  });
+
+  it('draft未指定で更新した場合、false（公開）として扱われ、tagIds未指定のため400エラーを返す', async () => {
     const createRes = await app.fetch(createApiRequest('/api/consultations', 'POST', {
       cookie: user.cookie,
       body: {
@@ -104,12 +133,12 @@ describe('Consultations API - Update (PUT /:id)', () => {
       },
     });
     const res = await app.fetch(req, env);
-    expect(res.status).toBe(200);
+    expect(res.status).toBe(400);
 
     const data = await res.json() as any;
-    expect(data.id).toBe(created.id);
-    expect(data.draft).toBe(false);
-    expect(data.updated_at).toBeDefined();
+    expect(data.error).toBe('ValidationError');
+    expect(data).not.toHaveProperty('id');
+    expect(data).not.toHaveProperty('draft');
   });
 
   it('認証なしの場合401エラーを返す', async () => {

@@ -248,6 +248,50 @@ export class ConsultationRepository {
 		}
 	}
 
+	async replaceTags(consultationId: number, tagIds: number[]) {
+		try {
+			// 入れ替え前にタグ存在チェックを先に実施して、無効IDで既存タグを消さない
+			const uniqueTagIds = [...new Set(tagIds)];
+			if (uniqueTagIds.length > 0) {
+				const existingTags = await this.db
+					.select({ id: tags.id })
+					.from(tags)
+					.where(inArray(tags.id, uniqueTagIds));
+
+				const existingTagIdSet = new Set(existingTags.map((tag) => tag.id));
+				const missingTagIds = uniqueTagIds.filter((tagId) => !existingTagIdSet.has(tagId));
+				if (missingTagIds.length > 0) {
+					throw new ConflictError(`存在しないタグIDが含まれています: ${missingTagIds.join(", ")}`);
+				}
+			}
+
+			await this.db
+				.delete(consultationTaggings)
+				.where(eq(consultationTaggings.consultationId, consultationId));
+
+			if (uniqueTagIds.length > 0) {
+				await this.db.insert(consultationTaggings).values(
+					uniqueTagIds.map((tagId) => ({ consultationId, tagId })),
+				);
+			}
+		} catch (error) {
+			if (error instanceof DatabaseError || error instanceof ConflictError) {
+				throw error;
+			}
+
+			const errorMessage = (error as Error).message || String(error);
+			if (errorMessage.includes("UNIQUE constraint failed")) {
+				throw new ConflictError("同じタグ付けが既に存在します");
+			}
+
+			if (errorMessage.includes("FOREIGN KEY constraint failed")) {
+				throw new ConflictError("指定されたタグまたは相談が存在しません");
+			}
+
+			throw new DatabaseError(`タグ更新処理でデータベースエラーが発生しました: ${errorMessage}`);
+		}
+	}
+
 	async deleteById(id: number) {
 		await this.db.delete(consultations).where(eq(consultations.id, id));
 	}
