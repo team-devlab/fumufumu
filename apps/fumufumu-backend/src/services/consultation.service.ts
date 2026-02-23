@@ -7,8 +7,12 @@ import type {
 	AdviceContent,
 	UpdateDraftAdviceContentSchema,
 } from "@/validators/consultation.validator";
-import { CompensationFailedError, ForbiddenError, NotFoundError } from "@/errors/AppError";
+import { CompensationFailedError, ForbiddenError, NotFoundError, ValidationError } from "@/errors/AppError";
 import type { AdviceResponse } from "@/types/advice.response";
+import {
+	CONSULTATION_TAG_RULE_MESSAGES,
+	getConsultationTagRuleError,
+} from "@/rules/consultation-tag.rule";
 
 // Repositoryのメソッドの戻り値から型を抽出
 type ConsultationEntity = Awaited<ReturnType<ConsultationRepository["findAll"]>>[number];
@@ -22,6 +26,17 @@ export class ConsultationService {
 	private static readonly BODY_PREVIEW_LENGTH = 100;
 
 	constructor(private repository: ConsultationRepository) {}
+
+	private static toLogError(error: unknown) {
+		if (error instanceof Error) {
+			return {
+				name: error.name,
+				message: error.message,
+				stack: error.stack,
+			};
+		}
+		return { value: error };
+	}
  
 	/**
 	 * 相談データをレスポンス形式に変換する
@@ -205,6 +220,15 @@ export class ConsultationService {
 		data: CreateConsultationContent,
 		authorId: number
 	): Promise<ConsultationResponse> {
+		const createRuleError = getConsultationTagRuleError(data.draft, data.tagIds);
+		if (createRuleError) {
+			throw new ValidationError(CONSULTATION_TAG_RULE_MESSAGES[createRuleError]);
+		}
+
+		if (data.tagIds?.length) {
+			await this.repository.validateTagIdsExist(data.tagIds);
+		}
+
 		const createdConsultation = await this.repository.create({
 			title: data.title,
 			body: data.body,
@@ -213,8 +237,18 @@ export class ConsultationService {
 		});
 
 		try {
-			await this.repository.attachTags(createdConsultation.id, data.tagIds);
+			if (data.tagIds && data.tagIds.length > 0) {
+				await this.repository.attachTags(createdConsultation.id, data.tagIds);
+			}
 		} catch (originalError) {
+			console.error("Consultation tag attach failed.", {
+				event: "CONSULTATION_CREATION_TAG_ATTACH_FAILED",
+				consultationId: createdConsultation.id,
+				authorId,
+				tagIds: data.tagIds,
+				error: ConsultationService.toLogError(originalError),
+			});
+
 			try {
 				await this.repository.deleteById(createdConsultation.id);
 			} catch (rollbackError) {
@@ -224,8 +258,8 @@ export class ConsultationService {
                     consultationId: createdConsultation.id,
                     authorId,
                     tagIds: data.tagIds,
-                    originalError: originalError instanceof Error ? { message: originalError.message, stack: originalError.stack } : originalError,
-                    rollbackError: rollbackError instanceof Error ? { message: rollbackError.message, stack: rollbackError.stack } : rollbackError,
+                    originalError: ConsultationService.toLogError(originalError),
+                    rollbackError: ConsultationService.toLogError(rollbackError),
                 });
                 
                 throw new CompensationFailedError(
@@ -259,6 +293,11 @@ export class ConsultationService {
     	if (existingConsultation.authorId !== requestUserId) {
     		throw new ForbiddenError('相談の所有者ではないため、更新できません。');
     	}
+
+		const updateRuleError = getConsultationTagRuleError(data.draft, data.tagIds);
+		if (updateRuleError) {
+			throw new ValidationError(CONSULTATION_TAG_RULE_MESSAGES[updateRuleError]);
+		}
     	
 		const updatedConsultation = await this.repository.update({
 			id,
@@ -266,7 +305,21 @@ export class ConsultationService {
 			body: data.body,
 			draft: data.draft,
 			authorId: existingConsultation.authorId ?? requestUserId,
-		});
+			tagIds: data.tagIds,
+		})
+			.catch((error) => {
+				if (data.tagIds !== undefined) {
+					console.error("Consultation update with tag replacement failed.", {
+						event: "CONSULTATION_UPDATE_WITH_TAG_REPLACEMENT_FAILED",
+						consultationId: id,
+						requestUserId,
+						draft: data.draft,
+						tagIds: data.tagIds,
+						error: ConsultationService.toLogError(error),
+					});
+				}
+				throw error;
+			});
 
 		return this.toConsultationSavedResponse({
 			id: updatedConsultation.id,
