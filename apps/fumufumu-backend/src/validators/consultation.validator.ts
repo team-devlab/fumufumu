@@ -1,14 +1,13 @@
 import { z } from "zod";
 import { PAGINATION_CONFIG } from "@/types/consultation.types";
+import {
+	CONSULTATION_TAG_RULE_MESSAGES,
+	getConsultationTagRuleError,
+} from "@/rules/consultation-tag.rule";
 
 const VALIDATION_MESSAGES = {
 	POSITIVE_INTEGER: "正の整数を指定してください",
 	BOOLEAN_STRING: '"true" または "false" を指定してください',
-} as const;
-
-const TAG_CONFIG = {
-	MIN_TAGS: 1,
-	MAX_TAGS: 3,
 } as const;
 
 /**
@@ -45,7 +44,6 @@ const postBodySchema = z
 const consultationDraftSchema = z.boolean().optional().default(false);
 const consultationTagIdsSchema = z
 	.array(z.coerce.number().int().positive("タグIDは正の整数を指定してください"))
-	.max(TAG_CONFIG.MAX_TAGS, `タグは${TAG_CONFIG.MAX_TAGS}個以下で選択してください`)
 	.optional();
 
 /**
@@ -103,11 +101,12 @@ const createConsultationBaseSchema = z.object({
 });
 
 export const createConsultationSchema = createConsultationBaseSchema.superRefine((data, ctx) => {
-	if (!data.draft && (!data.tagIds || data.tagIds.length < TAG_CONFIG.MIN_TAGS)) {
+	const ruleError = getConsultationTagRuleError(data.draft, data.tagIds);
+	if (ruleError) {
 		ctx.addIssue({
 			code: z.ZodIssueCode.custom,
 			path: ["tagIds"],
-			message: `タグは${TAG_CONFIG.MIN_TAGS}個以上選択してください`,
+			message: CONSULTATION_TAG_RULE_MESSAGES[ruleError],
 		});
 	}
 });
@@ -120,11 +119,12 @@ const updateConsultationBaseSchema = z.object({
 });
 
 export const updateConsultationSchema = updateConsultationBaseSchema.superRefine((data, ctx) => {
-	if (!data.draft && (!data.tagIds || data.tagIds.length < TAG_CONFIG.MIN_TAGS)) {
+	const ruleError = getConsultationTagRuleError(data.draft, data.tagIds);
+	if (ruleError) {
 		ctx.addIssue({
 			code: z.ZodIssueCode.custom,
 			path: ["tagIds"],
-			message: `タグは${TAG_CONFIG.MIN_TAGS}個以上選択してください`,
+			message: CONSULTATION_TAG_RULE_MESSAGES[ruleError],
 		});
 	}
 });

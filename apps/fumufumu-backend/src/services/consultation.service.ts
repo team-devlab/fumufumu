@@ -9,6 +9,10 @@ import type {
 } from "@/validators/consultation.validator";
 import { CompensationFailedError, ForbiddenError, NotFoundError, ValidationError } from "@/errors/AppError";
 import type { AdviceResponse } from "@/types/advice.response";
+import {
+	CONSULTATION_TAG_RULE_MESSAGES,
+	getConsultationTagRuleError,
+} from "@/rules/consultation-tag.rule";
 
 // Repositoryのメソッドの戻り値から型を抽出
 type ConsultationEntity = Awaited<ReturnType<ConsultationRepository["findAll"]>>[number];
@@ -216,8 +220,9 @@ export class ConsultationService {
 		data: CreateConsultationContent,
 		authorId: number
 	): Promise<ConsultationResponse> {
-		if (!data.draft && (!data.tagIds || data.tagIds.length === 0)) {
-			throw new ValidationError("公開時はタグを1つ以上選択してください。");
+		const createRuleError = getConsultationTagRuleError(data.draft, data.tagIds);
+		if (createRuleError) {
+			throw new ValidationError(CONSULTATION_TAG_RULE_MESSAGES[createRuleError]);
 		}
 
 		if (data.tagIds?.length) {
@@ -289,8 +294,9 @@ export class ConsultationService {
     		throw new ForbiddenError('相談の所有者ではないため、更新できません。');
     	}
 
-		if (!data.draft && (!data.tagIds || data.tagIds.length === 0)) {
-			throw new ValidationError("公開時はタグを1つ以上選択してください。");
+		const updateRuleError = getConsultationTagRuleError(data.draft, data.tagIds);
+		if (updateRuleError) {
+			throw new ValidationError(CONSULTATION_TAG_RULE_MESSAGES[updateRuleError]);
 		}
     	
 		const updatedConsultation = await this.repository.update({

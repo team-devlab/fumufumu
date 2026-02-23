@@ -7,7 +7,6 @@ import type { ConsultationFilters, PaginationParams } from "@/types/consultation
 import { PAGINATION_CONFIG } from "@/types/consultation.types";
 import { DatabaseError, ConflictError, NotFoundError } from "@/errors/AppError";
 import { advices } from "@/db/schema/advices";
-import { number } from "zod";
 
 
 export class ConsultationRepository {
