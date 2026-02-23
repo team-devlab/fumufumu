@@ -364,22 +364,17 @@ export class ConsultationRepository {
 					.delete(consultationTaggings)
 					.where(eq(consultationTaggings.consultationId, data.id));
 
+				const insertTaggingsQuery = uniqueTagIds && uniqueTagIds.length > 0
+					? this.db.insert(consultationTaggings).values(
+						uniqueTagIds.map((tagId) => ({ consultationId: data.id, tagId })),
+					)
+					: null;
+
 				// 相談更新とタグ差し替えを同一バッチで実行し、途中失敗時の部分更新を防ぐ
-				let updateResult: Awaited<typeof updateQuery>;
-				if (uniqueTagIds && uniqueTagIds.length > 0) {
-					[updateResult] = await this.db.batch([
-						updateQuery,
-						deleteTaggingsQuery,
-						this.db.insert(consultationTaggings).values(
-							uniqueTagIds.map((tagId) => ({ consultationId: data.id, tagId })),
-						),
-					]) as [Awaited<typeof updateQuery>, unknown, unknown];
-				} else {
-					[updateResult] = await this.db.batch([
-						updateQuery,
-						deleteTaggingsQuery,
-					]) as [Awaited<typeof updateQuery>, unknown];
-				}
+				const statements = insertTaggingsQuery
+					? [updateQuery, deleteTaggingsQuery, insertTaggingsQuery] as const
+					: [updateQuery, deleteTaggingsQuery] as const;
+				const [updateResult] = await this.db.batch(statements);
 
 				const [updated] = updateResult;
 				if (!updated) {

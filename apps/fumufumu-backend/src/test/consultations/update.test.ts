@@ -155,10 +155,85 @@ describe('Consultations API - Update (PUT /:id)', () => {
     const taggingRows = await env.DB
       .prepare('SELECT tag_id FROM consultation_taggings WHERE consultation_id = ?')
       .bind(created.id)
-      .all();
-    // @ts-ignore
-    const tagIds = taggingRows.results.map((row) => row.tag_id as number);
+      .all() as { results: Array<{ tag_id: number }> };
+    const tagIds = taggingRows.results.map((row) => row.tag_id);
     expect(tagIds).toEqual([tagId]);
+  });
+
+  it('batch途中でFK失敗した場合、更新とタグ差し替えはロールバックされる', async () => {
+    const initialTitle = 'batch原本タイトル';
+    const initialBody = 'batch原本の本文です。10文字以上あります。';
+
+    const transientTagName = `batch-rollback-tag-${Date.now()}`;
+    await env.DB.prepare('INSERT INTO tags (name) VALUES (?)').bind(transientTagName).run();
+    const transientTag = await env.DB
+      .prepare('SELECT id FROM tags WHERE name = ?')
+      .bind(transientTagName)
+      .first() as { id: number } | null;
+    expect(transientTag?.id).toBeDefined();
+    const transientTagId = transientTag!.id;
+
+    const createRes = await app.fetch(createApiRequest('/api/consultations', 'POST', {
+      cookie: user.cookie,
+      body: {
+        title: initialTitle,
+        body: initialBody,
+        draft: true,
+        tagIds: [tagId],
+      },
+    }), env);
+    expect(createRes.status).toBe(201);
+    const created = await createRes.json() as { id: number };
+
+    const triggerName = `force_batch_fk_failure_${Date.now()}_${created.id}`;
+    try {
+      await env.DB.prepare(`
+        CREATE TRIGGER ${triggerName}
+        AFTER UPDATE ON consultations
+        WHEN NEW.id = ${created.id}
+        BEGIN
+          DELETE FROM tags WHERE id = ${transientTagId};
+        END;
+      `).run();
+
+      const updateRes = await app.fetch(createApiRequest(`/api/consultations/${created.id}`, 'PUT', {
+        cookie: user.cookie,
+        body: {
+          title: 'batch更新後タイトル',
+          body: 'batch更新後の本文です。10文字以上あります。',
+          draft: false,
+          tagIds: [transientTagId],
+        },
+      }), env);
+
+      expect(updateRes.status).toBe(409);
+      const errorBody = await updateRes.json() as any;
+      expect(errorBody.error).toBe('ConflictError');
+
+      const consultation = await env.DB
+        .prepare('SELECT title, body, draft FROM consultations WHERE id = ?')
+        .bind(created.id)
+        .first() as { title: string; body: string; draft: number } | null;
+      expect(consultation).toBeTruthy();
+      expect(consultation!.title).toBe(initialTitle);
+      expect(consultation!.body).toBe(initialBody);
+      expect(consultation!.draft).toBe(1);
+
+      const taggingRows = await env.DB
+        .prepare('SELECT tag_id FROM consultation_taggings WHERE consultation_id = ?')
+        .bind(created.id)
+        .all() as { results: Array<{ tag_id: number }> };
+      const tagIds = taggingRows.results.map((row) => row.tag_id);
+      expect(tagIds).toEqual([tagId]);
+
+      const tagAfterFailure = await env.DB
+        .prepare('SELECT id FROM tags WHERE id = ?')
+        .bind(transientTagId)
+        .first() as { id: number } | null;
+      expect(tagAfterFailure).toBeTruthy();
+    } finally {
+      await env.DB.prepare(`DROP TRIGGER IF EXISTS ${triggerName}`).run();
+    }
   });
 
   it('draft未指定で更新した場合、false（公開）として扱われ、tagIds未指定のため400エラーを返す', async () => {
