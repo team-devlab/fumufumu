@@ -313,27 +313,96 @@ export class ConsultationRepository {
 		body: string;
 		draft: boolean;
 		authorId: number;
-	}) {
-		const [updated] = await this.db
-			.update(consultations)
-			.set({
-				title: data.title,
-				body: data.body,
-				draft: data.draft,
-			})
-			.where(
-				and(
-					eq(consultations.id, data.id),
-					eq(consultations.authorId, data.authorId),
-				)
-			)
-			.returning();
+		tagIds?: number[];
+		}) {
+			try {
+				let uniqueTagIds: number[] | undefined;
+				if (data.tagIds !== undefined) {
+					// 先にタグ存在チェックを行い、無効IDでは更新自体を実行しない
+					uniqueTagIds = [...new Set(data.tagIds)];
+				}
 
-		if (!updated) {
-			throw new DatabaseError(`相談の更新に失敗しました: id=${data.id}`);
-		}
+				if (uniqueTagIds && uniqueTagIds.length > 0) {
+					const existingTags = await this.db
+						.select({ id: tags.id })
+						.from(tags)
+						.where(inArray(tags.id, uniqueTagIds));
 
-		return updated;
+					const existingTagIdSet = new Set(existingTags.map((tag) => tag.id));
+					const missingTagIds = uniqueTagIds.filter((tagId) => !existingTagIdSet.has(tagId));
+					if (missingTagIds.length > 0) {
+						throw new ConflictError(`存在しないタグIDが含まれています: ${missingTagIds.join(", ")}`);
+					}
+				}
+
+				const updateQuery = this.db
+					.update(consultations)
+					.set({
+						title: data.title,
+						body: data.body,
+						draft: data.draft,
+					})
+					.where(
+						and(
+							eq(consultations.id, data.id),
+							eq(consultations.authorId, data.authorId),
+						)
+					)
+					.returning();
+
+				if (data.tagIds === undefined) {
+					const [updated] = await updateQuery;
+
+					if (!updated) {
+						throw new DatabaseError(`相談の更新に失敗しました: id=${data.id}`);
+					}
+
+					return updated;
+				}
+
+				const deleteTaggingsQuery = this.db
+					.delete(consultationTaggings)
+					.where(eq(consultationTaggings.consultationId, data.id));
+
+				// 相談更新とタグ差し替えを同一バッチで実行し、途中失敗時の部分更新を防ぐ
+				let updateResult: Awaited<typeof updateQuery>;
+				if (uniqueTagIds && uniqueTagIds.length > 0) {
+					[updateResult] = await this.db.batch([
+						updateQuery,
+						deleteTaggingsQuery,
+						this.db.insert(consultationTaggings).values(
+							uniqueTagIds.map((tagId) => ({ consultationId: data.id, tagId })),
+						),
+					]) as [Awaited<typeof updateQuery>, unknown, unknown];
+				} else {
+					[updateResult] = await this.db.batch([
+						updateQuery,
+						deleteTaggingsQuery,
+					]) as [Awaited<typeof updateQuery>, unknown];
+				}
+
+				const [updated] = updateResult;
+				if (!updated) {
+					throw new DatabaseError(`相談の更新に失敗しました: id=${data.id}`);
+				}
+
+				return updated;
+			} catch (error) {
+				if (error instanceof DatabaseError || error instanceof ConflictError) {
+					throw error;
+				}
+
+				const errorMessage = (error as Error).message || String(error);
+				if (errorMessage.includes("UNIQUE constraint failed")) {
+					throw new ConflictError("同じタグ付けが既に存在します");
+				}
+
+				if (errorMessage.includes("FOREIGN KEY constraint failed")) {
+					throw new ConflictError("指定されたタグまたは相談が存在しません");
+				}
+
+				throw new DatabaseError(`相談更新処理でデータベースエラーが発生しました: ${errorMessage}`);
+			}
 	}
 
 	/**

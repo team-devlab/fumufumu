@@ -295,23 +295,21 @@ export class ConsultationService {
 			body: data.body,
 			draft: data.draft,
 			authorId: existingConsultation.authorId ?? requestUserId,
-		});
-
-		if (data.tagIds !== undefined) {
-			try {
-				await this.repository.replaceTags(id, data.tagIds);
-			} catch (error) {
-				console.error("Consultation tag replace failed.", {
-					event: "CONSULTATION_UPDATE_TAG_REPLACE_FAILED",
-					consultationId: id,
-					requestUserId,
-					draft: data.draft,
-					tagIds: data.tagIds,
-					error: ConsultationService.toLogError(error),
-				});
+			tagIds: data.tagIds,
+		})
+			.catch((error) => {
+				if (data.tagIds !== undefined) {
+					console.error("Consultation update with tag replacement failed.", {
+						event: "CONSULTATION_UPDATE_WITH_TAG_REPLACEMENT_FAILED",
+						consultationId: id,
+						requestUserId,
+						draft: data.draft,
+						tagIds: data.tagIds,
+						error: ConsultationService.toLogError(error),
+					});
+				}
 				throw error;
-			}
-		}
+			});
 
 		return this.toConsultationSavedResponse({
 			id: updatedConsultation.id,
