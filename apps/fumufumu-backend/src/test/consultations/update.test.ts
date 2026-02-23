@@ -111,6 +111,34 @@ describe('Consultations API - Update (PUT /:id)', () => {
     const body = await res.json() as any;
     expect(body.error).toBe('ValidationError');
   });
+  it('下書き状態から公開更新時、tagIdsが4件以上なら400エラーを返す', async () => {
+    const createRes = await app.fetch(createApiRequest('/api/consultations', 'POST', {
+      cookie: user.cookie,
+      body: {
+        title: '公開時タグ上限超過確認用',
+        body: '公開時タグ上限超過確認用の本文です。10文字以上あります。',
+        draft: true,
+        tagIds: [tagId],
+      },
+    }), env);
+    expect(createRes.status).toBe(201);
+    const created = await createRes.json() as any;
+
+    const req = createApiRequest(`/api/consultations/${created.id}`, 'PUT', {
+      cookie: user.cookie,
+      body: {
+        title: '公開時タグ4件',
+        body: '公開時にtagIdsを4件送るケースです。',
+        draft: false,
+        tagIds: [tagId, tagId, tagId, tagId],
+      },
+    });
+    const res = await app.fetch(req, env);
+    expect(res.status).toBe(400);
+
+    const body = await res.json() as any;
+    expect(body.error).toBe('ValidationError');
+  });
 
   it('公開更新時に無効tagIdsを指定した場合、409を返し相談本体は更新されない', async () => {
     const initialTitle = '原本タイトル';
