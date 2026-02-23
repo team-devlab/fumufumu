@@ -422,6 +422,27 @@ describe('Consultations API Integration Tests', () => {
 			const res = await app.fetch(req, env);
 			expect(res.status).toBe(400);
 		});
+		it('公開作成: tagIdsが4件以上の場合は400エラーを返す', async () => {
+				const req = new Request('http://localhost/api/consultations', {
+					method: 'POST',
+					headers: {
+						'Content-Type': 'application/json',
+						'Cookie': sessionCookie!,
+					},
+					body: JSON.stringify({
+						title: '公開相談（タグ4件）',
+						body: '公開時にtagIds上限超過のバリデーション確認です。',
+						draft: false,
+						tagIds: [existingTagIds[0], existingTagIds[1], existingTagIds[0], existingTagIds[1]],
+					}),
+				});
+
+				const res = await app.fetch(req, env);
+				expect(res.status).toBe(400);
+
+				const body = await res.json() as any;
+				expect(body.error).toBe('ValidationError');
+			});
 
 		it('タグ付き相談作成: 存在するタグIDを複数指定して相談を作成できる', async () => {
 			const req = new Request('http://localhost/api/consultations', {
