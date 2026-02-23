@@ -7,6 +7,7 @@ import type { ConsultationFilters, PaginationParams } from "@/types/consultation
 import { PAGINATION_CONFIG } from "@/types/consultation.types";
 import { DatabaseError, ConflictError, NotFoundError } from "@/errors/AppError";
 import { advices } from "@/db/schema/advices";
+import { number } from "zod";
 
 
 export class ConsultationRepository {
@@ -36,8 +37,17 @@ export class ConsultationRepository {
 	}
 
 	private async validateAndInsertTaggings(consultationId: number, tagIds: number[]) {
-		const uniqueTagIds = [...new Set(tagIds)];
+		const uniqueTagIds = await this.validateTagIdsExist(tagIds);
 		if (uniqueTagIds.length === 0) return;
+
+		await this.db.insert(consultationTaggings).values(
+			uniqueTagIds.map((tagId) => ({ consultationId, tagId })),
+		);
+	}
+
+	async validateTagIdsExist(tagIds: number[]): Promise<number[]> {
+		const uniqueTagIds = [...new Set(tagIds)];
+		if (uniqueTagIds.length === 0) return uniqueTagIds;
 
 		const existingTags = await this.db
 			.select({ id: tags.id })
@@ -46,13 +56,12 @@ export class ConsultationRepository {
 
 		const existingTagIdSet = new Set(existingTags.map((tag) => tag.id));
 		const missingTagIds = uniqueTagIds.filter((tagId) => !existingTagIdSet.has(tagId));
+
 		if (missingTagIds.length > 0) {
 			throw new ConflictError(`存在しないタグIDが含まれています: ${missingTagIds.join(", ")}`);
 		}
 
-		await this.db.insert(consultationTaggings).values(
-			uniqueTagIds.map((tagId) => ({ consultationId, tagId })),
-		);
+		return uniqueTagIds;
 	}
 
 	private async findAuthorOrThrow(authorId: number) {

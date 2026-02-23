@@ -220,6 +220,12 @@ export class ConsultationService {
 			throw new ValidationError("公開時はタグを1つ以上選択してください。");
 		}
 
+		// 先にタグの存在を検証して、不正tagIds時はここで終了する。
+		// これにより、create -> attach失敗 -> 補償delete の無駄な書き込みを回避できる。
+		if (data.tagIds?.length) {
+			await this.repository.validateTagIdsExist(data.tagIds);
+		}
+
 		const createdConsultation = await this.repository.create({
 			title: data.title,
 			body: data.body,
