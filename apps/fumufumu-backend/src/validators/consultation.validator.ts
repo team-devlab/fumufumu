@@ -104,7 +104,7 @@ export const createConsultationSchema = createConsultationBaseSchema.superRefine
 	const ruleError = getConsultationTagRuleError(data.draft, data.tagIds);
 	if (ruleError) {
 		ctx.addIssue({
-			code: z.ZodIssueCode.custom,
+			code: "custom",
 			path: ["tagIds"],
 			message: CONSULTATION_TAG_RULE_MESSAGES[ruleError],
 		});
