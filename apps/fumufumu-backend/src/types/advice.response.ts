@@ -1,4 +1,5 @@
 import type { Author } from "@/types/user.types";
+import type { PaginationMeta } from "@/types/consultation.types";
 
 export type AdviceResponse = {
 	id: number;
@@ -8,4 +9,9 @@ export type AdviceResponse = {
 	created_at: string;
 	updated_at: string;
 	author: Author | null;
+};
+
+export type AdviceListResponse = {
+	pagination: PaginationMeta;
+	data: AdviceResponse[];
 };

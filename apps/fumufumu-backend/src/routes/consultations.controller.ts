@@ -9,6 +9,7 @@ import { injectConsultationService } from "@/middlewares/injectService.middlewar
 import type { ConsultationFilters, PaginationParams } from "@/types/consultation.types";
 import {
 	listConsultationsQuerySchema,
+	listAdvicesQuerySchema,
 	createConsultationSchema,
 	updateConsultationSchema,
 	adviceContentSchema,
@@ -151,6 +152,29 @@ export const createAdviceHandlers = factory.createHandlers(
 	}
 );
 
+export const listAdvicesHandlers = factory.createHandlers(
+	zValidator("param", consultationIdParamSchema, (result) => {
+		if (!result.success) throw result.error;
+	}),
+	zValidator("query", listAdvicesQuerySchema, (result) => {
+		if (!result.success) throw result.error;
+	}),
+	async (c) => {
+		const { id } = c.req.valid("param");
+		const validatedQuery = c.req.valid("query");
+		const appUserId = c.get("appUserId");
+		const service = c.get("consultationService");
+
+		const pagination: PaginationParams = {
+			page: validatedQuery.page,
+			limit: validatedQuery.limit,
+		};
+
+		const result = await service.listAdvices(id, pagination, appUserId);
+		return c.json(result, 200);
+	}
+);
+
 export const updateDraftAdviceHandlers = factory.createHandlers(
 	zValidator("param", consultationIdParamSchema, (result) => {
 		if (!result.success) throw result.error;
@@ -185,4 +209,5 @@ consultationsRoute.post("/", ...createConsultationHandlers);
 consultationsRoute.put("/:id", ...updateConsultationHandlers);
 // 相談に対するアドバイス関連
 consultationsRoute.post("/:id/advice", ...createAdviceHandlers);
+consultationsRoute.get("/:id/advices", ...listAdvicesHandlers);
 consultationsRoute.put("/:id/advice/draft", ...updateDraftAdviceHandlers);

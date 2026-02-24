@@ -93,6 +93,35 @@ export const listConsultationsQuerySchema = z.object({
 		.default(PAGINATION_CONFIG.DEFAULT_LIMIT),
 });
 
+/**
+ * 回答一覧取得のクエリパラメータバリデーションスキーマ
+ */
+export const listAdvicesQuerySchema = z.object({
+	/**
+	 * ページ番号（オプショナル、デフォルト: 1）
+	 * - 1以上の整数のみ許可
+	 */
+	page: z.coerce
+		.number()
+		.int("ページ番号は整数を指定してください")
+		.min(1, "ページ番号は1以上を指定してください")
+		.max(1000, "ページ番号は1000以下を指定してください")
+		.optional()
+		.default(PAGINATION_CONFIG.DEFAULT_PAGE),
+
+	/**
+	 * 1ページあたりの件数（オプショナル、デフォルト: 20）
+	 * - 1以上100以下の整数のみ許可
+	 */
+	limit: z.coerce
+		.number()
+		.int("件数は整数を指定してください")
+		.min(1, "件数は1以上を指定してください")
+		.max(PAGINATION_CONFIG.MAX_LIMIT, `件数は${PAGINATION_CONFIG.MAX_LIMIT}以下を指定してください`)
+		.optional()
+		.default(PAGINATION_CONFIG.DEFAULT_LIMIT),
+});
+
 const createConsultationBaseSchema = z.object({
 	title: consultationTitleSchema,
 	body: postBodySchema,
@@ -145,6 +174,7 @@ export const consultationIdParamSchema = z.object({
 });
 
 export type ListConsultationsQuery = z.infer<typeof listConsultationsQuerySchema>;
+export type ListAdvicesQuery = z.infer<typeof listAdvicesQuerySchema>;
 export type CreateConsultationContent = z.infer<typeof createConsultationSchema>;
 export type UpdateConsultationContent = z.infer<typeof updateConsultationSchema>;
 export type ConsultationContent = CreateConsultationContent;
