@@ -78,7 +78,7 @@ const paginationQuerySchema = z.object({
 /**
  * 相談一覧取得のクエリパラメータバリデーションスキーマ
  */
-export const listConsultationsQuerySchema = z.object({
+export const listConsultationsQuerySchema = paginationQuerySchema.extend({
 	/**
 	 * ユーザーIDでフィルタリング（オプショナル）
 	 * - 正の整数のみ許可
@@ -96,8 +96,7 @@ export const listConsultationsQuerySchema = z.object({
 	 * - "true" または "false" の文字列をbooleanに変換
 	 */
 	solved: booleanStringSchema.optional(),
-
-}).merge(paginationQuerySchema);
+});
 
 /**
  * 回答一覧取得のクエリパラメータバリデーションスキーマ
