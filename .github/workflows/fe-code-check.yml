@@ -33,6 +33,9 @@ jobs:
       # Biomeのセットアップ（バージョンを自動検出）
       - name: Setup Biome CLI
         uses: biomejs/setup-biome@v2
+        with:
+          working-dir: apps/fumufumu-frontend
+          biome-version: 2.2.0
 
       # format, lint, organize imports のチェックを同時に実行（ファイルへの書き込みは行わない）
       - name: Run Biome CI
