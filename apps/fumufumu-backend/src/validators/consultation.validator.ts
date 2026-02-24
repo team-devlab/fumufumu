@@ -47,27 +47,9 @@ const consultationTagIdsSchema = z
 	.optional();
 
 /**
- * 相談一覧取得のクエリパラメータバリデーションスキーマ
+ * 一覧系エンドポイント共通のページネーションスキーマ
  */
-export const listConsultationsQuerySchema = z.object({
-	/**
-	 * ユーザーIDでフィルタリング（オプショナル）
-	 * - 正の整数のみ許可
-	 */
-	userId: positiveIntegerStringSchema.optional(),
-
-	/**
-	 * 下書き状態でフィルタリング（オプショナル）
-	 * - "true" または "false" の文字列をbooleanに変換
-	 */
-	draft: booleanStringSchema.optional(),
-
-	/**
-	 * 解決状態でフィルタリング（オプショナル）
-	 * - "true" または "false" の文字列をbooleanに変換
-	 */
-	solved: booleanStringSchema.optional(),
-
+const paginationQuerySchema = z.object({
 	/**
 	 * ページ番号（オプショナル、デフォルト: 1）
 	 * - 1以上の整数のみ許可
@@ -94,33 +76,33 @@ export const listConsultationsQuerySchema = z.object({
 });
 
 /**
- * 回答一覧取得のクエリパラメータバリデーションスキーマ
+ * 相談一覧取得のクエリパラメータバリデーションスキーマ
  */
-export const listAdvicesQuerySchema = z.object({
+export const listConsultationsQuerySchema = z.object({
 	/**
-	 * ページ番号（オプショナル、デフォルト: 1）
-	 * - 1以上の整数のみ許可
+	 * ユーザーIDでフィルタリング（オプショナル）
+	 * - 正の整数のみ許可
 	 */
-	page: z.coerce
-		.number()
-		.int("ページ番号は整数を指定してください")
-		.min(1, "ページ番号は1以上を指定してください")
-		.max(1000, "ページ番号は1000以下を指定してください")
-		.optional()
-		.default(PAGINATION_CONFIG.DEFAULT_PAGE),
+	userId: positiveIntegerStringSchema.optional(),
 
 	/**
-	 * 1ページあたりの件数（オプショナル、デフォルト: 20）
-	 * - 1以上100以下の整数のみ許可
+	 * 下書き状態でフィルタリング（オプショナル）
+	 * - "true" または "false" の文字列をbooleanに変換
 	 */
-	limit: z.coerce
-		.number()
-		.int("件数は整数を指定してください")
-		.min(1, "件数は1以上を指定してください")
-		.max(PAGINATION_CONFIG.MAX_LIMIT, `件数は${PAGINATION_CONFIG.MAX_LIMIT}以下を指定してください`)
-		.optional()
-		.default(PAGINATION_CONFIG.DEFAULT_LIMIT),
-});
+	draft: booleanStringSchema.optional(),
+
+	/**
+	 * 解決状態でフィルタリング（オプショナル）
+	 * - "true" または "false" の文字列をbooleanに変換
+	 */
+	solved: booleanStringSchema.optional(),
+
+}).merge(paginationQuerySchema);
+
+/**
+ * 回答一覧取得のクエリパラメータバリデーションスキーマ
+ */
+export const listAdvicesQuerySchema = paginationQuerySchema;
 
 const createConsultationBaseSchema = z.object({
 	title: consultationTitleSchema,
