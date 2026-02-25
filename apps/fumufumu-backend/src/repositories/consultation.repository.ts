@@ -215,7 +215,7 @@ export class ConsultationRepository {
 				eq(advices.draft, false),
 				isNull(advices.hiddenAt),
 			),
-			orderBy: (fields, { asc }) => [asc(fields.createdAt)],
+			orderBy: (fields, { desc }) => [desc(fields.updatedAt), desc(fields.id)],
 			limit,
 			offset,
 			with: {
