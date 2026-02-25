@@ -200,4 +200,48 @@ describe('Consultations API - Advice List (GET /:id/advices)', () => {
 		const body = await res.json() as any;
 		expect(body.error).toBe('NotFoundError');
 	});
+	
+	it('本人の下書き相談の回答一覧は取得できる（200）', async () => {
+		const req = createApiRequest(`/api/consultations/${draftConsultationId}/advices`, 'GET', {
+			cookie: user.cookie,
+		});
+		const res = await app.fetch(req, env);
+		expect(res.status).toBe(200);
+		const body = await res.json() as any;
+		expect(Array.isArray(body.data)).toBe(true);
+		expect(body.data).toEqual([]);
+		expect(body.pagination.current_page).toBe(1);
+		expect(body.pagination.per_page).toBe(20);
+		expect(body.pagination.total_items).toBe(0);
+		expect(body.pagination.total_pages).toBe(0);
+		expect(body.pagination.has_next).toBe(false);
+		expect(body.pagination.has_prev).toBe(false);
+	});
+	
+	it('他人の非表示相談の回答一覧は取得できない（404）', async () => {
+		const req = createApiRequest(`/api/consultations/${hiddenConsultationId}/advices`, 'GET', {
+			cookie: attacker.cookie,
+		});
+		const res = await app.fetch(req, env);
+		expect(res.status).toBe(404);
+		const body = await res.json() as any;
+		expect(body.error).toBe('NotFoundError');
+	});
+	
+	it('本人の非表示相談の回答一覧は取得できる（200）', async () => {
+		const req = createApiRequest(`/api/consultations/${hiddenConsultationId}/advices`, 'GET', {
+			cookie: user.cookie,
+		});
+		const res = await app.fetch(req, env);
+		expect(res.status).toBe(200);
+		const body = await res.json() as any;
+		expect(Array.isArray(body.data)).toBe(true);
+		expect(body.data).toEqual([]);
+		expect(body.pagination.current_page).toBe(1);
+		expect(body.pagination.per_page).toBe(20);
+		expect(body.pagination.total_items).toBe(0);
+		expect(body.pagination.total_pages).toBe(0);
+		expect(body.pagination.has_next).toBe(false);
+		expect(body.pagination.has_prev).toBe(false);
+	});
 });
