@@ -88,6 +88,23 @@ describe('Consultations API - Advice List (GET /:id/advices)', () => {
 		expect(draftConsultationRes.status).toBe(201);
 		const draftConsultation = await draftConsultationRes.json() as any;
 		draftConsultationId = draftConsultation.id;
+		
+		const hiddenConsultationRes = await app.fetch(createApiRequest('/api/consultations', 'POST', {
+			cookie: user.cookie,
+			body: {
+				title: '他人に見えない非表示相談',
+				body: '回答一覧アクセス制御の確認用本文です。10文字以上あります。',
+				draft: false,
+				tagIds: [tagId],
+			},
+		}), env);
+		expect(hiddenConsultationRes.status).toBe(201);
+		const hiddenConsultation = await hiddenConsultationRes.json() as any;
+		hiddenConsultationId = hiddenConsultation.id;
+		await env.DB
+			.prepare("UPDATE consultations SET hidden_at = (cast(unixepoch('subsecond') * 1000 as integer)) WHERE id = ?")
+			.bind(hiddenConsultationId)
+			.run();
 	});
 
 	it('デフォルト: page=1, limit=20 で取得できる', async () => {
