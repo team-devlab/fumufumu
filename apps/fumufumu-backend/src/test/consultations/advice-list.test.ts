@@ -10,6 +10,7 @@ describe('Consultations API - Advice List (GET /:id/advices)', () => {
 	let attacker: Awaited<ReturnType<typeof createAndLoginUser>>;
 	let consultationId: number;
 	let draftConsultationId: number;
+	let hiddenConsultationId: number;
 	let tagId: number;
 	const draftAdviceBody = '下書き回答（一覧非表示）のテストです。10文字以上あります。';
 	const hiddenAdviceBody = '非表示回答（一覧非表示）のテストです。10文字以上あります。';
