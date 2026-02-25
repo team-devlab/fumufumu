@@ -126,6 +126,7 @@ describe('Consultations API - Advice List (GET /:id/advices)', () => {
 		expect(body.pagination.total_pages).toBe(2);
 		expect(body.pagination.has_next).toBe(true);
 		expect(body.pagination.has_prev).toBe(false);
+		expect(res.headers.get('Cache-Control')).toBe('no-store, max-age=0');
 	});
 
 	it('limit=10, page=2 で2ページ目を取得できる', async () => {
