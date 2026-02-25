@@ -171,6 +171,8 @@ export const listAdvicesHandlers = factory.createHandlers(
 		};
 
 		const result = await service.listAdvices(id, pagination, appUserId);
+		// NOTE: 回答一覧はユーザーごとに可視性が変わるため、キャッシュを明示的に禁止する
+		c.header('Cache-Control', 'no-store, max-age=0');
 		return c.json(result, 200);
 	}
 );
