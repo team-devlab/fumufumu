@@ -35,7 +35,7 @@ jobs:
         uses: biomejs/setup-biome@v2
         with:
           working-dir: apps/fumufumu-frontend
-          biome-version: 2.2.0
+          version: 2.4.4
 
       # format, lint, organize imports のチェックを同時に実行（ファイルへの書き込みは行わない）
       - name: Run Biome CI
