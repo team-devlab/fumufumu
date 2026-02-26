@@ -1,8 +1,8 @@
 "use client";
 
-import { useState } from "react";
 import Link from "next/link";
 import type React from "react";
+import { useState } from "react";
 import { ROUTES } from "@/config/routes";
 import type { Consultation } from "@/features/consultation/types";
 
@@ -76,7 +76,9 @@ export const UserContentTabs: React.FC<Props> = ({ consultations }) => {
 
       {activeTab === "advices" && (
         <div className="py-8 text-center">
-          <p className="text-gray-500 text-sm">アドバイス一覧は現在準備中です</p>
+          <p className="text-gray-500 text-sm">
+            アドバイス一覧は現在準備中です
+          </p>
         </div>
       )}
 

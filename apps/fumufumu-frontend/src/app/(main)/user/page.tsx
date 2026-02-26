@@ -1,8 +1,8 @@
 import Link from "next/link";
 import { fetchCurrentUserApi } from "@/features/user/api/userApi";
 import { fetchUserConsultationsApi } from "@/features/user/api/userConsultationApi";
-import { UserProfile } from "@/features/user/components/UserProfile";
 import { UserContentTabs } from "@/features/user/components/UserContentTabs";
+import { UserProfile } from "@/features/user/components/UserProfile";
 
 export const metadata = {
   title: "ユーザー情報 | Fumufumu App",
@@ -19,10 +19,7 @@ export default async function UserPage() {
           <p className="text-gray-600 mb-4">
             ログインすると現在のユーザー情報を表示できます。
           </p>
-          <Link
-            href="/login"
-            className="text-blue-600 hover:underline"
-          >
+          <Link href="/login" className="text-blue-600 hover:underline">
             ログインへ
           </Link>
         </div>
