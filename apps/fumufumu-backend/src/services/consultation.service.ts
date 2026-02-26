@@ -8,7 +8,7 @@ import type {
 	UpdateDraftAdviceContentSchema,
 } from "@/validators/consultation.validator";
 import { CompensationFailedError, ForbiddenError, NotFoundError, ValidationError } from "@/errors/AppError";
-import type { AdviceResponse } from "@/types/advice.response";
+import type { AdviceListResponse, AdviceResponse } from "@/types/advice.response";
 import {
 	CONSULTATION_TAG_RULE_MESSAGES,
 	getConsultationTagRuleError,
@@ -18,6 +18,7 @@ import {
 type ConsultationEntity = Awaited<ReturnType<ConsultationRepository["findAll"]>>[number];
 type ConsultationEntityById = Awaited<ReturnType<ConsultationRepository["findFirstById"]>>;
 type AdviceEntity = Awaited<ReturnType<ConsultationRepository["createAdvice"]>>;
+type AdviceEntityFromList = Awaited<ReturnType<ConsultationRepository["findAdvicesByConsultationId"]>>[number];
 
 // 詳細取得時の `advices` 配列の中身の型を抽出
 type AdviceEntityFromDetail = ConsultationEntityById["advices"][number];
@@ -94,7 +95,7 @@ export class ConsultationService {
 	 * * @param advice - Repository層から取得した相談回答データ（作成時 or 詳細取得時）
 	 * @returns API レスポンス形式の相談回答データ
 	 */
-	private toAdviceResponse(advice: AdviceEntity | AdviceEntityFromDetail): AdviceResponse {
+	private toAdviceResponse(advice: AdviceEntity | AdviceEntityFromDetail | AdviceEntityFromList): AdviceResponse {
 		return {
 			id: advice.id,
 			body: advice.body,
@@ -179,6 +180,30 @@ export class ConsultationService {
 
 		return { 
 			data: responses,
+			pagination: this.calculatePagination({ page, limit }, totalCount),
+		};
+	}
+
+	async listAdvices(
+		consultationId: number,
+		pagination?: PaginationParams,
+		requestUserId?: number,
+	): Promise<AdviceListResponse> {
+		const { page = 1, limit = 20 } = pagination || {};
+
+		const consultation = await this.repository.findConsultationByIdForAccessCheck(consultationId);
+		const isHiddenConsultation = consultation.draft || consultation.hiddenAt !== null;
+		if (isHiddenConsultation && consultation.authorId !== requestUserId) {
+			throw new NotFoundError(`相談が見つかりません: id=${consultationId}`);
+		}
+
+		const [adviceList, totalCount] = await Promise.all([
+			this.repository.findAdvicesByConsultationId(consultationId, { page, limit }),
+			this.repository.countAdvicesByConsultationId(consultationId),
+		]);
+
+		return {
+			data: adviceList.map((advice) => this.toAdviceResponse(advice)),
 			pagination: this.calculatePagination({ page, limit }, totalCount),
 		};
 	}

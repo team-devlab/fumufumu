@@ -145,6 +145,24 @@ export class ConsultationRepository {
 		return consultation;
 	}
 
+	async findConsultationByIdForAccessCheck(id: number) {
+		const consultation = await this.db.query.consultations.findFirst({
+			columns: {
+				id: true,
+				authorId: true,
+				draft: true,
+				hiddenAt: true,
+			},
+			where: eq(consultations.id, id),
+		});
+
+		if (!consultation) {
+			throw new NotFoundError(`相談が見つかりません: id=${id}`);
+		}
+
+		return consultation;
+	}
+
 	/**
 	 * 相談一覧を取得する（RQB使用）
 	 * 
@@ -184,6 +202,40 @@ export class ConsultationRepository {
 		.from(consultations)
 		.where(this.buildWhereConditions(filters));
 	
+		return result[0]?.count || 0;
+	}
+
+	async findAdvicesByConsultationId(consultationId: number, pagination?: PaginationParams) {
+		const { page = PAGINATION_CONFIG.DEFAULT_PAGE, limit = PAGINATION_CONFIG.DEFAULT_LIMIT } = pagination || {};
+		const offset = (page - 1) * limit;
+
+		return await this.db.query.advices.findMany({
+			where: and(
+				eq(advices.consultationId, consultationId),
+				eq(advices.draft, false),
+				isNull(advices.hiddenAt),
+			),
+			orderBy: (fields, { desc }) => [desc(fields.updatedAt), desc(fields.id)],
+			limit,
+			offset,
+			with: {
+				author: true,
+			},
+		});
+	}
+
+	async countAdvicesByConsultationId(consultationId: number): Promise<number> {
+		const result = await this.db
+			.select({ count: sql<number>`count(*)` })
+			.from(advices)
+			.where(
+				and(
+					eq(advices.consultationId, consultationId),
+					eq(advices.draft, false),
+					isNull(advices.hiddenAt),
+				),
+			);
+
 		return result[0]?.count || 0;
 	}
 

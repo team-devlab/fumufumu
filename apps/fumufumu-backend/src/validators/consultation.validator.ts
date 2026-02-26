@@ -47,27 +47,9 @@ const consultationTagIdsSchema = z
 	.optional();
 
 /**
- * 相談一覧取得のクエリパラメータバリデーションスキーマ
+ * 一覧系エンドポイント共通のページネーションスキーマ
  */
-export const listConsultationsQuerySchema = z.object({
-	/**
-	 * ユーザーIDでフィルタリング（オプショナル）
-	 * - 正の整数のみ許可
-	 */
-	userId: positiveIntegerStringSchema.optional(),
-
-	/**
-	 * 下書き状態でフィルタリング（オプショナル）
-	 * - "true" または "false" の文字列をbooleanに変換
-	 */
-	draft: booleanStringSchema.optional(),
-
-	/**
-	 * 解決状態でフィルタリング（オプショナル）
-	 * - "true" または "false" の文字列をbooleanに変換
-	 */
-	solved: booleanStringSchema.optional(),
-
+const paginationQuerySchema = z.object({
 	/**
 	 * ページ番号（オプショナル、デフォルト: 1）
 	 * - 1以上の整数のみ許可
@@ -92,6 +74,34 @@ export const listConsultationsQuerySchema = z.object({
 		.optional()
 		.default(PAGINATION_CONFIG.DEFAULT_LIMIT),
 });
+
+/**
+ * 相談一覧取得のクエリパラメータバリデーションスキーマ
+ */
+export const listConsultationsQuerySchema = paginationQuerySchema.extend({
+	/**
+	 * ユーザーIDでフィルタリング（オプショナル）
+	 * - 正の整数のみ許可
+	 */
+	userId: positiveIntegerStringSchema.optional(),
+
+	/**
+	 * 下書き状態でフィルタリング（オプショナル）
+	 * - "true" または "false" の文字列をbooleanに変換
+	 */
+	draft: booleanStringSchema.optional(),
+
+	/**
+	 * 解決状態でフィルタリング（オプショナル）
+	 * - "true" または "false" の文字列をbooleanに変換
+	 */
+	solved: booleanStringSchema.optional(),
+});
+
+/**
+ * 回答一覧取得のクエリパラメータバリデーションスキーマ
+ */
+export const listAdvicesQuerySchema = paginationQuerySchema;
 
 const createConsultationBaseSchema = z.object({
 	title: consultationTitleSchema,
@@ -145,6 +155,7 @@ export const consultationIdParamSchema = z.object({
 });
 
 export type ListConsultationsQuery = z.infer<typeof listConsultationsQuerySchema>;
+export type ListAdvicesQuery = z.infer<typeof listAdvicesQuerySchema>;
 export type CreateConsultationContent = z.infer<typeof createConsultationSchema>;
 export type UpdateConsultationContent = z.infer<typeof updateConsultationSchema>;
 export type ConsultationContent = CreateConsultationContent;
