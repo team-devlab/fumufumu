@@ -53,9 +53,15 @@ describe('Consultations API - Create (POST /)', () => {
     expect(data).toHaveProperty('created_at');
     expect(data).toHaveProperty('updated_at');
     expect(data).toHaveProperty('author');
+    expect(data.author).toHaveProperty('id');
     expect(data.author).toHaveProperty('name');
+    expect(data.author).toHaveProperty('disabled');
+    expect(data.author).not.toHaveProperty('createdAt');
+    expect(data.author).not.toHaveProperty('updatedAt');
     expect(data).toHaveProperty('body');
     expect(data).toHaveProperty('advices');
+    expect(Array.isArray(data.advices)).toBe(true);
+    expect(data.advices.length).toBe(0);
   });
 
   it('下書き作成: draft=trueで相談を作成できる', async () => {
@@ -184,6 +190,9 @@ describe('Consultations API - Create (POST /)', () => {
 
     const res = await app.fetch(req, env);
     expect(res.status).toBe(400);
+    const data = await res.json() as any;
+    expect(data.error).toBe('ValidationError');
+    expect(data.message).toBe('入力内容に誤りがあります');
   });
 
   it('本文が10文字未満の場合400エラーを返す', async () => {
@@ -198,6 +207,9 @@ describe('Consultations API - Create (POST /)', () => {
 
     const res = await app.fetch(req, env);
     expect(res.status).toBe(400);
+    const data = await res.json() as any;
+    expect(data.error).toBe('ValidationError');
+    expect(data.message).toBe('入力内容に誤りがあります');
   });
 
   it('タイトルが100文字超の場合400エラーを返す', async () => {
@@ -212,6 +224,9 @@ describe('Consultations API - Create (POST /)', () => {
 
     const res = await app.fetch(req, env);
     expect(res.status).toBe(400);
+    const data = await res.json() as any;
+    expect(data.error).toBe('ValidationError');
+    expect(data.message).toBe('入力内容に誤りがあります');
   });
 
   it('認証なしの場合401エラーを返す', async () => {
@@ -243,6 +258,9 @@ describe('Consultations API - Create (POST /)', () => {
 
     const res = await app.fetch(req, env);
     expect(res.status).toBe(400);
+    const data = await res.json() as any;
+    expect(data.error).toBe('ValidationError');
+    expect(data.message).toBe('入力内容に誤りがあります');
   });
 
   it('公開作成: draft=false かつ tagIds未指定の場合は400エラーを返す', async () => {
@@ -257,6 +275,9 @@ describe('Consultations API - Create (POST /)', () => {
 
     const res = await app.fetch(req, env);
     expect(res.status).toBe(400);
+    const data = await res.json() as any;
+    expect(data.error).toBe('ValidationError');
+    expect(data.message).toBe('入力内容に誤りがあります');
   });
 
   it('公開作成: tagIdsが4件以上の場合は400エラーを返す', async () => {
@@ -295,7 +316,7 @@ describe('Consultations API - Create (POST /)', () => {
     expect(data.title).toBe('タグ付き相談テスト');
   });
 
-  it('タグ付き相談作成(失敗): 存在しないタグIDが含まれると409を返し、相談本体もロールバックされる', async () => {
+  it('タグ付き相談作成(失敗): 存在しないタグIDが含まれると409を返し、相談本体は作成されない', async () => {
     const nonExistentTagId = 99999;
     const rollbackTitle = `失敗するタグ付き相談-${Date.now()}`;
     const req = createApiRequest('/api/consultations', 'POST', {
