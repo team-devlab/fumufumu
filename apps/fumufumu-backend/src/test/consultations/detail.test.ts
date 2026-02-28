@@ -251,7 +251,7 @@ describe('Consultations API - Detail (GET /:id)', () => {
 
       expect(res.status).toBe(400);
       const body = await res.json() as any;
-      assertValidationError(body, '入力内容に誤りがあります');
+      assertValidationError(body);
       expect(body).not.toHaveProperty('id');
       expect(body).not.toHaveProperty('title');
     }

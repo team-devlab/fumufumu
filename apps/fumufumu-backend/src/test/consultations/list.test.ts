@@ -476,7 +476,7 @@ describe('Consultations API - List & Filtering', () => {
       const body = await res.json() as any;
 
       // index.ts の app.onError で定義したレスポンスを確認
-      assertValidationError(body, '入力内容に誤りがあります');
+      assertValidationError(body);
 
       // 成功時のプロパティ（dataなど）が「存在しない」ことを確認
       expect(body).not.toHaveProperty('data');
@@ -497,7 +497,7 @@ describe('Consultations API - List & Filtering', () => {
       const body = await res.json() as any;
 
       // index.ts の app.onError で定義したレスポンスを確認
-      assertValidationError(body, '入力内容に誤りがあります');
+      assertValidationError(body);
 
       // 成功時のプロパティ（dataなど）が「存在しない」ことを確認
       expect(body).not.toHaveProperty('data');

@@ -135,7 +135,7 @@ describe('Consultations API - Advice Create (POST /:id/advice)', () => {
 
       expect(res.status).toBe(400);
       const data = await res.json() as any;
-      assertValidationError(data, '入力内容に誤りがあります');
+      assertValidationError(data);
       expect(data).not.toHaveProperty('id');
       expect(data).not.toHaveProperty('draft');
     }
@@ -153,7 +153,7 @@ describe('Consultations API - Advice Create (POST /:id/advice)', () => {
     const res = await app.fetch(req, env);
     expect(res.status).toBe(400);
     const data = await res.json() as any;
-    assertValidationError(data, '入力内容に誤りがあります');
+    assertValidationError(data);
   });
 
   it('存在しない相談IDを指定すると404エラーになる', async () => {

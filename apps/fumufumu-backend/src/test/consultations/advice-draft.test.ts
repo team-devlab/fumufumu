@@ -112,7 +112,7 @@ describe('Consultations API - Advice Draft Update (PUT /:id/advice/draft)', () =
 
       expect(res.status).toBe(400);
       const body = await res.json() as any;
-      assertValidationError(body, '入力内容に誤りがあります');
+      assertValidationError(body);
       expect(body).not.toHaveProperty('id');
       expect(body).not.toHaveProperty('draft');
     }
@@ -129,7 +129,7 @@ describe('Consultations API - Advice Draft Update (PUT /:id/advice/draft)', () =
 
     expect(res.status).toBe(400);
     const body = await res.json() as any;
-    assertValidationError(body, '入力内容に誤りがあります');
+    assertValidationError(body);
   });
 
   it('公開済み回答は下書き更新できない', async () => {

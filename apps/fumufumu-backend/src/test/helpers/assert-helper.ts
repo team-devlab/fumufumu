@@ -16,10 +16,8 @@ export function assertUnauthorizedError(
  */
 export function assertValidationError(
   data: any,
-  expectedMessage?: string,
+  expectedMessage: string = '入力内容に誤りがあります',
 ) {
   expect(data.error).toBe('ValidationError');
-  if (expectedMessage !== undefined) {
-    expect(data.message).toBe(expectedMessage);
-  }
+  expect(data.message).toBe(expectedMessage);
 }
