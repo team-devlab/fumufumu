@@ -230,6 +230,23 @@ describe('Consultations API - Create (POST /)', () => {
     expect(data.message).toBe('入力内容に誤りがあります');
   });
 
+  it('本文が10000文字超の場合400エラーを返す', async () => {
+    const req = createApiRequest('/api/consultations', 'POST', {
+      cookie: user.cookie,
+      body: {
+        title: '本文上限超過テスト',
+        body: 'A'.repeat(10001),
+        tagIds: [existingTagIds[0]],
+      },
+    });
+
+    const res = await app.fetch(req, env);
+    expect(res.status).toBe(400);
+    const data = await res.json() as any;
+    expect(data.error).toBe('ValidationError');
+    expect(data.message).toBe('入力内容に誤りがあります');
+  });
+
   it('タイトルが100文字超の場合400エラーを返す', async () => {
     const req = createApiRequest('/api/consultations', 'POST', {
       cookie: user.cookie,
@@ -313,6 +330,28 @@ describe('Consultations API - Create (POST /)', () => {
     expect(res.status).toBe(400);
     const data = await res.json() as any;
     expect(data.error).toBe('ValidationError');
+  });
+
+  it('公開作成: tagIdsに不正なID(0/-1)が含まれる場合は400エラーを返す', async () => {
+    const invalidTagIds = [0, -1];
+
+    for (const invalidTagId of invalidTagIds) {
+      const req = createApiRequest('/api/consultations', 'POST', {
+        cookie: user.cookie,
+        body: {
+          title: `公開相談（不正tagId:${invalidTagId}）`,
+          body: '不正なtagIdsのバリデーション確認です。',
+          draft: false,
+          tagIds: [invalidTagId],
+        },
+      });
+
+      const res = await app.fetch(req, env);
+      expect(res.status).toBe(400);
+      const data = await res.json() as any;
+      expect(data.error).toBe('ValidationError');
+      expect(data.message).toBe('入力内容に誤りがあります');
+    }
   });
 
   it('下書き作成: tagIdsが4件以上の場合は400エラーを返す', async () => {
