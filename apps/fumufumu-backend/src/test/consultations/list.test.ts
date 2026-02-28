@@ -4,6 +4,7 @@ import app from '../../index';
 import { setupIntegrationTest, forceSetSolved, forceSetHidden } from '../helpers/db-helper';
 import { createAndLoginUser } from '../helpers/auth-helper';
 import { createApiRequest } from '../helpers/request-helper';
+import { assertUnauthorizedError } from '../helpers/assert-helper';
 import { ConsultationService } from '@/services/consultation.service';
 
 describe('Consultations API - List & Filtering', () => {
@@ -462,8 +463,7 @@ describe('Consultations API - List & Filtering', () => {
       expect(body).not.toHaveProperty('pagination');
 
       // エラー構造が正しいか（index.ts の定義と一致するか）を確認
-      expect(body).toHaveProperty('error');
-      expect(body).toHaveProperty('message');
+      assertUnauthorizedError(body);
     });
 
     it('不正なページ番号（0以下）は400エラーを返す (Zod共通バリデーション)', async () => {

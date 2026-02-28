@@ -4,6 +4,7 @@ import app from '../../index';
 import { setupIntegrationTest } from '../helpers/db-helper';
 import { createAndLoginUser } from '../helpers/auth-helper';
 import { createApiRequest } from '../helpers/request-helper';
+import { assertUnauthorizedError } from '../helpers/assert-helper';
 
 describe('Consultations API - Advice Draft Update (PUT /:id/advice/draft)', () => {
   let user: Awaited<ReturnType<typeof createAndLoginUser>>;
@@ -94,8 +95,7 @@ describe('Consultations API - Advice Draft Update (PUT /:id/advice/draft)', () =
 
     expect(res.status).toBe(401);
     const body = await res.json() as any;
-    expect(body).toHaveProperty('error');
-    expect(body).toHaveProperty('message');
+    assertUnauthorizedError(body);
   });
 
   it('不正なID(0/-1/abc)を指定した場合400エラーを返す', async () => {

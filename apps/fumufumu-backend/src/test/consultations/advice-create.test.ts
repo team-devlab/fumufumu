@@ -4,6 +4,7 @@ import app from '../../index';
 import { setupIntegrationTest, forceSetHidden } from '../helpers/db-helper';
 import { createAndLoginUser } from '../helpers/auth-helper';
 import { createApiRequest } from '../helpers/request-helper';
+import { assertUnauthorizedError } from '../helpers/assert-helper';
 
 describe('Consultations API - Advice Create (POST /:id/advice)', () => {
   let user: Awaited<ReturnType<typeof createAndLoginUser>>;
@@ -116,8 +117,7 @@ describe('Consultations API - Advice Create (POST /:id/advice)', () => {
     const res = await app.fetch(req, env);
     expect(res.status).toBe(401);
     const data = await res.json() as any;
-    expect(data).toHaveProperty('error');
-    expect(data).toHaveProperty('message');
+    assertUnauthorizedError(data);
   });
 
   it('不正なID(0/-1/abc)を指定した場合400エラーを返す', async () => {

@@ -4,6 +4,7 @@ import app from '../../index';
 import { setupIntegrationTest } from '../helpers/db-helper';
 import { createAndLoginUser } from '../helpers/auth-helper';
 import { createApiRequest } from '../helpers/request-helper';
+import { assertUnauthorizedError } from '../helpers/assert-helper';
 
 describe('Consultations API - Create (POST /)', () => {
   let user: Awaited<ReturnType<typeof createAndLoginUser>>;
@@ -276,8 +277,7 @@ describe('Consultations API - Create (POST /)', () => {
     const res = await app.fetch(req, env);
     expect(res.status).toBe(401);
     const data = await res.json() as any;
-    expect(data).toHaveProperty('error');
-    expect(data).toHaveProperty('message');
+    assertUnauthorizedError(data);
   });
 
   it('タグ付き相談作成: tagIdsが空配列の場合は400エラーを返す', async () => {

@@ -4,6 +4,7 @@ import app from '../../index';
 import { setupIntegrationTest } from '../helpers/db-helper';
 import { createAndLoginUser } from '../helpers/auth-helper';
 import { createApiRequest } from '../helpers/request-helper';
+import { assertUnauthorizedError } from '../helpers/assert-helper';
 
 describe('Consultations API - Advice List (GET /:id/advices)', () => {
 	let user: Awaited<ReturnType<typeof createAndLoginUser>>;
@@ -194,11 +195,13 @@ describe('Consultations API - Advice List (GET /:id/advices)', () => {
 		expect(invalidLimitBody.error).toBe('ValidationError');
 	});
 
-	it('認証なしは401エラーを返す', async () => {
-		const req = createApiRequest(`/api/consultations/${consultationId}/advices`, 'GET');
-		const res = await app.fetch(req, env);
-		expect(res.status).toBe(401);
-	});
+		it('認証なしは401エラーを返す', async () => {
+			const req = createApiRequest(`/api/consultations/${consultationId}/advices`, 'GET');
+			const res = await app.fetch(req, env);
+			expect(res.status).toBe(401);
+			const body = await res.json() as any;
+			assertUnauthorizedError(body);
+		});
 
 	it('存在しない相談IDは404エラーを返す', async () => {
 		const req = createApiRequest('/api/consultations/999999/advices', 'GET', {
