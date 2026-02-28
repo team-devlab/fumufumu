@@ -99,6 +99,24 @@ describe('Consultations API - Create (POST /)', () => {
     expect(data.draft).toBe(true);
   });
 
+  it('下書き作成: draft=true かつ tagIdsが空配列でも作成できる', async () => {
+    const req = createApiRequest('/api/consultations', 'POST', {
+      cookie: user.cookie,
+      body: {
+        title: '下書き相談（タグ空配列）',
+        body: '下書き保存時にタグ空配列を許容する挙動確認です。',
+        draft: true,
+        tagIds: [],
+      },
+    });
+
+    const res = await app.fetch(req, env);
+    expect(res.status).toBe(201);
+
+    const data = await res.json() as any;
+    expect(data.draft).toBe(true);
+  });
+
   it('draftを指定しない場合、デフォルトでfalseになる', async () => {
     const req = createApiRequest('/api/consultations', 'POST', {
       cookie: user.cookie,
@@ -295,6 +313,24 @@ describe('Consultations API - Create (POST /)', () => {
     expect(res.status).toBe(400);
     const data = await res.json() as any;
     expect(data.error).toBe('ValidationError');
+  });
+
+  it('下書き作成: tagIdsが4件以上の場合は400エラーを返す', async () => {
+    const req = createApiRequest('/api/consultations', 'POST', {
+      cookie: user.cookie,
+      body: {
+        title: '下書き相談（タグ4件）',
+        body: '下書きでもtagIds上限超過のバリデーション確認です。',
+        draft: true,
+        tagIds: [existingTagIds[0], existingTagIds[1], existingTagIds[0], existingTagIds[1]],
+      },
+    });
+
+    const res = await app.fetch(req, env);
+    expect(res.status).toBe(400);
+    const data = await res.json() as any;
+    expect(data.error).toBe('ValidationError');
+    expect(data.message).toBe('入力内容に誤りがあります');
   });
 
   it('タグ付き相談作成: 存在するタグIDを複数指定して相談を作成できる', async () => {
