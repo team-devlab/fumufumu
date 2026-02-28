@@ -4,6 +4,7 @@ import app from '../../index';
 import { setupIntegrationTest, forceSetSolved, forceSetHidden } from '../helpers/db-helper';
 import { createAndLoginUser } from '../helpers/auth-helper';
 import { createApiRequest } from '../helpers/request-helper';
+import { assertUnauthorizedError, assertValidationError } from '../helpers/assert-helper';
 import { ConsultationService } from '@/services/consultation.service';
 
 describe('Consultations API - List & Filtering', () => {
@@ -462,8 +463,7 @@ describe('Consultations API - List & Filtering', () => {
       expect(body).not.toHaveProperty('pagination');
 
       // エラー構造が正しいか（index.ts の定義と一致するか）を確認
-      expect(body).toHaveProperty('error');
-      expect(body).toHaveProperty('message');
+      assertUnauthorizedError(body);
     });
 
     it('不正なページ番号（0以下）は400エラーを返す (Zod共通バリデーション)', async () => {
@@ -476,8 +476,7 @@ describe('Consultations API - List & Filtering', () => {
       const body = await res.json() as any;
 
       // index.ts の app.onError で定義したレスポンスを確認
-      expect(body.error).toBe('ValidationError');
-      expect(body.message).toBe('入力内容に誤りがあります');
+      assertValidationError(body);
 
       // 成功時のプロパティ（dataなど）が「存在しない」ことを確認
       expect(body).not.toHaveProperty('data');
@@ -498,8 +497,7 @@ describe('Consultations API - List & Filtering', () => {
       const body = await res.json() as any;
 
       // index.ts の app.onError で定義したレスポンスを確認
-      expect(body.error).toBe('ValidationError');
-      expect(body.message).toBe('入力内容に誤りがあります');
+      assertValidationError(body);
 
       // 成功時のプロパティ（dataなど）が「存在しない」ことを確認
       expect(body).not.toHaveProperty('data');
