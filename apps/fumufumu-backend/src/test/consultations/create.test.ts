@@ -4,15 +4,11 @@ import app from '../../index';
 import { setupIntegrationTest } from '../helpers/db-helper';
 import { createAndLoginUser } from '../helpers/auth-helper';
 import { createApiRequest } from '../helpers/request-helper';
-import { assertUnauthorizedError } from '../helpers/assert-helper';
+import { assertUnauthorizedError, assertValidationError } from '../helpers/assert-helper';
 
 describe('Consultations API - Create (POST /)', () => {
   let user: Awaited<ReturnType<typeof createAndLoginUser>>;
   let existingTagIds: number[] = [];
-  const assertValidationError = (data: any) => {
-    expect(data.error).toBe('ValidationError');
-    expect(data.message).toBe('入力内容に誤りがあります');
-  };
 
   beforeAll(async () => {
     await setupIntegrationTest();
@@ -214,7 +210,7 @@ describe('Consultations API - Create (POST /)', () => {
     const res = await app.fetch(req, env);
     expect(res.status).toBe(400);
     const data = await res.json() as any;
-    assertValidationError(data);
+    assertValidationError(data, '入力内容に誤りがあります');
   });
 
   it('本文が10文字未満の場合400エラーを返す', async () => {
@@ -230,7 +226,7 @@ describe('Consultations API - Create (POST /)', () => {
     const res = await app.fetch(req, env);
     expect(res.status).toBe(400);
     const data = await res.json() as any;
-    assertValidationError(data);
+    assertValidationError(data, '入力内容に誤りがあります');
   });
 
   it('本文が10000文字超の場合400エラーを返す', async () => {
@@ -246,7 +242,7 @@ describe('Consultations API - Create (POST /)', () => {
     const res = await app.fetch(req, env);
     expect(res.status).toBe(400);
     const data = await res.json() as any;
-    assertValidationError(data);
+    assertValidationError(data, '入力内容に誤りがあります');
   });
 
   it('タイトルが100文字超の場合400エラーを返す', async () => {
@@ -262,7 +258,7 @@ describe('Consultations API - Create (POST /)', () => {
     const res = await app.fetch(req, env);
     expect(res.status).toBe(400);
     const data = await res.json() as any;
-    assertValidationError(data);
+    assertValidationError(data, '入力内容に誤りがあります');
   });
 
   it('認証なしの場合401エラーを返す', async () => {
@@ -294,7 +290,7 @@ describe('Consultations API - Create (POST /)', () => {
     const res = await app.fetch(req, env);
     expect(res.status).toBe(400);
     const data = await res.json() as any;
-    assertValidationError(data);
+    assertValidationError(data, '入力内容に誤りがあります');
   });
 
   it('公開作成: draft=false かつ tagIds未指定の場合は400エラーを返す', async () => {
@@ -310,7 +306,7 @@ describe('Consultations API - Create (POST /)', () => {
     const res = await app.fetch(req, env);
     expect(res.status).toBe(400);
     const data = await res.json() as any;
-    assertValidationError(data);
+    assertValidationError(data, '入力内容に誤りがあります');
   });
 
   it('公開作成: tagIdsが4件以上の場合は400エラーを返す', async () => {
@@ -327,7 +323,7 @@ describe('Consultations API - Create (POST /)', () => {
     const res = await app.fetch(req, env);
     expect(res.status).toBe(400);
     const data = await res.json() as any;
-    assertValidationError(data);
+    assertValidationError(data, '入力内容に誤りがあります');
   });
 
   it('公開作成: tagIdsに不正なID(0/-1)が含まれる場合は400エラーを返す', async () => {
@@ -347,7 +343,7 @@ describe('Consultations API - Create (POST /)', () => {
       const res = await app.fetch(req, env);
       expect(res.status).toBe(400);
       const data = await res.json() as any;
-      assertValidationError(data);
+      assertValidationError(data, '入力内容に誤りがあります');
     }
   });
 
@@ -365,7 +361,7 @@ describe('Consultations API - Create (POST /)', () => {
     const res = await app.fetch(req, env);
     expect(res.status).toBe(400);
     const data = await res.json() as any;
-    assertValidationError(data);
+    assertValidationError(data, '入力内容に誤りがあります');
   });
 
   it('タグ付き相談作成: 存在するタグIDを複数指定して相談を作成できる', async () => {

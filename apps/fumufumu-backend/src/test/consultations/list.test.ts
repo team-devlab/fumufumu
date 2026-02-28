@@ -4,7 +4,7 @@ import app from '../../index';
 import { setupIntegrationTest, forceSetSolved, forceSetHidden } from '../helpers/db-helper';
 import { createAndLoginUser } from '../helpers/auth-helper';
 import { createApiRequest } from '../helpers/request-helper';
-import { assertUnauthorizedError } from '../helpers/assert-helper';
+import { assertUnauthorizedError, assertValidationError } from '../helpers/assert-helper';
 import { ConsultationService } from '@/services/consultation.service';
 
 describe('Consultations API - List & Filtering', () => {
@@ -476,8 +476,7 @@ describe('Consultations API - List & Filtering', () => {
       const body = await res.json() as any;
 
       // index.ts の app.onError で定義したレスポンスを確認
-      expect(body.error).toBe('ValidationError');
-      expect(body.message).toBe('入力内容に誤りがあります');
+      assertValidationError(body, '入力内容に誤りがあります');
 
       // 成功時のプロパティ（dataなど）が「存在しない」ことを確認
       expect(body).not.toHaveProperty('data');
@@ -498,8 +497,7 @@ describe('Consultations API - List & Filtering', () => {
       const body = await res.json() as any;
 
       // index.ts の app.onError で定義したレスポンスを確認
-      expect(body.error).toBe('ValidationError');
-      expect(body.message).toBe('入力内容に誤りがあります');
+      assertValidationError(body, '入力内容に誤りがあります');
 
       // 成功時のプロパティ（dataなど）が「存在しない」ことを確認
       expect(body).not.toHaveProperty('data');

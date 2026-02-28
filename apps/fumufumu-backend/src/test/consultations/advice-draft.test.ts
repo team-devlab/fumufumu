@@ -4,7 +4,7 @@ import app from '../../index';
 import { setupIntegrationTest } from '../helpers/db-helper';
 import { createAndLoginUser } from '../helpers/auth-helper';
 import { createApiRequest } from '../helpers/request-helper';
-import { assertUnauthorizedError } from '../helpers/assert-helper';
+import { assertUnauthorizedError, assertValidationError } from '../helpers/assert-helper';
 
 describe('Consultations API - Advice Draft Update (PUT /:id/advice/draft)', () => {
   let user: Awaited<ReturnType<typeof createAndLoginUser>>;
@@ -112,8 +112,7 @@ describe('Consultations API - Advice Draft Update (PUT /:id/advice/draft)', () =
 
       expect(res.status).toBe(400);
       const body = await res.json() as any;
-      expect(body.error).toBe('ValidationError');
-      expect(body.message).toBe('入力内容に誤りがあります');
+      assertValidationError(body, '入力内容に誤りがあります');
       expect(body).not.toHaveProperty('id');
       expect(body).not.toHaveProperty('draft');
     }
@@ -130,8 +129,7 @@ describe('Consultations API - Advice Draft Update (PUT /:id/advice/draft)', () =
 
     expect(res.status).toBe(400);
     const body = await res.json() as any;
-    expect(body.error).toBe('ValidationError');
-    expect(body.message).toBe('入力内容に誤りがあります');
+    assertValidationError(body, '入力内容に誤りがあります');
   });
 
   it('公開済み回答は下書き更新できない', async () => {

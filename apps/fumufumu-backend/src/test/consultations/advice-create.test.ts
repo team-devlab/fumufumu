@@ -4,7 +4,7 @@ import app from '../../index';
 import { setupIntegrationTest, forceSetHidden } from '../helpers/db-helper';
 import { createAndLoginUser } from '../helpers/auth-helper';
 import { createApiRequest } from '../helpers/request-helper';
-import { assertUnauthorizedError } from '../helpers/assert-helper';
+import { assertUnauthorizedError, assertValidationError } from '../helpers/assert-helper';
 
 describe('Consultations API - Advice Create (POST /:id/advice)', () => {
   let user: Awaited<ReturnType<typeof createAndLoginUser>>;
@@ -135,8 +135,7 @@ describe('Consultations API - Advice Create (POST /:id/advice)', () => {
 
       expect(res.status).toBe(400);
       const data = await res.json() as any;
-      expect(data.error).toBe('ValidationError');
-      expect(data.message).toBe('入力内容に誤りがあります');
+      assertValidationError(data, '入力内容に誤りがあります');
       expect(data).not.toHaveProperty('id');
       expect(data).not.toHaveProperty('draft');
     }
@@ -154,8 +153,7 @@ describe('Consultations API - Advice Create (POST /:id/advice)', () => {
     const res = await app.fetch(req, env);
     expect(res.status).toBe(400);
     const data = await res.json() as any;
-    expect(data.error).toBe('ValidationError');
-    expect(data.message).toBe('入力内容に誤りがあります');
+    assertValidationError(data, '入力内容に誤りがあります');
   });
 
   it('存在しない相談IDを指定すると404エラーになる', async () => {

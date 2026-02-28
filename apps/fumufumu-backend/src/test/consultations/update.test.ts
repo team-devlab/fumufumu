@@ -4,7 +4,7 @@ import app from '../../index';
 import { setupIntegrationTest } from '../helpers/db-helper';
 import { createAndLoginUser } from '../helpers/auth-helper';
 import { createApiRequest } from '../helpers/request-helper';
-import { assertUnauthorizedError } from '../helpers/assert-helper';
+import { assertUnauthorizedError, assertValidationError } from '../helpers/assert-helper';
 
 describe('Consultations API - Update (PUT /:id)', () => {
   let user: Awaited<ReturnType<typeof createAndLoginUser>>;
@@ -110,7 +110,7 @@ describe('Consultations API - Update (PUT /:id)', () => {
     expect(res.status).toBe(400);
 
     const body = await res.json() as any;
-    expect(body.error).toBe('ValidationError');
+    assertValidationError(body);
   });
   it('下書き状態から公開更新時、tagIdsが4件以上なら400エラーを返す', async () => {
     const createRes = await app.fetch(createApiRequest('/api/consultations', 'POST', {
@@ -138,7 +138,7 @@ describe('Consultations API - Update (PUT /:id)', () => {
     expect(res.status).toBe(400);
 
     const body = await res.json() as any;
-    expect(body.error).toBe('ValidationError');
+    assertValidationError(body);
   });
 
   it('公開更新時に無効tagIdsを指定した場合、409を返し相談本体は更新されない', async () => {
@@ -289,7 +289,7 @@ describe('Consultations API - Update (PUT /:id)', () => {
     expect(res.status).toBe(400);
 
     const data = await res.json() as any;
-    expect(data.error).toBe('ValidationError');
+    assertValidationError(data);
     expect(data).not.toHaveProperty('id');
     expect(data).not.toHaveProperty('draft');
   });
@@ -325,8 +325,7 @@ describe('Consultations API - Update (PUT /:id)', () => {
 
       expect(res.status).toBe(400);
       const body = await res.json() as any;
-      expect(body.error).toBe('ValidationError');
-      expect(body.message).toBe('入力内容に誤りがあります');
+      assertValidationError(body, '入力内容に誤りがあります');
       expect(body).not.toHaveProperty('id');
       expect(body).not.toHaveProperty('draft');
     }
@@ -348,8 +347,7 @@ describe('Consultations API - Update (PUT /:id)', () => {
 
       expect(res.status).toBe(400);
       const body = await res.json() as any;
-      expect(body.error).toBe('ValidationError');
-      expect(body.message).toBe('入力内容に誤りがあります');
+      assertValidationError(body, '入力内容に誤りがあります');
       expect(body).not.toHaveProperty('id');
       expect(body).not.toHaveProperty('draft');
     }

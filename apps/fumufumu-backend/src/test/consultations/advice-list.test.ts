@@ -4,7 +4,7 @@ import app from '../../index';
 import { setupIntegrationTest } from '../helpers/db-helper';
 import { createAndLoginUser } from '../helpers/auth-helper';
 import { createApiRequest } from '../helpers/request-helper';
-import { assertUnauthorizedError } from '../helpers/assert-helper';
+import { assertUnauthorizedError, assertValidationError } from '../helpers/assert-helper';
 
 describe('Consultations API - Advice List (GET /:id/advices)', () => {
 	let user: Awaited<ReturnType<typeof createAndLoginUser>>;
@@ -180,19 +180,19 @@ describe('Consultations API - Advice List (GET /:id/advices)', () => {
 			cookie: user.cookie,
 			queryParams: { page: 0 },
 		});
-		const invalidPageRes = await app.fetch(invalidPageReq, env);
-		expect(invalidPageRes.status).toBe(400);
-		const invalidPageBody = await invalidPageRes.json() as any;
-		expect(invalidPageBody.error).toBe('ValidationError');
+			const invalidPageRes = await app.fetch(invalidPageReq, env);
+			expect(invalidPageRes.status).toBe(400);
+			const invalidPageBody = await invalidPageRes.json() as any;
+			assertValidationError(invalidPageBody);
 
 		const invalidLimitReq = createApiRequest(`/api/consultations/${consultationId}/advices`, 'GET', {
 			cookie: user.cookie,
 			queryParams: { limit: 101 },
 		});
-		const invalidLimitRes = await app.fetch(invalidLimitReq, env);
-		expect(invalidLimitRes.status).toBe(400);
-		const invalidLimitBody = await invalidLimitRes.json() as any;
-		expect(invalidLimitBody.error).toBe('ValidationError');
+			const invalidLimitRes = await app.fetch(invalidLimitReq, env);
+			expect(invalidLimitRes.status).toBe(400);
+			const invalidLimitBody = await invalidLimitRes.json() as any;
+			assertValidationError(invalidLimitBody);
 	});
 
 		it('認証なしは401エラーを返す', async () => {

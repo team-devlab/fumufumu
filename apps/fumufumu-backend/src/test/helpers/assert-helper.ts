@@ -10,3 +10,16 @@ export function assertUnauthorizedError(
   expect(data.error).toBe('Unauthorized');
   expect(data.message).toBe(expectedMessage);
 }
+
+/**
+ * バリデーションエラーレスポンスの共通検証
+ */
+export function assertValidationError(
+  data: any,
+  expectedMessage?: string,
+) {
+  expect(data.error).toBe('ValidationError');
+  if (expectedMessage !== undefined) {
+    expect(data.message).toBe(expectedMessage);
+  }
+}
