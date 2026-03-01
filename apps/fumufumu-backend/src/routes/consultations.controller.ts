@@ -7,6 +7,7 @@ import type { AppBindings } from "@/index";
 import { authGuard } from "@/middlewares/authGuard.middleware";
 import { injectConsultationService } from "@/middlewares/injectService.middleware";
 import type { ConsultationFilters, PaginationParams } from "@/types/consultation.types";
+import type { AdviceFilters } from "@/types/advice.types";
 import {
 	listConsultationsQuerySchema,
 	listAdvicesQuerySchema,
@@ -157,7 +158,11 @@ export const listAdvicesHandlers = factory.createHandlers(
 			limit: validatedQuery.limit,
 		};
 
-		const result = await service.listAdvices(id, pagination, appUserId);
+		const filters: AdviceFilters = {
+			userId: validatedQuery.userId,
+		};
+
+		const result = await service.listAdvices(id, pagination, appUserId, filters);
 		// NOTE: 回答一覧はユーザーごとに可視性が変わるため、キャッシュを明示的に禁止する
 		c.header('Cache-Control', 'no-store, max-age=0');
 		return c.json(result, 200);

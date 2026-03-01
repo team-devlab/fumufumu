@@ -1,5 +1,6 @@
 import type { ConsultationRepository } from "@/repositories/consultation.repository";
 import type { ConsultationFilters, PaginationMeta, PaginationParams } from "@/types/consultation.types";
+import type { AdviceFilters } from "@/types/advice.types";
 import type { ConsultationResponse, ConsultationListResponse, ConsultationSavedResponse, AdviceSavedResponse } from "@/types/consultation.response";
 import type {
 	CreateConsultationContent,
@@ -188,6 +189,7 @@ export class ConsultationService {
 		consultationId: number,
 		pagination?: PaginationParams,
 		requestUserId?: number,
+		filters?: AdviceFilters,
 	): Promise<AdviceListResponse> {
 		const { page = 1, limit = 20 } = pagination || {};
 
@@ -198,8 +200,8 @@ export class ConsultationService {
 		}
 
 		const [adviceList, totalCount] = await Promise.all([
-			this.repository.findAdvicesByConsultationId(consultationId, { page, limit }),
-			this.repository.countAdvicesByConsultationId(consultationId),
+			this.repository.findAdvicesByConsultationId(consultationId, { page, limit }, filters),
+			this.repository.countAdvicesByConsultationId(consultationId, filters),
 		]);
 
 		return {

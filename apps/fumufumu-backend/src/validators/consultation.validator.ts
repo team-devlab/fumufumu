@@ -101,7 +101,13 @@ export const listConsultationsQuerySchema = paginationQuerySchema.extend({
 /**
  * 回答一覧取得のクエリパラメータバリデーションスキーマ
  */
-export const listAdvicesQuerySchema = paginationQuerySchema;
+export const listAdvicesQuerySchema = paginationQuerySchema.extend({
+	/**
+	 * ユーザーIDでフィルタリング（オプショナル）
+	 * - 正の整数のみ許可
+	 */
+	userId: positiveIntegerStringSchema.optional(),
+});
 
 const createConsultationBaseSchema = z.object({
 	title: consultationTitleSchema,

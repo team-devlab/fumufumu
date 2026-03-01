@@ -5,6 +5,7 @@ import type { DbInstance } from "@/index";
 import { eq, and, isNull, isNotNull, inArray, type SQL, sql } from "drizzle-orm";
 import type { ConsultationFilters, PaginationParams } from "@/types/consultation.types";
 import { PAGINATION_CONFIG } from "@/types/consultation.types";
+import type { AdviceFilters } from "@/types/advice.types";
 import { DatabaseError, ConflictError, NotFoundError } from "@/errors/AppError";
 import { advices } from "@/db/schema/advices";
 
@@ -119,6 +120,23 @@ export class ConsultationRepository {
 		return conditions.length > 0 ? and(...conditions) : undefined;
 	}
 
+	/**
+	 * 回答一覧のWHERE句を構築する（findAdvicesByConsultationId / countAdvicesByConsultationId 共通）
+	 */
+	private buildAdviceWhereConditions(consultationId: number, filters?: AdviceFilters): SQL {
+		const conditions: SQL[] = [
+			eq(advices.consultationId, consultationId),
+			eq(advices.draft, false),
+			isNull(advices.hiddenAt),
+		];
+
+		if (filters?.userId !== undefined) {
+			conditions.push(eq(advices.authorId, filters.userId));
+		}
+
+		return and(...conditions) as SQL;
+	}
+
 	async findFirstById(id: number) {
 		const consultation = await this.db.query.consultations.findFirst({
 			where: eq(consultations.id, id),
@@ -205,16 +223,16 @@ export class ConsultationRepository {
 		return result[0]?.count || 0;
 	}
 
-	async findAdvicesByConsultationId(consultationId: number, pagination?: PaginationParams) {
+	async findAdvicesByConsultationId(
+		consultationId: number,
+		pagination?: PaginationParams,
+		filters?: AdviceFilters,
+	) {
 		const { page = PAGINATION_CONFIG.DEFAULT_PAGE, limit = PAGINATION_CONFIG.DEFAULT_LIMIT } = pagination || {};
 		const offset = (page - 1) * limit;
 
 		return await this.db.query.advices.findMany({
-			where: and(
-				eq(advices.consultationId, consultationId),
-				eq(advices.draft, false),
-				isNull(advices.hiddenAt),
-			),
+			where: this.buildAdviceWhereConditions(consultationId, filters),
 			orderBy: (fields, { desc }) => [desc(fields.updatedAt), desc(fields.id)],
 			limit,
 			offset,
@@ -224,17 +242,14 @@ export class ConsultationRepository {
 		});
 	}
 
-	async countAdvicesByConsultationId(consultationId: number): Promise<number> {
+	async countAdvicesByConsultationId(
+		consultationId: number,
+		filters?: AdviceFilters,
+	): Promise<number> {
 		const result = await this.db
 			.select({ count: sql<number>`count(*)` })
 			.from(advices)
-			.where(
-				and(
-					eq(advices.consultationId, consultationId),
-					eq(advices.draft, false),
-					isNull(advices.hiddenAt),
-				),
-			);
+			.where(this.buildAdviceWhereConditions(consultationId, filters));
 
 		return result[0]?.count || 0;
 	}
