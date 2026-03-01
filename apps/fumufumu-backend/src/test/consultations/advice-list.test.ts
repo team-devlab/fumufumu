@@ -9,18 +9,34 @@ import { assertUnauthorizedError, assertValidationError } from '../helpers/asser
 describe('Consultations API - Advice List (GET /:id/advices)', () => {
 	let user: Awaited<ReturnType<typeof createAndLoginUser>>;
 	let attacker: Awaited<ReturnType<typeof createAndLoginUser>>;
+	let noPublicUser: Awaited<ReturnType<typeof createAndLoginUser>>;
 	let consultationId: number;
+	let userIdFilterConsultationId: number;
 	let draftConsultationId: number;
 	let hiddenConsultationId: number;
 	let tagId: number;
 	const draftAdviceBody = '下書き回答（一覧非表示）のテストです。10文字以上あります。';
 	const hiddenAdviceBody = '非表示回答（一覧非表示）のテストです。10文字以上あります。';
+	const filterTargetPublicBodies = [
+		'userId対象ユーザー公開回答1。10文字以上あります。',
+		'userId対象ユーザー公開回答2。10文字以上あります。',
+		'userId対象ユーザー公開回答3。10文字以上あります。',
+	];
+	const filterOtherPublicBodies = [
+		'userId他ユーザー公開回答1。10文字以上あります。',
+		'userId他ユーザー公開回答2。10文字以上あります。',
+	];
+	const filterTargetDraftBody = 'userId対象ユーザー下書き回答。10文字以上あります。';
+	const filterTargetHiddenBody = 'userId対象ユーザー非表示回答。10文字以上あります。';
+	const noPublicDraftBody = '公開なしユーザー下書き回答。10文字以上あります。';
+	const noPublicHiddenBody = '公開なしユーザー非表示回答。10文字以上あります。';
 
 	beforeAll(async () => {
 		await setupIntegrationTest();
 
 		user = await createAndLoginUser();
 		attacker = await createAndLoginUser({ name: 'Attacker' });
+		noPublicUser = await createAndLoginUser({ name: 'NoPublicUser' });
 
 		const tagName = `advice-list-test-tag-${Date.now()}`;
 		await env.DB.prepare('INSERT INTO tags (name) VALUES (?)').bind(tagName).run();
@@ -107,6 +123,87 @@ describe('Consultations API - Advice List (GET /:id/advices)', () => {
 			.prepare("UPDATE consultations SET hidden_at = (cast(unixepoch('subsecond') * 1000 as integer)) WHERE id = ?")
 			.bind(hiddenConsultationId)
 			.run();
+
+		const userIdFilterConsultationRes = await app.fetch(createApiRequest('/api/consultations', 'POST', {
+			cookie: user.cookie,
+			body: {
+				title: 'userIdフィルタ検証用相談',
+				body: 'userIdで回答を絞り込む挙動を検証するための本文です。',
+				draft: false,
+				tagIds: [tagId],
+			},
+		}), env);
+		expect(userIdFilterConsultationRes.status).toBe(201);
+		const userIdFilterConsultation = await userIdFilterConsultationRes.json() as any;
+		userIdFilterConsultationId = userIdFilterConsultation.id;
+
+		for (const body of filterTargetPublicBodies) {
+			const adviceRes = await app.fetch(createApiRequest(`/api/consultations/${userIdFilterConsultationId}/advice`, 'POST', {
+				cookie: user.cookie,
+				body: {
+					body,
+					draft: false,
+				},
+			}), env);
+			expect(adviceRes.status).toBe(201);
+		}
+
+		const filterTargetDraftRes = await app.fetch(createApiRequest(`/api/consultations/${userIdFilterConsultationId}/advice`, 'POST', {
+			cookie: user.cookie,
+			body: {
+				body: filterTargetDraftBody,
+				draft: true,
+			},
+		}), env);
+		expect(filterTargetDraftRes.status).toBe(201);
+
+		const filterTargetHiddenRes = await app.fetch(createApiRequest(`/api/consultations/${userIdFilterConsultationId}/advice`, 'POST', {
+			cookie: user.cookie,
+			body: {
+				body: filterTargetHiddenBody,
+				draft: false,
+			},
+		}), env);
+		expect(filterTargetHiddenRes.status).toBe(201);
+		const filterTargetHiddenAdvice = await filterTargetHiddenRes.json() as any;
+		await env.DB
+			.prepare("UPDATE advices SET hidden_at = (cast(unixepoch('subsecond') * 1000 as integer)) WHERE id = ?")
+			.bind(filterTargetHiddenAdvice.id)
+			.run();
+
+		for (const body of filterOtherPublicBodies) {
+			const adviceRes = await app.fetch(createApiRequest(`/api/consultations/${userIdFilterConsultationId}/advice`, 'POST', {
+				cookie: attacker.cookie,
+				body: {
+					body,
+					draft: false,
+				},
+			}), env);
+			expect(adviceRes.status).toBe(201);
+		}
+
+		const noPublicDraftRes = await app.fetch(createApiRequest(`/api/consultations/${userIdFilterConsultationId}/advice`, 'POST', {
+			cookie: noPublicUser.cookie,
+			body: {
+				body: noPublicDraftBody,
+				draft: true,
+			},
+		}), env);
+		expect(noPublicDraftRes.status).toBe(201);
+
+		const noPublicHiddenRes = await app.fetch(createApiRequest(`/api/consultations/${userIdFilterConsultationId}/advice`, 'POST', {
+			cookie: noPublicUser.cookie,
+			body: {
+				body: noPublicHiddenBody,
+				draft: false,
+			},
+		}), env);
+		expect(noPublicHiddenRes.status).toBe(201);
+		const noPublicHiddenAdvice = await noPublicHiddenRes.json() as any;
+		await env.DB
+			.prepare("UPDATE advices SET hidden_at = (cast(unixepoch('subsecond') * 1000 as integer)) WHERE id = ?")
+			.bind(noPublicHiddenAdvice.id)
+			.run();
 	});
 
 	it('デフォルト: page=1, limit=20 で取得できる', async () => {
@@ -180,28 +277,128 @@ describe('Consultations API - Advice List (GET /:id/advices)', () => {
 			cookie: user.cookie,
 			queryParams: { page: 0 },
 		});
-			const invalidPageRes = await app.fetch(invalidPageReq, env);
-			expect(invalidPageRes.status).toBe(400);
-			const invalidPageBody = await invalidPageRes.json() as any;
-			assertValidationError(invalidPageBody);
+		const invalidPageRes = await app.fetch(invalidPageReq, env);
+		expect(invalidPageRes.status).toBe(400);
+		const invalidPageBody = await invalidPageRes.json() as any;
+		assertValidationError(invalidPageBody);
 
 		const invalidLimitReq = createApiRequest(`/api/consultations/${consultationId}/advices`, 'GET', {
 			cookie: user.cookie,
 			queryParams: { limit: 101 },
 		});
-			const invalidLimitRes = await app.fetch(invalidLimitReq, env);
-			expect(invalidLimitRes.status).toBe(400);
-			const invalidLimitBody = await invalidLimitRes.json() as any;
-			assertValidationError(invalidLimitBody);
+		const invalidLimitRes = await app.fetch(invalidLimitReq, env);
+		expect(invalidLimitRes.status).toBe(400);
+		const invalidLimitBody = await invalidLimitRes.json() as any;
+		assertValidationError(invalidLimitBody);
 	});
 
-		it('認証なしは401エラーを返す', async () => {
-			const req = createApiRequest(`/api/consultations/${consultationId}/advices`, 'GET');
-			const res = await app.fetch(req, env);
-			expect(res.status).toBe(401);
-			const body = await res.json() as any;
-			assertUnauthorizedError(body);
+	it('userId指定: 公開回答のうち指定ユーザーの回答のみ取得できる', async () => {
+		const req = createApiRequest(`/api/consultations/${userIdFilterConsultationId}/advices`, 'GET', {
+			cookie: user.cookie,
+			queryParams: { userId: user.appUserId.toString(), limit: 100 },
 		});
+		const res = await app.fetch(req, env);
+		expect(res.status).toBe(200);
+		const body = await res.json() as any;
+
+		expect(body.data.length).toBe(filterTargetPublicBodies.length);
+		expect(body.pagination.total_items).toBe(filterTargetPublicBodies.length);
+		expect(body.data.every((advice: any) => advice.author?.id === user.appUserId)).toBe(true);
+
+		const returnedBodies = body.data.map((advice: any) => advice.body);
+		for (const expectedBody of filterTargetPublicBodies) {
+			expect(returnedBodies).toContain(expectedBody);
+		}
+		for (const otherBody of filterOtherPublicBodies) {
+			expect(returnedBodies).not.toContain(otherBody);
+		}
+	});
+
+	it('userId指定: 指定ユーザーの下書き/非表示回答は含まれない', async () => {
+		const req = createApiRequest(`/api/consultations/${userIdFilterConsultationId}/advices`, 'GET', {
+			cookie: user.cookie,
+			queryParams: { userId: user.appUserId.toString(), limit: 100 },
+		});
+		const res = await app.fetch(req, env);
+		expect(res.status).toBe(200);
+		const body = await res.json() as any;
+		const returnedBodies = body.data.map((advice: any) => advice.body);
+
+		expect(returnedBodies).not.toContain(filterTargetDraftBody);
+		expect(returnedBodies).not.toContain(filterTargetHiddenBody);
+	});
+
+	it('userId指定: 指定ユーザーに公開回答がない場合は空配列を返す', async () => {
+		const req = createApiRequest(`/api/consultations/${userIdFilterConsultationId}/advices`, 'GET', {
+			cookie: user.cookie,
+			queryParams: { userId: noPublicUser.appUserId.toString(), limit: 100 },
+		});
+		const res = await app.fetch(req, env);
+		expect(res.status).toBe(200);
+		const body = await res.json() as any;
+
+		expect(body.data).toEqual([]);
+		expect(body.pagination.total_items).toBe(0);
+		expect(body.pagination.total_pages).toBe(0);
+		expect(body.pagination.has_next).toBe(false);
+		expect(body.pagination.has_prev).toBe(false);
+	});
+
+	it('userId + page/limit の組み合わせでページネーションできる', async () => {
+		const req = createApiRequest(`/api/consultations/${userIdFilterConsultationId}/advices`, 'GET', {
+			cookie: user.cookie,
+			queryParams: { userId: user.appUserId.toString(), limit: 2, page: 2 },
+		});
+		const res = await app.fetch(req, env);
+		expect(res.status).toBe(200);
+		const body = await res.json() as any;
+
+		expect(body.data.length).toBe(1);
+		expect(body.pagination.current_page).toBe(2);
+		expect(body.pagination.per_page).toBe(2);
+		expect(body.pagination.total_items).toBe(filterTargetPublicBodies.length);
+		expect(body.pagination.total_pages).toBe(2);
+		expect(body.pagination.has_prev).toBe(true);
+		expect(body.pagination.has_next).toBe(false);
+		expect(body.data.every((advice: any) => advice.author?.id === user.appUserId)).toBe(true);
+	});
+
+	it('不正なuserIdは400エラーを返す', async () => {
+		const invalidUserIds = ['abc', '0', '-1'];
+
+		for (const invalidUserId of invalidUserIds) {
+			const req = createApiRequest(`/api/consultations/${userIdFilterConsultationId}/advices`, 'GET', {
+				cookie: user.cookie,
+				queryParams: { userId: invalidUserId },
+			});
+			const res = await app.fetch(req, env);
+			expect(res.status).toBe(400);
+			const body = await res.json() as any;
+			assertValidationError(body);
+		}
+	});
+
+	it('存在しないuserIdは200かつ空配列を返す', async () => {
+		const req = createApiRequest(`/api/consultations/${userIdFilterConsultationId}/advices`, 'GET', {
+			cookie: user.cookie,
+			queryParams: { userId: 99999999 },
+		});
+		const res = await app.fetch(req, env);
+		expect(res.status).toBe(200);
+		const body = await res.json() as any;
+
+		expect(body.data).toEqual([]);
+		expect(body.pagination.total_items).toBe(0);
+		expect(body.pagination.total_pages).toBe(0);
+	});
+
+	it('認証なしは401エラーを返す', async () => {
+		const req = createApiRequest(`/api/consultations/${consultationId}/advices`, 'GET');
+		const res = await app.fetch(req, env);
+		expect(res.status).toBe(401);
+		const body = await res.json() as any;
+		assertUnauthorizedError(body);
+	});
 
 	it('存在しない相談IDは404エラーを返す', async () => {
 		const req = createApiRequest('/api/consultations/999999/advices', 'GET', {
