@@ -16,6 +16,7 @@ export default async function UserPage() {
     return (
       <div className="max-w-4xl mx-auto w-full">
         <div className="p-6 bg-white rounded-xl shadow border border-gray-200">
+          <h1 className="sr-only">ユーザー情報</h1>
           <p className="text-gray-600 mb-4">
             ログインすると現在のユーザー情報を表示できます。
           </p>
@@ -31,8 +32,14 @@ export default async function UserPage() {
 
   return (
     <div className="max-w-3xl mx-auto w-full">
+      <h1 className="sr-only">ユーザープロフィール</h1>
       <UserProfile user={user} />
-      <UserContentTabs consultations={consultationResponse.data} />
+      <section aria-labelledby="user-content-heading">
+        <h2 id="user-content-heading" className="sr-only">
+          ユーザー投稿一覧
+        </h2>
+        <UserContentTabs consultations={consultationResponse.data} />
+      </section>
     </div>
   );
 }
