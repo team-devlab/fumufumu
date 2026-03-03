@@ -3,6 +3,7 @@
  */
 export const ROUTES = {
   HOME: "/",
+  USER: "/user",
   CONSULTATION: {
     LIST: "/consultations",
     NEW: "/consultations/new",
