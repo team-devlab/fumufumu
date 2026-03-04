@@ -11,10 +11,14 @@ export const ConsultationNewContainer = () => {
     setTitle,
     body,
     setBody,
+    tags,
+    availableTags,
+    isLoadingTags,
     isProcessing,
     titleCharCount,
     bodyCharCount,
     handleSaveDraft,
+    handleToggleTag,
     handleConfirm,
     handleBack,
   } = useConsultationEntry();
@@ -24,8 +28,12 @@ export const ConsultationNewContainer = () => {
       <ConsultationForm
         title={title}
         body={body}
+        tags={tags}
+        availableTags={availableTags}
+        isLoadingTags={isLoadingTags}
         onChangeTitle={setTitle}
         onChangeBody={setBody}
+        onToggleTag={handleToggleTag}
         titleCharCount={titleCharCount}
         bodyCharCount={bodyCharCount}
       />

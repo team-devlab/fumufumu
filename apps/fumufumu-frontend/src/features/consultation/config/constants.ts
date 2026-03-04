@@ -2,6 +2,7 @@ export const CONSULTATION_RULES = {
   TITLE_MAX_LENGTH: 60,
   BODY_MAX_LENGTH: 800,
   BODY_MIN_LENGTH: 10,
+  TAGS_MAX_COUNT: 3,
 } as const;
 
 // UI文言を一元管理
