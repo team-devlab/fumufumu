@@ -36,10 +36,27 @@ export interface ConsultationListResponse {
   data: Consultation[];
 }
 
+export interface Tag {
+  id: number;
+  name: string;
+  sort_order: number;
+  count: number;
+}
+
+export interface TagListResponse {
+  data: Tag[];
+}
+
+export interface ConsultationFormTag {
+  id: number;
+  name: string;
+}
+
 export interface CreateConsultationParams {
   title: string;
   body: string;
   draft: boolean;
+  tagIds?: number[];
 }
 
 export interface CreateAdviceParams {
