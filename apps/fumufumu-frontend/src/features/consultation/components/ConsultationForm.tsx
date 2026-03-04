@@ -9,7 +9,6 @@ type Props = {
   body: string;
   tags: ConsultationFormTag[];
   availableTags: Tag[];
-  isLoadingTags: boolean;
   onChangeTitle: (value: string) => void;
   onChangeBody: (value: string) => void;
   onToggleTag: (tag: Tag) => void;
@@ -22,7 +21,6 @@ export const ConsultationForm = ({
   body,
   tags,
   availableTags,
-  isLoadingTags,
   onChangeTitle,
   onChangeBody,
   onToggleTag,
@@ -103,9 +101,7 @@ export const ConsultationForm = ({
           <p className="text-xs text-gray-500">
             選択中: {tags.length} / {CONSULTATION_RULES.TAGS_MAX_COUNT}
           </p>
-          {isLoadingTags ? (
-            <p className="text-sm text-gray-500">タグを読み込み中...</p>
-          ) : availableTags.length === 0 ? (
+          {availableTags.length === 0 ? (
             <p className="text-sm text-gray-500">選択可能なタグがありません</p>
           ) : (
             <div className="flex flex-wrap gap-2">

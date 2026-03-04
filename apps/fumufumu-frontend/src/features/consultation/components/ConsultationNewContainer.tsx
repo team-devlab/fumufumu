@@ -3,8 +3,13 @@
 import { ConsultationForm } from "@/features/consultation/components/ConsultationForm";
 import { ConsultationFormActions } from "@/features/consultation/components/ConsultationFormActions";
 import { useConsultationEntry } from "@/features/consultation/hooks/useConsultationEntry";
+import type { Tag } from "@/features/consultation/types";
 
-export const ConsultationNewContainer = () => {
+type Props = {
+  availableTags: Tag[];
+};
+
+export const ConsultationNewContainer = ({ availableTags }: Props) => {
   // カスタムフックからステートとロジックを取得
   const {
     title,
@@ -12,8 +17,6 @@ export const ConsultationNewContainer = () => {
     body,
     setBody,
     tags,
-    availableTags,
-    isLoadingTags,
     isProcessing,
     titleCharCount,
     bodyCharCount,
@@ -21,7 +24,7 @@ export const ConsultationNewContainer = () => {
     handleToggleTag,
     handleConfirm,
     handleBack,
-  } = useConsultationEntry();
+  } = useConsultationEntry(availableTags);
 
   return (
     <div className="max-w-4xl mx-auto w-full pb-20">
@@ -30,7 +33,6 @@ export const ConsultationNewContainer = () => {
         body={body}
         tags={tags}
         availableTags={availableTags}
-        isLoadingTags={isLoadingTags}
         onChangeTitle={setTitle}
         onChangeBody={setBody}
         onToggleTag={handleToggleTag}

@@ -1,11 +1,10 @@
 "use client";
 
 import { useRouter } from "next/navigation";
-import { useEffect, useState } from "react";
+import { useState } from "react";
 import toast from "react-hot-toast";
 import { ROUTES } from "@/config/routes";
 import { createConsultation } from "@/features/consultation/api/consultationClientApi";
-import { fetchTags } from "@/features/consultation/api/tagClientApi";
 import { CONSULTATION_RULES } from "@/features/consultation/config/constants";
 import { usePreventUnload } from "@/features/consultation/hooks/usePreventUnload";
 import {
@@ -19,7 +18,7 @@ import type { ConsultationFormTag, Tag } from "@/features/consultation/types";
 
 const countCharacters = (text: string) => text.replace(/\s/g, "").length;
 
-const resolveSelectedTags = (
+const reconcileSelectedTagsWithAvailableTags = (
   selectedTags: ConsultationFormTag[],
   availableTags: Tag[],
 ): ConsultationFormTag[] => {
@@ -40,7 +39,21 @@ const resolveSelectedTags = (
   return resolvedTags;
 };
 
-export const useConsultationEntry = () => {
+const areSameTags = (
+  leftTags: ConsultationFormTag[],
+  rightTags: ConsultationFormTag[],
+) => {
+  return (
+    leftTags.length === rightTags.length &&
+    leftTags.every(
+      (leftTag, index) =>
+        leftTag.id === rightTags[index]?.id &&
+        leftTag.name === rightTags[index]?.name,
+    )
+  );
+};
+
+export const useConsultationEntry = (availableTags: Tag[]) => {
   const router = useRouter();
 
   // 個別のSelectorフックから値とアクションを取得
@@ -52,63 +65,20 @@ export const useConsultationEntry = () => {
   const hasInput = useHasInput();
 
   const [isProcessing, setIsProcessing] = useState(false);
-  const [availableTags, setAvailableTags] = useState<Tag[]>([]);
-  const [isLoadingTags, setIsLoadingTags] = useState(true);
+  const selectedTags = reconcileSelectedTagsWithAvailableTags(
+    tags,
+    availableTags,
+  );
 
   // 有効文字数を計算
   const titleCharCount = countCharacters(title);
   const bodyCharCount = countCharacters(body);
 
-  useEffect(() => {
-    let isMounted = true;
-
-    const loadTags = async () => {
-      setIsLoadingTags(true);
-      try {
-        const response = await fetchTags();
-        if (!isMounted) return;
-        setAvailableTags(response.data);
-      } catch (error) {
-        console.error(error);
-        if (isMounted) {
-          toast.error("タグ一覧の取得に失敗しました");
-        }
-      } finally {
-        if (isMounted) {
-          setIsLoadingTags(false);
-        }
-      }
-    };
-
-    void loadTags();
-
-    return () => {
-      isMounted = false;
-    };
-  }, []);
-
-  useEffect(() => {
-    if (availableTags.length === 0 || tags.length === 0) return;
-
-    const resolvedTags = resolveSelectedTags(tags, availableTags);
-    const isSame =
-      resolvedTags.length === tags.length &&
-      resolvedTags.every(
-        (resolvedTag, index) =>
-          resolvedTag.id === tags[index]?.id &&
-          resolvedTag.name === tags[index]?.name,
-      );
-
-    if (!isSame) {
-      setTags(resolvedTags);
-    }
-  }, [availableTags, tags, setTags]);
-
   // NOTE: 誤操作による離脱防止
   const isDirty = hasInput && !isProcessing;
   usePreventUnload(isDirty);
 
-  const tagIds = tags
+  const tagIds = selectedTags
     .map((tag) => tag.id)
     .filter((id) => Number.isInteger(id) && id > 0);
 
@@ -168,20 +138,22 @@ export const useConsultationEntry = () => {
   };
 
   const handleToggleTag = (tag: Tag) => {
-    const isSelected = tags.some((selectedTag) => selectedTag.id === tag.id);
+    const isSelected = selectedTags.some(
+      (selectedTag) => selectedTag.id === tag.id,
+    );
     if (isSelected) {
-      setTags(tags.filter((selectedTag) => selectedTag.id !== tag.id));
+      setTags(selectedTags.filter((selectedTag) => selectedTag.id !== tag.id));
       return;
     }
 
-    if (tags.length >= CONSULTATION_RULES.TAGS_MAX_COUNT) {
+    if (selectedTags.length >= CONSULTATION_RULES.TAGS_MAX_COUNT) {
       toast.error(
         `タグは最大${CONSULTATION_RULES.TAGS_MAX_COUNT}件まで選択できます`,
       );
       return;
     }
 
-    setTags([...tags, { id: tag.id, name: tag.name }]);
+    setTags([...selectedTags, { id: tag.id, name: tag.name }]);
   };
 
   const handleConfirm = () => {
@@ -202,6 +174,10 @@ export const useConsultationEntry = () => {
       return;
     }
 
+    if (!areSameTags(selectedTags, tags)) {
+      setTags(selectedTags);
+    }
+
     router.push(`${ROUTES.CONSULTATION.NEW}/confirm`);
   };
 
@@ -213,9 +189,7 @@ export const useConsultationEntry = () => {
     isProcessing,
     titleCharCount,
     bodyCharCount,
-    tags,
-    availableTags,
-    isLoadingTags,
+    tags: selectedTags,
     handleSaveDraft,
     handleToggleTag,
     handleConfirm,
