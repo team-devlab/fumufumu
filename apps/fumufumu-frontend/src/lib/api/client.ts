@@ -1,8 +1,18 @@
+import { redirect } from "next/navigation";
+import { isRedirectError } from "next/dist/client/components/redirect-error";
+
 const API_URL = process.env.NEXT_PUBLIC_API_URL || "http://localhost:8787";
 
 type ApiOptions = RequestInit & {
   // 必要に応じて拡張
 };
+
+function buildLoginUrl(returnTo?: string): string {
+  const params = new URLSearchParams();
+  params.set("sessionExpired", "");
+  if (returnTo) params.set("returnTo", returnTo);
+  return `/login?${params.toString()}`;
+}
 
 export async function apiClient<T>(
   endpoint: string,
@@ -28,7 +38,17 @@ export async function apiClient<T>(
     const response = await fetch(url, config);
 
     if (!response.ok) {
-      // エラーレスポンスのパース（必要に応じて）
+      if (response.status === 401) {
+        if (typeof window !== "undefined") {
+          window.location.href = buildLoginUrl(window.location.pathname);
+        } else {
+          const { headers } = await import("next/headers");
+          const headersList = await headers();
+          const returnTo = headersList.get("x-pathname") || undefined;
+          redirect(buildLoginUrl(returnTo));
+        }
+      }
+
       const errorData = await response.json().catch(() => ({}));
       throw new Error(errorData.error || `API Error: ${response.status}`);
     }
@@ -36,6 +56,7 @@ export async function apiClient<T>(
     // レスポンスが空の場合はnullを返す等の処理も可能
     return response.json() as Promise<T>;
   } catch (error) {
+    if (isRedirectError(error)) throw error;
     console.error("API Request Failed:", error);
     throw error;
   }
