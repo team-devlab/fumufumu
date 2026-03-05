@@ -1,18 +1,20 @@
 "use client";
 
 import Link from "next/link";
+import { useSearchParams } from "next/navigation";
 import { useState } from "react";
 import { Button } from "@/components/ui/Button";
 import { useAuth } from "../hooks/useAuth";
 
 export const LoginForm = () => {
   const { signin, isLoading, error } = useAuth();
+  const searchParams = useSearchParams();
   const [email, setEmail] = useState("");
   const [password, setPassword] = useState("");
 
   const handleSubmit = (e: React.FormEvent) => {
     e.preventDefault();
-    signin({ email, password });
+    signin({ email, password }, searchParams.get("returnTo"));
   };
 
   return (

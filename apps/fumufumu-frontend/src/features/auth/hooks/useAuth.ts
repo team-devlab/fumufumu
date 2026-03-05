@@ -14,12 +14,23 @@ export const useAuth = () => {
   const [isLoading, setIsLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
 
-  const signin = async (credentials: SigninCredentials) => {
+  const resolveReturnTo = (returnTo?: string | null) => {
+    if (!returnTo) return ROUTES.CONSULTATION.LIST;
+    if (!returnTo.startsWith("/") || returnTo.startsWith("//")) {
+      return ROUTES.CONSULTATION.LIST;
+    }
+    return returnTo;
+  };
+
+  const signin = async (
+    credentials: SigninCredentials,
+    returnTo?: string | null,
+  ) => {
     setIsLoading(true);
     setError(null);
     try {
       await authApi.signin(credentials);
-      router.push(ROUTES.CONSULTATION.LIST);
+      router.push(resolveReturnTo(returnTo));
     } catch (err) {
       setError(err instanceof Error ? err.message : "ログインに失敗しました");
     } finally {
