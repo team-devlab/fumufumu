@@ -17,9 +17,17 @@ export const LoginForm = () => {
     signin({ email, password }, searchParams.get("returnTo"));
   };
 
+  const isSessionExpired = searchParams.has("sessionExpired");
+
   return (
     <div className="text-center">
       <h1 className="text-3xl font-bold text-gray-800 mb-6">ログイン</h1>
+
+      {isSessionExpired && (
+        <div className="mb-4 p-3 bg-amber-50 text-amber-700 border border-amber-200 rounded-lg text-sm">
+          セッションの有効期限が切れました。再度ログインしてください。
+        </div>
+      )}
 
       {error && (
         <div className="mb-4 p-3 bg-red-100 text-red-700 rounded-lg text-sm">
