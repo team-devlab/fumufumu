@@ -30,13 +30,23 @@ export const useConsultationConfirm = () => {
       return;
     }
 
+    const tagIds = tags
+      .map((tag) => tag.id)
+      .filter((id) => Number.isInteger(id) && id > 0);
+
+    if (!draft && tagIds.length < 1) {
+      toast.error("タグを1つ以上選択してください");
+      router.push(ROUTES.CONSULTATION.NEW);
+      return;
+    }
+
     setIsProcessing(true);
     try {
       await createConsultation({
         title,
         body,
         draft,
-        // tags: tags // APIがタグ対応したらここを開放
+        ...(tagIds.length > 0 ? { tagIds } : {}),
       });
 
       // ADR 003: 投稿成功時にリセット

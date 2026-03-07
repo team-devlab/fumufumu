@@ -10,23 +10,65 @@ import { usePreventUnload } from "@/features/consultation/hooks/usePreventUnload
 import {
   useConsultationActions,
   useConsultationBody,
+  useConsultationTags,
   useConsultationTitle,
   useHasInput,
 } from "@/features/consultation/stores/useConsultationFormStore";
+import type { ConsultationFormTag, Tag } from "@/features/consultation/types";
 
 const countCharacters = (text: string) => text.replace(/\s/g, "").length;
 
-export const useConsultationEntry = () => {
+const reconcileSelectedTagsWithAvailableTags = (
+  selectedTags: ConsultationFormTag[],
+  availableTags: Tag[],
+): ConsultationFormTag[] => {
+  const resolvedTags: ConsultationFormTag[] = [];
+  const seenTagIds = new Set<number>();
+
+  for (const selectedTag of selectedTags) {
+    const matchedTag =
+      selectedTag.id > 0
+        ? availableTags.find((tag) => tag.id === selectedTag.id)
+        : availableTags.find((tag) => tag.name === selectedTag.name);
+
+    if (!matchedTag || seenTagIds.has(matchedTag.id)) continue;
+    seenTagIds.add(matchedTag.id);
+    resolvedTags.push({ id: matchedTag.id, name: matchedTag.name });
+  }
+
+  return resolvedTags;
+};
+
+const areSameTags = (
+  leftTags: ConsultationFormTag[],
+  rightTags: ConsultationFormTag[],
+) => {
+  return (
+    leftTags.length === rightTags.length &&
+    leftTags.every(
+      (leftTag, index) =>
+        leftTag.id === rightTags[index]?.id &&
+        leftTag.name === rightTags[index]?.name,
+    )
+  );
+};
+
+export const useConsultationEntry = (availableTags: Tag[]) => {
   const router = useRouter();
 
   // 個別のSelectorフックから値とアクションを取得
   // これにより、例えば tags が更新されても、このコンポーネントは再レンダリングされにくくなります
   const title = useConsultationTitle();
   const body = useConsultationBody();
-  const { setTitle, setBody, reset } = useConsultationActions();
+  const tags = useConsultationTags();
+  const { setTitle, setBody, setTags, reset } = useConsultationActions();
   const hasInput = useHasInput();
 
   const [isProcessing, setIsProcessing] = useState(false);
+  const selectedTags = reconcileSelectedTagsWithAvailableTags(
+    tags,
+    availableTags,
+  );
 
   // 有効文字数を計算
   const titleCharCount = countCharacters(title);
@@ -35,6 +77,10 @@ export const useConsultationEntry = () => {
   // NOTE: 誤操作による離脱防止
   const isDirty = hasInput && !isProcessing;
   usePreventUnload(isDirty);
+
+  const tagIds = selectedTags
+    .map((tag) => tag.id)
+    .filter((id) => Number.isInteger(id) && id > 0);
 
   const handleBack = () => {
     if (isDirty) {
@@ -72,6 +118,7 @@ export const useConsultationEntry = () => {
         title,
         body,
         draft: true,
+        ...(tagIds.length > 0 ? { tagIds } : {}),
       });
 
       // ADR 003: 投稿成功時にリセット
@@ -90,6 +137,25 @@ export const useConsultationEntry = () => {
     }
   };
 
+  const handleToggleTag = (tag: Tag) => {
+    const isSelected = selectedTags.some(
+      (selectedTag) => selectedTag.id === tag.id,
+    );
+    if (isSelected) {
+      setTags(selectedTags.filter((selectedTag) => selectedTag.id !== tag.id));
+      return;
+    }
+
+    if (selectedTags.length >= CONSULTATION_RULES.TAGS_MAX_COUNT) {
+      toast.error(
+        `タグは最大${CONSULTATION_RULES.TAGS_MAX_COUNT}件まで選択できます`,
+      );
+      return;
+    }
+
+    setTags([...selectedTags, { id: tag.id, name: tag.name }]);
+  };
+
   const handleConfirm = () => {
     if (!title.trim() || !body.trim()) {
       toast.error("タイトルと相談内容を入力してください");
@@ -103,6 +169,15 @@ export const useConsultationEntry = () => {
       return;
     }
 
+    if (tagIds.length < 1) {
+      toast.error("タグを1つ以上選択してください");
+      return;
+    }
+
+    if (!areSameTags(selectedTags, tags)) {
+      setTags(selectedTags);
+    }
+
     router.push(`${ROUTES.CONSULTATION.NEW}/confirm`);
   };
 
@@ -114,7 +189,9 @@ export const useConsultationEntry = () => {
     isProcessing,
     titleCharCount,
     bodyCharCount,
+    tags: selectedTags,
     handleSaveDraft,
+    handleToggleTag,
     handleConfirm,
     handleBack,
   };

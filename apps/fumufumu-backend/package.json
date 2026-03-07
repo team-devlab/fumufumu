@@ -14,7 +14,9 @@
     "studio": "drizzle-kit studio",
     "local:migration": "wrangler d1 migrations apply YOUR_DB_NAME --local",
     "remote:migration": "wrangler d1 migrations apply xxx --remote",
-    "seed": "tsx scripts/seed.ts"
+    "seed": "tsx scripts/seed.ts",
+    "tags:list": "tsx scripts/tags.ts list",
+    "tags:add": "tsx scripts/tags.ts add"
   },
   "dependencies": {
     "@hono/zod-validator": "^0.4.3",

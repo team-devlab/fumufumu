@@ -2,12 +2,16 @@ import {
   CONSULTATION_LABELS,
   CONSULTATION_RULES,
 } from "@/features/consultation/config/constants";
+import type { ConsultationFormTag, Tag } from "@/features/consultation/types";
 
 type Props = {
   title: string;
   body: string;
+  tags: ConsultationFormTag[];
+  availableTags: Tag[];
   onChangeTitle: (value: string) => void;
   onChangeBody: (value: string) => void;
+  onToggleTag: (tag: Tag) => void;
   titleCharCount: number;
   bodyCharCount: number;
 };
@@ -15,8 +19,11 @@ type Props = {
 export const ConsultationForm = ({
   title,
   body,
+  tags,
+  availableTags,
   onChangeTitle,
   onChangeBody,
+  onToggleTag,
   titleCharCount,
   bodyCharCount,
 }: Props) => {
@@ -87,8 +94,38 @@ export const ConsultationForm = ({
             ※ タグは1つ以上選択してください
           </span>
         </div>
-        <div className="p-4 bg-gray-50 rounded-lg border border-dashed border-gray-300 text-center text-gray-400 text-sm">
-          {CONSULTATION_LABELS.TAG_DEV_MESSAGE}
+        <div
+          id="tags"
+          className="p-4 bg-gray-50 rounded-lg border border-gray-200 space-y-3"
+        >
+          <p className="text-xs text-gray-500">
+            選択中: {tags.length} / {CONSULTATION_RULES.TAGS_MAX_COUNT}
+          </p>
+          {availableTags.length === 0 ? (
+            <p className="text-sm text-gray-500">選択可能なタグがありません</p>
+          ) : (
+            <div className="flex flex-wrap gap-2">
+              {availableTags.map((tag) => {
+                const isSelected = tags.some(
+                  (selectedTag) => selectedTag.id === tag.id,
+                );
+                return (
+                  <button
+                    key={tag.id}
+                    type="button"
+                    onClick={() => onToggleTag(tag)}
+                    className={`px-3 py-1 rounded-full text-sm font-medium transition-colors ${
+                      isSelected
+                        ? "bg-teal-600 text-white"
+                        : "bg-white text-gray-700 border border-gray-300 hover:bg-gray-100"
+                    }`}
+                  >
+                    #{tag.name}
+                  </button>
+                );
+              })}
+            </div>
+          )}
         </div>
       </div>
     </div>
