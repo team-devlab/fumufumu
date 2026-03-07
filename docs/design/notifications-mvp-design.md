@@ -1,3 +1,7 @@
+> [!NOTE]
+> 審査機能が先！ということに気づいたので後に回します。
+> 参考URL: https://github.com/team-devlab/fumufumu/pull/73#issuecomment-4015510167
+
 # 通知機能 意思決定シート（1ページ）
 
 ## 0. このシートの目的
