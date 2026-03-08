@@ -18,22 +18,6 @@ const showPattern1 = () => {
   });
 };
 
-const showPattern2 = () => {
-  toast(
-    "⚠️ ログイン期限が切れました。2秒後にログイン画面へ移動します",
-    {
-      duration: 2200,
-      style: {
-        border: "1px solid #A7F3D0",
-        background: "#ECFEF6",
-        color: "#0F4D3F",
-        borderRadius: "14px",
-        padding: "12px 14px",
-      },
-    },
-  );
-};
-
 const showPattern3 = () => {
   toast.custom(
     (t) => (
@@ -67,13 +51,18 @@ const showPattern3 = () => {
 export default function SessionToastPreviewPage() {
   return (
     <div className="mx-auto w-full max-w-4xl space-y-5">
-      <h2 className="text-2xl font-bold text-gray-800">セッション切れトースト検証</h2>
+      <h2 className="text-2xl font-bold text-gray-800">
+        セッション切れトースト検証
+      </h2>
       <p className="text-sm text-gray-500">
-        fumufumuの配色トーンに合わせた3パターンです。文言先頭に ⚠️ を入れています。
+        fumufumuの配色トーンに合わせた3パターンです。文言先頭に ⚠️
+        を入れています。
       </p>
 
       <section className="space-y-3 rounded-xl border border-gray-200 bg-white p-5 shadow-sm">
-        <h3 className="text-lg font-semibold text-gray-800">パターン1: 警告トーン（黄系）</h3>
+        <h3 className="text-lg font-semibold text-gray-800">
+          パターン1: 警告トーン（黄系）
+        </h3>
         <p className="text-sm text-gray-500">
           まず気づかせる用途。短く明確に再ログインを促します。
         </p>
@@ -87,21 +76,21 @@ export default function SessionToastPreviewPage() {
       </section>
 
       <section className="space-y-3 rounded-xl border border-gray-200 bg-white p-5 shadow-sm">
-        <h3 className="text-lg font-semibold text-gray-800">パターン2: 自動遷移を想定（teal系）</h3>
+        <h3 className="text-lg font-semibold text-gray-800">
+          パターン2: ログインフォーム付近に常時表示（teal系）
+        </h3>
         <p className="text-sm text-gray-500">
-          投稿/保存で401を受けた瞬間に出す想定。実運用時は2秒後に自動遷移を追加します。
+          セッション切れでログイン画面に遷移したときに、見逃さないよう常時表示する案です。
         </p>
-        <button
-          type="button"
-          onClick={showPattern2}
-          className="rounded-lg bg-teal-600 px-4 py-2 text-sm font-semibold text-white hover:bg-teal-700"
-        >
-          パターン2を表示
-        </button>
+        <div className="rounded-2xl border border-[#A7F3D0] bg-[#ECFEF6] px-4 py-3 text-sm text-[#0F4D3F]">
+          ⚠️ セッションが切れました。再ログインしてください。
+        </div>
       </section>
 
       <section className="space-y-3 rounded-xl border border-gray-200 bg-white p-5 shadow-sm">
-        <h3 className="text-lg font-semibold text-gray-800">パターン3: トースト内導線付き</h3>
+        <h3 className="text-lg font-semibold text-gray-800">
+          パターン3: トースト内導線付き
+        </h3>
         <p className="text-sm text-gray-500">
           トースト内に「ログインへ」導線を置く案。すぐ遷移したいときに使います。
         </p>
