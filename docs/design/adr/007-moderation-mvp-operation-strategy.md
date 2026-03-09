@@ -20,7 +20,7 @@
   - `target_id`: `NOT NULL`
   - `status`: `NOT NULL`（`pending/approved/rejected`）
   - `reason`: `NULL` 許容（`rejected` の場合のみ必須）
-  - `reviewed_at `: `NULL` 許容
+  - `reviewed_at`: `NULL` 許容
   - `created_at`: `NOT NULL`
   - `updated_at`: `NOT NULL`
 
@@ -54,7 +54,7 @@
 - 運営用APIを用意する（例: `/admin/moderation/...`）。
 - 主要API:
   - `GET /admin/moderation/consultations?status=pending`（未審査一覧取得）
-  - `POST /admin/moderation/consultations/find`（ID指定の複数相談取得）
+  - `GET /admin/moderation/consultations/find?consultation_ids=101,205,999`（ID指定の複数相談取得）
   - `POST /admin/moderation/consultations/:consultationId/decision`（承認/却下実行）
 - CLIまたはスクリプトから運営用APIを呼び出す。
 - 一般ユーザーには `pending` の投稿詳細を返さず、「確認中」を表示する。
@@ -97,14 +97,10 @@
 
 #### 2) ID指定の複数相談取得
 
-- Endpoint: `GET /admin/moderation/consultations/find`
+- Endpoint: `GET /admin/moderation/consultations/find?consultation_ids=101,205,999`
 - Request:
-
-```json
-{
-  "consultation_ids": [101, 205, 999]
-}
-```
+  - Query:
+    - `consultation_ids`: カンマ区切りのID文字列（例: `101,205,999`）
 
 - Response:
 
@@ -135,6 +131,7 @@
 - 挙動:
   - `moderation_reviews.status = pending` の相談のみ `consultations` に含める
   - `approved/rejected` の相談IDは `not_found_ids` 側で返す
+  - `consultation_ids` の件数増加によりURL長の制約が懸念される場合は、`POST /admin/moderation/consultations/find` への切り替えを行う
 
 #### 3) 承認/却下実行
 
@@ -165,7 +162,7 @@
   "success": true,
   "consultation_id": 101,
   "status": "approved",
-  "decided_at": "2026-03-08T10:30:00Z"
+  "reviewed_at": "2026-03-08T10:30:00Z"
 }
 ```
 
@@ -177,7 +174,7 @@
   - `/admin/moderation/*` は Cloudflare Access で保護し、運営メンバーまたは Service Token のみアクセス可能にする。
   - 対象は以下3APIを含む運営用API全体とする。
     - `GET /admin/moderation/consultations?status=pending`
-    - `POST /admin/moderation/consultations/find`
+    - `GET /admin/moderation/consultations/find`
     - `POST /admin/moderation/consultations/:consultationId/decision`
 
 ## 今後検討事項
