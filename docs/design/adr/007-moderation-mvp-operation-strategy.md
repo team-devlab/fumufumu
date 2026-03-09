@@ -99,7 +99,7 @@
 
 #### 2) ID指定の複数相談取得
 
-- Endpoint: `POST /admin/moderation/consultations/find`
+- Endpoint: `GET /admin/moderation/consultations/find`
 - Request:
 
 ```json
