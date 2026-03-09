@@ -19,7 +19,7 @@
   - `consultation_id`: `NOT NULL`
   - `status`: `NOT NULL`（`pending/approved/rejected`）
   - `reason`: `NULL` 許容（`rejected` の場合のみ必須）
-  - `decided_at`: `NULL` 許容
+  - `reviewed_at `: `NULL` 許容
   - `created_at`: `NOT NULL`
   - `updated_at`: `NOT NULL`
 
