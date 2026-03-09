@@ -10,13 +10,15 @@
 - 投稿作成時に、投稿本体と審査レコードを同時に作成する。
 - 投稿本体（例: `consultations`）は `moderation_status` を持ち、初期値を `pending` とする。
 - 審査管理用に新規テーブル（例: `moderation_reviews`）を作成し、`pending/approved/rejected` を管理する。
+- `moderation_reviews` は `consultation` と `advice` の両方を扱えるよう、`target_type` と `target_id` で対象を識別する。
 - 承認・却下時は、投稿本体の公開状態と審査レコードを同一トランザクションで更新する。
 
 ### NULL許容方針（MVP）
 
 - `moderation_reviews`
   - `id`: `NOT NULL`
-  - `consultation_id`: `NOT NULL`
+  - `target_type`: `NOT NULL`（`consultation/advice`）
+  - `target_id`: `NOT NULL`
   - `status`: `NOT NULL`（`pending/approved/rejected`）
   - `reason`: `NULL` 許容（`rejected` の場合のみ必須）
   - `reviewed_at `: `NULL` 許容
@@ -24,6 +26,8 @@
   - `updated_at`: `NOT NULL`
 
 - `consultations`
+  - `moderation_status`: `NOT NULL`（初期値 `pending`）
+- `advices`
   - `moderation_status`: `NOT NULL`（初期値 `pending`）
 
 ---
