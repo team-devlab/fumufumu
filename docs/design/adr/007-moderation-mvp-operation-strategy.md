@@ -8,10 +8,9 @@
 ## 1. DB設計の方針
 
 - 投稿作成時に、投稿本体と審査レコードを同時に作成する。
-- 投稿本体（例: `consultations`）は `moderation_status` を持ち、初期値を `pending` とする。
 - 審査管理用に新規テーブル（例: `moderation_reviews`）を作成し、`pending/approved/rejected` を管理する。
 - `moderation_reviews` は `consultation` と `advice` の両方を扱えるよう、`target_type` と `target_id` で対象を識別する。
-- 承認・却下時は、投稿本体の公開状態と審査レコードを同一トランザクションで更新する。
+- 承認・却下時は、審査レコードを更新し、その状態を公開可否の判定に利用する。
 
 ### NULL許容方針（MVP）
 
@@ -24,11 +23,6 @@
   - `reviewed_at `: `NULL` 許容
   - `created_at`: `NOT NULL`
   - `updated_at`: `NOT NULL`
-
-- `consultations`
-  - `moderation_status`: `NOT NULL`（初期値 `pending`）
-- `advices`
-  - `moderation_status`: `NOT NULL`（初期値 `pending`）
 
 ---
 
@@ -94,7 +88,7 @@
   "consultations": [
     {
       "id": 101,
-      "moderation_status": "pending",
+      "status": "pending",
       "created_at": "2026-03-08T10:15:00Z"
     }
   ]
@@ -122,7 +116,7 @@
       "title": "相談タイトル",
       "content": "相談本文",
       "author_id": 12,
-      "moderation_status": "pending",
+      "status": "pending",
       "created_at": "2026-03-08T10:15:00Z"
     },
     {
@@ -130,7 +124,7 @@
       "title": "別の相談タイトル",
       "content": "別の相談本文",
       "author_id": 33,
-      "moderation_status": "pending",
+      "status": "pending",
       "created_at": "2026-03-08T11:00:00Z"
     }
   ],
@@ -139,7 +133,7 @@
 ```
 
 - 挙動:
-  - `moderation_status = pending` の相談のみ `consultations` に含める
+  - `moderation_reviews.status = pending` の相談のみ `consultations` に含める
   - `approved/rejected` の相談IDは `not_found_ids` 側で返す
 
 #### 3) 承認/却下実行
@@ -170,7 +164,7 @@
 {
   "success": true,
   "consultation_id": 101,
-  "moderation_status": "approved",
+  "status": "approved",
   "decided_at": "2026-03-08T10:30:00Z"
 }
 ```
