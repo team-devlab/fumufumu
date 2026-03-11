@@ -4,7 +4,7 @@ import app from '../../index';
 import { setupIntegrationTest, forceSetSolved, forceSetHidden } from '../helpers/db-helper';
 import { createAndLoginUser } from '../helpers/auth-helper';
 import { createApiRequest } from '../helpers/request-helper';
-import { assertUnauthorizedError, assertValidationError } from '../helpers/assert-helper';
+import { assertValidationError } from '../helpers/assert-helper';
 import { ConsultationService } from '@/services/consultation.service';
 
 describe('Consultations API - List & Filtering', () => {
@@ -138,7 +138,7 @@ describe('Consultations API - List & Filtering', () => {
     });
   });
 
-  it('フィルタ: draft=true で自分の下書きのみを取得できる', async () => {
+  it('フィルタ: draft=true は公開APIでは空配列を返す', async () => {
     const req = createApiRequest('/api/consultations', 'GET', {
       cookie: user.cookie,
       queryParams: { draft: 'true' },
@@ -147,14 +147,12 @@ describe('Consultations API - List & Filtering', () => {
     const res = await app.fetch(req, env);
     const body = await res.json() as any;
 
-    // データが1件以上返ってきていることを保証（サイレントパス防止）
-    expect(body.data.length).toBeGreaterThan(0);
-
-    expect(body.data.every((item: any) => item.draft === true)).toBe(true);
-    expect(body.data.every((item: any) => item.author.id === user.appUserId)).toBe(true);
+    expect(res.status).toBe(200);
+    expect(body.data).toEqual([]);
+    expect(body.pagination.total_items).toBe(0);
   });
 
-  it('セキュリティ: draft=true を指定しても、他人の下書きは一覧に含まれない', async () => {
+  it('セキュリティ: draft=true を指定しても下書き情報は漏洩しない', async () => {
     // 別のユーザーを作成
     const otherUser = await createAndLoginUser({ name: 'Other User' });
     
@@ -173,11 +171,9 @@ describe('Consultations API - List & Filtering', () => {
     const res = await app.fetch(req, env);
     const body = await res.json() as any;
 
-    // データが1件以上返ってきていることを保証（サイレントパス防止）
-    expect(body.data.length).toBeGreaterThan(0);
-
-    const leakedDraft = body.data.find((c: any) => c.title === '他人の下書き');
-    expect(leakedDraft).toBeUndefined();
+    expect(res.status).toBe(200);
+    expect(body.data).toEqual([]);
+    expect(body.pagination.total_items).toBe(0);
   });
 
   it('非表示(hiddenAt)が設定されている相談は、一覧に含まれない', async () => {
@@ -424,7 +420,7 @@ describe('Consultations API - List & Filtering', () => {
     });
   });
 
-  it('セキュリティ: 他人の下書きは一覧に含まれない', async () => {
+  it('セキュリティ: draft=true 一覧で他人の下書きは取得されない', async () => {
     // 別のユーザーを作成
     const otherUser = await createAndLoginUser({ name: 'Other User' });
     
@@ -443,27 +439,20 @@ describe('Consultations API - List & Filtering', () => {
     const res = await app.fetch(req, env);
     const body = await res.json() as any;
 
-    // データが1件以上返ってきていることを保証（サイレントパス防止）
-    expect(body.data.length).toBeGreaterThan(0);
-
-    const hasOtherDraft = body.data.some((c: any) => c.title === '他人の下書き');
-    expect(hasOtherDraft).toBe(false);
+    expect(res.status).toBe(200);
+    expect(body.data).toEqual([]);
+    expect(body.pagination.total_items).toBe(0);
   });
 
   describe('Pagination Edge Cases', () => {
-    it('認証なしの場合401エラーを返す', async () => {
+    it('認証なしでも公開相談一覧を取得できる', async () => {
       const req = createApiRequest('/api/consultations', 'GET'); // Cookieなし
       const res = await app.fetch(req, env);
       
-      expect(res.status).toBe(401);
+      expect(res.status).toBe(200);
       const body = await res.json() as any;
-
-      // 成功時のプロパティ（dataなど）が「存在しない」ことを確認
-      expect(body).not.toHaveProperty('data');
-      expect(body).not.toHaveProperty('pagination');
-
-      // エラー構造が正しいか（index.ts の定義と一致するか）を確認
-      assertUnauthorizedError(body);
+      expect(Array.isArray(body.data)).toBe(true);
+      expect(body).toHaveProperty('pagination');
     });
 
     it('不正なページ番号（0以下）は400エラーを返す (Zod共通バリデーション)', async () => {

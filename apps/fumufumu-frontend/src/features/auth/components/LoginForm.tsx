@@ -22,13 +22,11 @@ export const LoginForm = () => {
   const reasonConfig: Record<string, { message: string; className: string }> = {
     unauthorized: {
       message: "このページはログインが必要です。",
-      className:
-        "border-[#A7F3D0] bg-[#ECFEF6] text-[#0F4D3F]",
+      className: "border-[#A7F3D0] bg-[#ECFEF6] text-[#0F4D3F]",
     },
     session_expired: {
       message: "セッションの有効期限が切れました。再度ログインしてください。",
-      className:
-        "border-amber-300 bg-amber-50 text-amber-800",
+      className: "border-amber-300 bg-amber-50 text-amber-800",
     },
   };
 

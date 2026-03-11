@@ -4,7 +4,7 @@ import app from '../../index';
 import { setupIntegrationTest, forceSetHidden } from '../helpers/db-helper';
 import { createAndLoginUser } from '../helpers/auth-helper';
 import { createApiRequest } from '../helpers/request-helper';
-import { assertUnauthorizedError, assertValidationError } from '../helpers/assert-helper';
+import { assertValidationError } from '../helpers/assert-helper';
 
 describe('Consultations API - Detail (GET /:id)', () => {
   let user: Awaited<ReturnType<typeof createAndLoginUser>>;
@@ -127,7 +127,7 @@ describe('Consultations API - Detail (GET /:id)', () => {
     expect(draftAdvice).toBeUndefined();
   });
 
-  it('自分の下書き相談は取得できる', async () => {
+  it('【404 Not Found】下書き相談は公開APIから取得できない', async () => {
     const createReq = createApiRequest('/api/consultations', 'POST', {
       cookie: user.cookie,
       body: {
@@ -144,15 +144,10 @@ describe('Consultations API - Detail (GET /:id)', () => {
     const created = await createRes.json() as any;
     const draftId = created.id;
 
-    const getReq = createApiRequest(`/api/consultations/${draftId}`, 'GET', {
-      cookie: user.cookie,
-    });
+    const getReq = createApiRequest(`/api/consultations/${draftId}`, 'GET');
     const getRes = await app.fetch(getReq, env);
 
-    expect(getRes.status).toBe(200);
-    const data = await getRes.json() as any;
-    expect(data.id).toBe(draftId);
-    expect(data.title).toBe('自分だけが見れる下書き');
+    expect(getRes.status).toBe(404);
   });
 
   it('【404 Not Found】他人の下書き相談は取得できない', async () => {
@@ -178,7 +173,7 @@ describe('Consultations API - Detail (GET /:id)', () => {
     expect(getRes.status).toBe(404);
   });
 
-  it('自分のhidden相談は取得できる', async () => {
+  it('【404 Not Found】hidden相談は公開APIから取得できない', async () => {
     const createReq = createApiRequest('/api/consultations', 'POST', {
       cookie: user.cookie,
       body: {
@@ -195,15 +190,10 @@ describe('Consultations API - Detail (GET /:id)', () => {
     const created = await createRes.json() as any;
     await forceSetHidden(created.id);
 
-    const getReq = createApiRequest(`/api/consultations/${created.id}`, 'GET', {
-      cookie: user.cookie,
-    });
+    const getReq = createApiRequest(`/api/consultations/${created.id}`, 'GET');
     const getRes = await app.fetch(getReq, env);
 
-    expect(getRes.status).toBe(200);
-    const data = await getRes.json() as any;
-    expect(data.id).toBe(created.id);
-    expect(data.hidden_at).not.toBeNull();
+    expect(getRes.status).toBe(404);
   });
 
   it('【404 Not Found】他人のhidden相談は取得できない', async () => {
@@ -231,13 +221,14 @@ describe('Consultations API - Detail (GET /:id)', () => {
     expect(getRes.status).toBe(404);
   });
 
-  it('認証なしの場合401エラーを返す', async () => {
+  it('認証なしでも公開相談の詳細を取得できる', async () => {
     const req = createApiRequest(`/api/consultations/${existingId}`, 'GET');
     const res = await app.fetch(req, env);
 
-    expect(res.status).toBe(401);
+    expect(res.status).toBe(200);
     const body = await res.json() as any;
-    assertUnauthorizedError(body);
+    expect(body.id).toBe(existingId);
+    expect(body.title).toBe('テスト相談');
   });
 
   it('不正なID(0/-1/abc)を指定した場合400エラーを返す', async () => {

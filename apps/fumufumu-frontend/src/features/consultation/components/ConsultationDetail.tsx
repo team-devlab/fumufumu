@@ -1,5 +1,5 @@
-import Link from "next/link";
 import { isRedirectError } from "next/dist/client/components/redirect-error";
+import Link from "next/link";
 import { ROUTES } from "@/config/routes";
 import { fetchCurrentUserApi } from "@/features/user/api/userApi";
 import { fetchConsultationDetailApi } from "../api/consultationApi";
