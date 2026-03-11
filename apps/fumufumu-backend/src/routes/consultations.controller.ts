@@ -192,16 +192,16 @@ export const updateDraftAdviceHandlers = factory.createHandlers(
 
 export const consultationsRoute = new Hono<AppBindings>();
 
-// ミドルウェア適用（認証 → サービス注入の順）
-consultationsRoute.use("/*", authGuard, injectConsultationService);
+// サービス注入は全ルート共通
+consultationsRoute.use("/*", injectConsultationService);
 
-// ルーティング登録
-// 相談関連
-consultationsRoute.get("/:id", ...getConsultationHandlers);
+// 公開ルート（未ログインでも閲覧可）
 consultationsRoute.get("/", ...listConsultationsHandlers);
-consultationsRoute.post("/", ...createConsultationHandlers);
-consultationsRoute.put("/:id", ...updateConsultationHandlers);
-// 相談に対するアドバイス関連
-consultationsRoute.post("/:id/advice", ...createAdviceHandlers);
-consultationsRoute.get("/:id/advices", ...listAdvicesHandlers);
-consultationsRoute.put("/:id/advice/draft", ...updateDraftAdviceHandlers);
+consultationsRoute.get("/:id", ...getConsultationHandlers);
+
+// 認証必須ルート
+consultationsRoute.post("/", authGuard, ...createConsultationHandlers);
+consultationsRoute.put("/:id", authGuard, ...updateConsultationHandlers);
+consultationsRoute.post("/:id/advice", authGuard, ...createAdviceHandlers);
+consultationsRoute.get("/:id/advices", authGuard, ...listAdvicesHandlers);
+consultationsRoute.put("/:id/advice/draft", authGuard, ...updateDraftAdviceHandlers);
