@@ -1,10 +1,11 @@
 import { env } from 'cloudflare:test';
 import { describe, it, expect } from 'vitest';
 import app from '../index';
+import { createApiRequest } from './helpers/request-helper';
 
 describe('Backend API', () => {
   it('should handle root request', async () => {
-    const req = new Request('http://localhost/');
+    const req = createApiRequest('/');
     const res = await app.fetch(req, env);
     expect(res.status).toBe(200);
     
@@ -12,4 +13,3 @@ describe('Backend API', () => {
     expect(text).toBe('Hello Hono!');
   });
 });
-

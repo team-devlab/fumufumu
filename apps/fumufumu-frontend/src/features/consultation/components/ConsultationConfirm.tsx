@@ -1,10 +1,11 @@
 import { Button } from "@/components/ui/Button";
 import { CONSULTATION_LABELS } from "@/features/consultation/config/constants";
+import type { ConsultationFormTag } from "@/features/consultation/types";
 
 type Props = {
   title: string;
   body: string;
-  tags: string[];
+  tags: ConsultationFormTag[];
   onBack: () => void;
   onSaveDraft: () => void;
   onPublish: () => void;
@@ -54,10 +55,10 @@ export const ConsultationConfirm = ({
           {tags.length > 0 ? (
             tags.map((tag) => (
               <span
-                key={tag}
+                key={tag.id}
                 className="px-3 py-1 bg-teal-100 text-teal-700 text-sm rounded-full font-medium"
               >
-                #{tag}
+                #{tag.name}
               </span>
             ))
           ) : (
