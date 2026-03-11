@@ -9,7 +9,7 @@ type ApiOptions = RequestInit & {
 
 function buildLoginUrl(returnTo?: string): string {
   const params = new URLSearchParams();
-  params.set("sessionExpired", "");
+  params.set("reason", "session_expired");
   if (returnTo) params.set("returnTo", returnTo);
   return `/login?${params.toString()}`;
 }

@@ -17,15 +17,32 @@ export const LoginForm = () => {
     signin({ email, password }, searchParams.get("returnTo"));
   };
 
-  const isSessionExpired = searchParams.has("sessionExpired");
+  const reason = searchParams.get("reason");
+
+  const reasonConfig: Record<string, { message: string; className: string }> = {
+    unauthorized: {
+      message: "このページはログインが必要です。",
+      className:
+        "border-[#A7F3D0] bg-[#ECFEF6] text-[#0F4D3F]",
+    },
+    session_expired: {
+      message: "セッションの有効期限が切れました。再度ログインしてください。",
+      className:
+        "border-amber-300 bg-amber-50 text-amber-800",
+    },
+  };
+
+  const reasonInfo = reason ? reasonConfig[reason] : null;
 
   return (
     <div className="text-center">
       <h1 className="text-3xl font-bold text-gray-800 mb-6">ログイン</h1>
 
-      {isSessionExpired && (
-        <div className="mb-4 rounded-2xl border border-[#A7F3D0] bg-[#ECFEF6] px-4 py-3 text-sm text-[#0F4D3F]">
-          ⚠️ セッションが切れました。再ログインしてください。
+      {reasonInfo && (
+        <div
+          className={`mb-4 rounded-2xl border px-4 py-3 text-sm ${reasonInfo.className}`}
+        >
+          {reasonInfo.message}
         </div>
       )}
 
