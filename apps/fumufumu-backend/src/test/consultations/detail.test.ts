@@ -257,6 +257,114 @@ describe('Consultations API - Detail (GET /:id)', () => {
     }
   });
 
+  it('相談詳細取得: page/limit指定で回答一覧をページネーションできる', async () => {
+    const consultationRes = await app.fetch(createApiRequest('/api/consultations', 'POST', {
+      cookie: user.cookie,
+      body: {
+        title: '回答ページング検証用の相談',
+        body: '相談詳細APIの回答ページングを検証する本文です。',
+        draft: false,
+        tagIds: [tagId],
+      },
+    }), env);
+    expect(consultationRes.status).toBe(201);
+    const consultation = await consultationRes.json() as any;
+
+    const adviceBodies = [
+      '回答1: ページング検証用の本文です。',
+      '回答2: ページング検証用の本文です。',
+      '回答3: ページング検証用の本文です。',
+      '回答4: ページング検証用の本文です。',
+      '回答5: ページング検証用の本文です。',
+    ];
+
+    for (const body of adviceBodies) {
+      const adviceRes = await app.fetch(createApiRequest(`/api/consultations/${consultation.id}/advice`, 'POST', {
+        cookie: user.cookie,
+        body: { body, draft: false },
+      }), env);
+      expect(adviceRes.status).toBe(201);
+    }
+
+    const detailRes = await app.fetch(createApiRequest(`/api/consultations/${consultation.id}`, 'GET', {
+      cookie: user.cookie,
+      queryParams: { page: 2, limit: 2 },
+    }), env);
+    expect(detailRes.status).toBe(200);
+
+    const detail = await detailRes.json() as any;
+    expect(Array.isArray(detail.advices)).toBe(true);
+    expect(detail.advices.length).toBe(2);
+    expect(detail.advices.map((a: any) => a.body)).toEqual([
+      adviceBodies[2],
+      adviceBodies[3],
+    ]);
+
+    expect(detail).toHaveProperty('advice_pagination');
+    expect(detail.advice_pagination.current_page).toBe(2);
+    expect(detail.advice_pagination.per_page).toBe(2);
+    expect(detail.advice_pagination.total_items).toBe(5);
+    expect(detail.advice_pagination.total_pages).toBe(3);
+    expect(detail.advice_pagination.has_next).toBe(true);
+    expect(detail.advice_pagination.has_prev).toBe(true);
+  });
+
+  it('相談詳細取得: 範囲外のpage指定では空配列とページ情報を返す', async () => {
+    const consultationRes = await app.fetch(createApiRequest('/api/consultations', 'POST', {
+      cookie: user.cookie,
+      body: {
+        title: '回答ページ範囲外検証用の相談',
+        body: '範囲外ページで空配列を返すことを確認する本文です。',
+        draft: false,
+        tagIds: [tagId],
+      },
+    }), env);
+    expect(consultationRes.status).toBe(201);
+    const consultation = await consultationRes.json() as any;
+
+    for (let i = 1; i <= 3; i++) {
+      const adviceRes = await app.fetch(createApiRequest(`/api/consultations/${consultation.id}/advice`, 'POST', {
+        cookie: user.cookie,
+        body: { body: `範囲外検証回答${i}: 10文字以上の本文です。`, draft: false },
+      }), env);
+      expect(adviceRes.status).toBe(201);
+    }
+
+    const detailRes = await app.fetch(createApiRequest(`/api/consultations/${consultation.id}`, 'GET', {
+      cookie: user.cookie,
+      queryParams: { page: 99, limit: 2 },
+    }), env);
+    expect(detailRes.status).toBe(200);
+
+    const detail = await detailRes.json() as any;
+    expect(detail.advices).toEqual([]);
+    expect(detail.advice_pagination.current_page).toBe(99);
+    expect(detail.advice_pagination.per_page).toBe(2);
+    expect(detail.advice_pagination.total_items).toBe(3);
+    expect(detail.advice_pagination.total_pages).toBe(2);
+    expect(detail.advice_pagination.has_next).toBe(false);
+  });
+
+  it('相談詳細取得: 不正なpage/limitを指定すると400エラーを返す', async () => {
+    const invalidPageReq = createApiRequest(`/api/consultations/${existingId}`, 'GET', {
+      cookie: user.cookie,
+      queryParams: { page: 0 },
+    });
+    const invalidPageRes = await app.fetch(invalidPageReq, env);
+    expect(invalidPageRes.status).toBe(400);
+    const invalidPageBody = await invalidPageRes.json() as any;
+    assertValidationError(invalidPageBody);
+
+    const invalidLimitReq = createApiRequest(`/api/consultations/${existingId}`, 'GET', {
+      cookie: user.cookie,
+      queryParams: { limit: 101 },
+    });
+    const invalidLimitRes = await app.fetch(invalidLimitReq, env);
+    expect(invalidLimitRes.status).toBe(400);
+    const invalidLimitBody = await invalidLimitRes.json() as any;
+    assertValidationError(invalidLimitBody);
+  });
+
   it('相談詳細取得時、hidden状態の回答はリストに含まれない', async () => {
     const consultationRes = await app.fetch(createApiRequest('/api/consultations', 'POST', {
       cookie: user.cookie,
