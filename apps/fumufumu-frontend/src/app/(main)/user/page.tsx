@@ -13,8 +13,13 @@ export default async function UserPage() {
 
   if (user === null) {
     return (
-      <div className="max-w-4xl mx-auto w-full p-8 text-center text-red-500">
-        ユーザー情報の取得に失敗しました。
+      <div className="max-w-4xl mx-auto w-full">
+        <div className="p-6 bg-white rounded-xl shadow border border-gray-200 text-center">
+          <h1 className="sr-only">ユーザー情報</h1>
+          <p className="text-gray-600">
+            ユーザー情報の取得に失敗しました。
+          </p>
+        </div>
       </div>
     );
   }
