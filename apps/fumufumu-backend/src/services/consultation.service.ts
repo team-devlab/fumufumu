@@ -21,9 +21,6 @@ type ConsultationEntityById = Awaited<ReturnType<ConsultationRepository["findFir
 type AdviceEntity = Awaited<ReturnType<ConsultationRepository["createAdvice"]>>;
 type AdviceEntityFromList = Awaited<ReturnType<ConsultationRepository["findAdvicesByConsultationId"]>>[number];
 
-// 詳細取得時の `advices` 配列の中身の型を抽出
-type AdviceEntityFromDetail = ConsultationEntityById["advices"][number];
-
 export class ConsultationService {
 	private static readonly BODY_PREVIEW_LENGTH = 100;
 
@@ -96,7 +93,7 @@ export class ConsultationService {
 	 * * @param advice - Repository層から取得した相談回答データ（作成時 or 詳細取得時）
 	 * @returns API レスポンス形式の相談回答データ
 	 */
-	private toAdviceResponse(advice: AdviceEntity | AdviceEntityFromDetail | AdviceEntityFromList): AdviceResponse {
+	private toAdviceResponse(advice: AdviceEntity | AdviceEntityFromList): AdviceResponse {
 		return {
 			id: advice.id,
 			body: advice.body,
@@ -126,7 +123,12 @@ export class ConsultationService {
 		};
 	}
 
-	async getConsultation(id: number, requestUserId: number) :Promise<ConsultationResponse> {
+	async getConsultation(
+		id: number,
+		requestUserId: number,
+		pagination?: PaginationParams,
+	) :Promise<ConsultationResponse> {
+		const { page = 1, limit = 20 } = pagination || {};
 		const consultation = await this.repository.findFirstById(id);
 
 		// NOTE: 権限チェック
@@ -135,12 +137,22 @@ export class ConsultationService {
 			throw new NotFoundError(`相談が見つかりません: id=${id}`);
 		}
 
+		const [adviceList, adviceTotalCount] = await Promise.all([
+			this.repository.findAdvicesByConsultationId(
+				id,
+				{ page, limit },
+				undefined,
+				"asc",
+			),
+			this.repository.countAdvicesByConsultationId(id),
+		]);
+
 		const baseResponse = this.toConsultationResponse(consultation, true);
 
 		return {
 			...baseResponse,
-			// 詳細情報なので、ちゃんとリレーションから変換してセットする
-			advices: consultation.advices.map(advice => this.toAdviceResponse(advice)),
+			advices: adviceList.map(advice => this.toAdviceResponse(advice)),
+			advice_pagination: this.calculatePagination({ page, limit }, adviceTotalCount),
 		};
 	}
 

@@ -99,6 +99,11 @@ export const listConsultationsQuerySchema = paginationQuerySchema.extend({
 });
 
 /**
+ * 相談詳細取得のクエリパラメータバリデーションスキーマ
+ */
+export const getConsultationQuerySchema = paginationQuerySchema;
+
+/**
  * 回答一覧取得のクエリパラメータバリデーションスキーマ
  */
 export const listAdvicesQuerySchema = paginationQuerySchema.extend({
@@ -161,6 +166,7 @@ export const consultationIdParamSchema = z.object({
 });
 
 export type ListConsultationsQuery = z.infer<typeof listConsultationsQuerySchema>;
+export type GetConsultationQuery = z.infer<typeof getConsultationQuerySchema>;
 export type ListAdvicesQuery = z.infer<typeof listAdvicesQuerySchema>;
 export type CreateConsultationContent = z.infer<typeof createConsultationSchema>;
 export type UpdateConsultationContent = z.infer<typeof updateConsultationSchema>;
