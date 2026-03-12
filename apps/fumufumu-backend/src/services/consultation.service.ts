@@ -208,8 +208,10 @@ export class ConsultationService {
 		const { page = 1, limit = 20 } = pagination || {};
 
 		const consultation = await this.repository.findConsultationByIdForAccessCheck(consultationId);
+		const contentCheck = await this.repository.findConsultationContentCheckByConsultationId(consultationId);
 		const isHiddenConsultation = consultation.draft || consultation.hiddenAt !== null;
-		if (isHiddenConsultation && consultation.authorId !== requestUserId) {
+		const isNotApproved = contentCheck !== undefined && contentCheck.status !== "approved";
+		if ((isHiddenConsultation && consultation.authorId !== requestUserId) || isNotApproved) {
 			throw new NotFoundError(`相談が見つかりません: id=${consultationId}`);
 		}
 
