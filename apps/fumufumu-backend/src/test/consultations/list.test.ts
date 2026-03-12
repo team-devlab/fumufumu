@@ -11,6 +11,12 @@ describe('Consultations API - List & Filtering', () => {
   let user: Awaited<ReturnType<typeof createAndLoginUser>>;
   let solvedId: number;
   let tagId: number;
+  const approveConsultation = async (consultationId: number) => {
+    await env.DB
+      .prepare("UPDATE content_checks SET status = 'approved', checked_at = (cast(unixepoch('subsecond') * 1000 as integer)), updated_at = (cast(unixepoch('subsecond') * 1000 as integer)) WHERE target_type = 'consultation' AND target_id = ?")
+      .bind(consultationId)
+      .run();
+  };
 
   beforeAll(async () => {
     // DBセットアップとテストユーザー作成
@@ -23,10 +29,12 @@ describe('Consultations API - List & Filtering', () => {
     tagId = createdTag!.id;
 
     // 公開相談（未解決）を作成
-    await app.fetch(createApiRequest('/api/consultations', 'POST', {
+    const unsolvedRes = await app.fetch(createApiRequest('/api/consultations', 'POST', {
       cookie: user.cookie,
       body: { title: '未解決の相談', body: 'これは未解決の本文です（10文字以上）', draft: false, tagIds: [tagId] }
     }), env);
+    const unsolved = await unsolvedRes.json() as any;
+    await approveConsultation(unsolved.id);
 
     // 解決済みにするための相談を作成
     const res = await app.fetch(createApiRequest('/api/consultations', 'POST', {
@@ -38,6 +46,7 @@ describe('Consultations API - List & Filtering', () => {
     const data = await res.json() as any;
     expect(data.id).toBeDefined();
     solvedId = data.id;
+    await approveConsultation(solvedId);
 
     await forceSetSolved(solvedId);
 
@@ -52,7 +61,11 @@ describe('Consultations API - List & Filtering', () => {
         cookie: user.cookie,
         body: post,
       });
-      await app.fetch(req, env);
+      const createdRes = await app.fetch(req, env);
+      const created = await createdRes.json() as any;
+      if (post.draft === false) {
+        await approveConsultation(created.id);
+      }
     }
   });
 
@@ -193,6 +206,7 @@ describe('Consultations API - List & Filtering', () => {
     }), env);
     const createdData = await createRes.json() as any;
     const targetId = createdData.id;
+    await approveConsultation(targetId);
 
     // SQL ヘルパーを使用して、DB 側で強制的に hidden_at を設定する
     await forceSetHidden(targetId);
@@ -266,10 +280,12 @@ describe('Consultations API - List & Filtering', () => {
   it('body_previewは100文字に切り取られている', async () => {
     // 100文字以上の本文で相談を作成
     const longBody = 'A'.repeat(150);
-    await app.fetch(createApiRequest('/api/consultations', 'POST', {
+    const createRes = await app.fetch(createApiRequest('/api/consultations', 'POST', {
       cookie: user.cookie,
       body: { title: '長い本文の相談', body: longBody, draft: false, tagIds: [tagId] },
     }), env);
+    const created = await createRes.json() as any;
+    await approveConsultation(created.id);
 
     // 一覧を取得して、body_previewが100文字に切り取られていることを確認
     const req = createApiRequest('/api/consultations', 'GET', {
@@ -346,6 +362,8 @@ describe('Consultations API - List & Filtering', () => {
           },
         }), env);
         expect(createRes.status).toBe(201);
+        const created = await createRes.json() as any;
+        await approveConsultation(created.id);
       }
     });
 

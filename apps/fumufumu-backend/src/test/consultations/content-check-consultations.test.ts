@@ -8,11 +8,13 @@ import { assertUnauthorizedError, assertValidationError } from '../helpers/asser
 
 describe('Admin Content Check API - Consultations', () => {
   let user: Awaited<ReturnType<typeof createAndLoginUser>>;
+  let anotherUser: Awaited<ReturnType<typeof createAndLoginUser>>;
   let tagId: number;
 
   beforeAll(async () => {
     await setupIntegrationTest();
     user = await createAndLoginUser();
+    anotherUser = await createAndLoginUser();
 
     const tagName = `content-check-tag-${Date.now()}`;
     await env.DB.prepare('INSERT INTO tags (name) VALUES (?)').bind(tagName).run();
@@ -63,6 +65,31 @@ describe('Admin Content Check API - Consultations', () => {
     expect(target).toBeDefined();
     expect(target?.status).toBe('pending');
     expect(new Date(target!.created_at).toString()).not.toBe('Invalid Date');
+  });
+
+  it('pending相談は通常一覧APIに露出しない', async () => {
+    const created = await createPublicConsultation('pending-hidden-from-list');
+
+    const req = createApiRequest('/api/consultations', 'GET', {
+      cookie: anotherUser.cookie,
+    });
+
+    const res = await app.fetch(req, env);
+    expect(res.status).toBe(200);
+    const data = await res.json() as { data: Array<{ id: number }> };
+
+    expect(data.data.some((item) => item.id === created.id)).toBe(false);
+  });
+
+  it('pending相談は通常詳細APIで取得できない', async () => {
+    const created = await createPublicConsultation('pending-hidden-from-detail');
+
+    const req = createApiRequest(`/api/consultations/${created.id}`, 'GET', {
+      cookie: anotherUser.cookie,
+    });
+
+    const res = await app.fetch(req, env);
+    expect(res.status).toBe(404);
   });
 
   it('detail: ids指定でpending詳細とmissing/non_pendingを返す', async () => {

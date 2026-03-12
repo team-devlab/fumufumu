@@ -11,6 +11,12 @@ describe('Consultations API - Detail (GET /:id)', () => {
   let attacker: Awaited<ReturnType<typeof createAndLoginUser>>;
   let tagId: number;
   let existingId: number;
+  const approveConsultation = async (consultationId: number) => {
+    await env.DB
+      .prepare("UPDATE content_checks SET status = 'approved', checked_at = (cast(unixepoch('subsecond') * 1000 as integer)), updated_at = (cast(unixepoch('subsecond') * 1000 as integer)) WHERE target_type = 'consultation' AND target_id = ?")
+      .bind(consultationId)
+      .run();
+  };
 
   const testBody = 'テスト本文です。10文字以上にします。';
 
@@ -44,6 +50,7 @@ describe('Consultations API - Detail (GET /:id)', () => {
     expect(createRes.status).toBe(201);
     const created = await createRes.json() as any;
     existingId = created.id;
+    await approveConsultation(existingId);
   });
 
   it('相談単体取得: 存在するIDの相談を取得できる（bodyとadvicesが含まれる）', async () => {
@@ -94,9 +101,9 @@ describe('Consultations API - Detail (GET /:id)', () => {
     expect(data.message).toBe('相談が見つかりません: id=999999');
   });
 
-  it('相談詳細取得時、下書き状態の回答はリストに含まれない', async () => {
-    const publicAdviceBody = '公開回答のテストです。10文字以上必要です。';
-    const draftAdviceBody = '下書き回答のテストです。10文字以上必要です。';
+  it('相談詳細取得時、下書き状態のアドバイスはリストに含まれない', async () => {
+    const publicAdviceBody = '公開アドバイスのテストです。10文字以上必要です。';
+    const draftAdviceBody = '下書きアドバイスのテストです。10文字以上必要です。';
 
     const createPublicAdviceReq = createApiRequest(`/api/consultations/${existingId}/advice`, 'POST', {
       cookie: user.cookie,
@@ -120,7 +127,7 @@ describe('Consultations API - Detail (GET /:id)', () => {
 
     const data = await detailRes.json() as any;
 
-    // 検証: 公開回答は含まれるが、下書き回答は含まれないはず
+    // 検証: 公開アドバイスは含まれるが、下書きアドバイスは含まれないはず
     const publicAdvice = data.advices.find((a: any) => a.body === publicAdviceBody);
     const draftAdvice = data.advices.find((a: any) => a.body === draftAdviceBody);
     expect(publicAdvice).toBeDefined();
@@ -193,6 +200,7 @@ describe('Consultations API - Detail (GET /:id)', () => {
     expect(createRes.status).toBe(201);
 
     const created = await createRes.json() as any;
+    await approveConsultation(created.id);
     await forceSetHidden(created.id);
 
     const getReq = createApiRequest(`/api/consultations/${created.id}`, 'GET', {
@@ -221,6 +229,7 @@ describe('Consultations API - Detail (GET /:id)', () => {
     expect(createRes.status).toBe(201);
 
     const created = await createRes.json() as any;
+    await approveConsultation(created.id);
     await forceSetHidden(created.id);
 
     const getReq = createApiRequest(`/api/consultations/${created.id}`, 'GET', {
@@ -365,21 +374,22 @@ describe('Consultations API - Detail (GET /:id)', () => {
     assertValidationError(invalidLimitBody);
   });
 
-  it('相談詳細取得時、hidden状態の回答はリストに含まれない', async () => {
+  it('相談詳細取得時、hidden状態のアドバイスはリストに含まれない', async () => {
     const consultationRes = await app.fetch(createApiRequest('/api/consultations', 'POST', {
       cookie: user.cookie,
       body: {
-        title: 'hidden回答検証用の相談',
-        body: 'hidden回答の除外を確認するための本文です。',
+        title: 'hiddenアドバイス検証用の相談',
+        body: 'hiddenアドバイスの除外を確認するための本文です。',
         draft: false,
         tagIds: [tagId],
       },
     }), env);
     expect(consultationRes.status).toBe(201);
     const consultation = await consultationRes.json() as any;
+    await approveConsultation(consultation.id);
 
-    const visibleAdviceBody = '表示される公開回答です。10文字以上必要です。';
-    const hiddenAdviceBody = '非表示にする公開回答です。10文字以上必要です。';
+    const visibleAdviceBody = '表示される公開アドバイスです。10文字以上必要です。';
+    const hiddenAdviceBody = '非表示にする公開アドバイスです。10文字以上必要です。';
 
     const visibleAdviceRes = await app.fetch(createApiRequest(`/api/consultations/${consultation.id}/advice`, 'POST', {
       cookie: user.cookie,
@@ -411,21 +421,22 @@ describe('Consultations API - Detail (GET /:id)', () => {
     expect(hiddenAdviceInResponse).toBeUndefined();
   });
 
-  it('相談詳細の回答はcreated_atの昇順で返る', async () => {
+  it('相談詳細のアドバイスはcreated_atの昇順で返る', async () => {
     const consultationRes = await app.fetch(createApiRequest('/api/consultations', 'POST', {
       cookie: user.cookie,
       body: {
-        title: '回答順序検証用の相談',
-        body: '回答の並び順を確認するための本文です。',
+        title: 'アドバイス順序検証用の相談',
+        body: 'アドバイスの並び順を確認するための本文です。',
         draft: false,
         tagIds: [tagId],
       },
     }), env);
     expect(consultationRes.status).toBe(201);
     const consultation = await consultationRes.json() as any;
+    await approveConsultation(consultation.id);
 
-    const newerBody = '新しい時刻を持つ回答です。10文字以上必要です。';
-    const olderBody = '古い時刻を持つ回答です。10文字以上必要です。';
+    const newerBody = '新しい時刻を持つアドバイスです。10文字以上必要です。';
+    const olderBody = '古い時刻を持つアドバイスです。10文字以上必要です。';
 
     const newerAdviceRes = await app.fetch(createApiRequest(`/api/consultations/${consultation.id}/advice`, 'POST', {
       cookie: user.cookie,

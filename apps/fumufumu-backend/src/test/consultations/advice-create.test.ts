@@ -10,6 +10,12 @@ describe('Consultations API - Advice Create (POST /:id/advice)', () => {
   let user: Awaited<ReturnType<typeof createAndLoginUser>>;
   let consultationId: number;
   let tagId: number;
+  const approveConsultation = async (id: number) => {
+    await env.DB
+      .prepare("UPDATE content_checks SET status = 'approved', checked_at = (cast(unixepoch('subsecond') * 1000 as integer)), updated_at = (cast(unixepoch('subsecond') * 1000 as integer)) WHERE target_type = 'consultation' AND target_id = ?")
+      .bind(id)
+      .run();
+  };
 
   beforeAll(async () => {
     await setupIntegrationTest();
@@ -38,28 +44,29 @@ describe('Consultations API - Advice Create (POST /:id/advice)', () => {
 
     const created = await createConsultationRes.json() as any;
     consultationId = created.id;
+    await approveConsultation(consultationId);
   });
 
-  it('相談回答を作成できる', async () => {
+  it('相談アドバイスを作成できる', async () => {
     const req = createApiRequest(`/api/consultations/${consultationId}/advice`, 'POST', {
       cookie: user.cookie,
       body: {
-        body: '相談回答本文です。10文字以上あります。',
+        body: '相談アドバイス本文です。10文字以上あります。',
       },
     });
 
     const res = await app.fetch(req, env);
     expect(res.status).toBe(201);
     const data = await res.json() as any;
-    expect(data.body).toBe('相談回答本文です。10文字以上あります。');
+    expect(data.body).toBe('相談アドバイス本文です。10文字以上あります。');
     expect(data.draft).toBe(false);
   });
 
-  it('回答投稿後、親の相談詳細を取得すると回答が含まれている', async () => {
+  it('アドバイス投稿後、親の相談詳細を取得するとアドバイスが含まれている', async () => {
     const postReq = createApiRequest(`/api/consultations/${consultationId}/advice`, 'POST', {
       cookie: user.cookie,
       body: {
-        body: 'テスト用回答：詳細画面での表示確認',
+        body: 'テスト用アドバイス：詳細画面での表示確認',
       },
     });
     const postRes = await app.fetch(postReq, env);
@@ -75,14 +82,14 @@ describe('Consultations API - Advice Create (POST /:id/advice)', () => {
     expect(data).toHaveProperty('advices');
     expect(Array.isArray(data.advices)).toBe(true);
     expect(data.advices.length).toBeGreaterThan(0);
-    expect(data.advices.some((a: any) => a.body === 'テスト用回答：詳細画面での表示確認')).toBe(true);
+    expect(data.advices.some((a: any) => a.body === 'テスト用アドバイス：詳細画面での表示確認')).toBe(true);
   });
 
-  it('draft=trueを指定して下書き回答を作成できる', async () => {
+  it('draft=trueを指定して下書きアドバイスを作成できる', async () => {
     const req = createApiRequest(`/api/consultations/${consultationId}/advice`, 'POST', {
       cookie: user.cookie,
       body: {
-        body: '下書き回答本文です。10文字以上あります。',
+        body: '下書きアドバイス本文です。10文字以上あります。',
         draft: true,
       },
     });
@@ -97,7 +104,7 @@ describe('Consultations API - Advice Create (POST /:id/advice)', () => {
     const req = createApiRequest(`/api/consultations/${consultationId}/advice`, 'POST', {
       cookie: user.cookie,
       body: {
-        body: 'draft未指定で作成する回答本文です。10文字以上あります。',
+        body: 'draft未指定で作成するアドバイス本文です。10文字以上あります。',
       },
     });
 
@@ -110,7 +117,7 @@ describe('Consultations API - Advice Create (POST /:id/advice)', () => {
   it('認証なしの場合401エラーを返す', async () => {
     const req = createApiRequest(`/api/consultations/${consultationId}/advice`, 'POST', {
       body: {
-        body: '認証なしで回答作成を試みる本文です。10文字以上あります。',
+        body: '認証なしでアドバイス作成を試みる本文です。10文字以上あります。',
       },
     });
 
@@ -127,7 +134,7 @@ describe('Consultations API - Advice Create (POST /:id/advice)', () => {
       const req = createApiRequest(`/api/consultations/${invalidId}/advice`, 'POST', {
         cookie: user.cookie,
         body: {
-          body: '不正なIDで回答作成を試みる本文です。10文字以上あります。',
+          body: '不正なIDでアドバイス作成を試みる本文です。10文字以上あります。',
           draft: false,
         },
       });
@@ -161,7 +168,7 @@ describe('Consultations API - Advice Create (POST /:id/advice)', () => {
     const req = createApiRequest(`/api/consultations/${nonExistentId}/advice`, 'POST', {
       cookie: user.cookie,
       body: {
-        body: 'これは存在しない相談への回答です。10文字以上あります。',
+        body: 'これは存在しない相談へのアドバイスです。10文字以上あります。',
         draft: false,
       },
     });
@@ -172,12 +179,12 @@ describe('Consultations API - Advice Create (POST /:id/advice)', () => {
     expect(data.error).toBe('NotFoundError');
   });
 
-  it('hidden状態の相談に回答投稿すると404になり、回答レコードも作成されない', async () => {
+  it('hidden状態の相談にアドバイス投稿すると404になり、アドバイスレコードも作成されない', async () => {
     const createConsultationRes = await app.fetch(createApiRequest('/api/consultations', 'POST', {
       cookie: user.cookie,
       body: {
         title: 'hidden相談',
-        body: 'hidden相談への回答作成可否を検証する本文です。',
+        body: 'hidden相談へのアドバイス作成可否を検証する本文です。',
         draft: false,
         tagIds: [tagId],
       },
@@ -197,7 +204,7 @@ describe('Consultations API - Advice Create (POST /:id/advice)', () => {
     const req = createApiRequest(`/api/consultations/${hiddenConsultationId}/advice`, 'POST', {
       cookie: user.cookie,
       body: {
-        body: 'hidden相談へ回答投稿を試みる本文です。10文字以上あります。',
+        body: 'hidden相談へアドバイス投稿を試みる本文です。10文字以上あります。',
         draft: false,
       },
     });

@@ -89,9 +89,9 @@ export class ConsultationService {
 	}
 
 	/**
-	 * 相談回答データをレスポンス形式に変換する
-	 * * @param advice - Repository層から取得した相談回答データ（作成時 or 詳細取得時）
-	 * @returns API レスポンス形式の相談回答データ
+	 * 相談アドバイスデータをレスポンス形式に変換する
+	 * * @param advice - Repository層から取得した相談アドバイスデータ（作成時 or 詳細取得時）
+	 * @returns API レスポンス形式の相談アドバイスデータ
 	 */
 	private toAdviceResponse(advice: AdviceEntity | AdviceEntityFromList): AdviceResponse {
 		return {
@@ -130,10 +130,12 @@ export class ConsultationService {
 	) :Promise<ConsultationResponse> {
 		const { page = 1, limit = 20 } = pagination || {};
 		const consultation = await this.repository.findFirstById(id);
+		const contentCheck = await this.repository.findConsultationContentCheckByConsultationId(id);
 
 		// NOTE: 権限チェック
 		const isHidden = consultation.draft || consultation.hiddenAt !== null;
-		if (isHidden && consultation.authorId !== requestUserId) {
+		const isNotApproved = contentCheck !== undefined && contentCheck.status !== "approved";
+		if ((isHidden && consultation.authorId !== requestUserId) || isNotApproved) {
 			throw new NotFoundError(`相談が見つかりません: id=${id}`);
 		}
 
@@ -399,12 +401,12 @@ export class ConsultationService {
 	
 	/**
 	 * 
-	 * 相談に対する回答を作成する
+	 * 相談に対するアドバイスを作成する
 	 * 
 	 * @param id - 相談ID
-	 * @param data.body - 回答本文
+	 * @param data.body - アドバイス本文
 	 * @param data.draft - 下書きフラグ（true: 下書き, false: 公開）
-	 * @param authorId - 回答者ID（認証ユーザー）
+	 * @param authorId - アドバイス者ID（認証ユーザー）
 	 * @returns 
 	 */
 	async createAdvice(id: number, data: AdviceContent, authorId: number): Promise<AdviceResponse> {
@@ -421,17 +423,17 @@ export class ConsultationService {
 	 * アドバイスの下書きを更新する
 	 * 
 	 * @param id - 相談ID
-	 * @param data.body - 回答本文
-	 * @param authorId - 回答者ID（認証ユーザー）
-	 * @returns 更新された相談回答のレスポンス
+	 * @param data.body - アドバイス本文
+	 * @param authorId - アドバイス者ID（認証ユーザー）
+	 * @returns 更新された相談アドバイスのレスポンス
 	 */
 		async updateDraftAdvice(id: number, data: UpdateDraftAdviceContentSchema, authorId: number): Promise<AdviceSavedResponse> {
 			const existingAdvice = await this.repository.findFirstAdviceByConsultation(id, authorId);
 			if (!existingAdvice) {
-				throw new NotFoundError(`指定された相談回答(consultationId:${id})は見つかりませんでした`);
+				throw new NotFoundError(`指定された相談アドバイス(consultationId:${id})は見つかりませんでした`);
 			}
 			if (existingAdvice.draft === false) {
-				throw new NotFoundError('相談回答は公開されているため、更新できません。');
+				throw new NotFoundError('相談アドバイスは公開されているため、更新できません。');
 			}
 			const updatedAdvice = await this.repository.updateDraftAdvice({
 				consultationId: id,
