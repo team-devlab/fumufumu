@@ -369,6 +369,8 @@ export class ConsultationService {
 		if (updateRuleError) {
 			throw new ValidationError(CONSULTATION_TAG_RULE_MESSAGES[updateRuleError]);
 		}
+
+		const shouldQueueContentCheck = existingConsultation.draft === true && data.draft === false;
     	
 		const updatedConsultation = await this.repository.update({
 			id,
@@ -377,6 +379,7 @@ export class ConsultationService {
 			draft: data.draft,
 			authorId: existingConsultation.authorId ?? requestUserId,
 			tagIds: data.tagIds,
+			queueContentCheck: shouldQueueContentCheck,
 		})
 			.catch((error) => {
 				if (data.tagIds !== undefined) {

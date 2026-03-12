@@ -373,6 +373,7 @@ export class ConsultationRepository {
 		draft: boolean;
 		authorId: number;
 		tagIds?: number[];
+		queueContentCheck?: boolean;
 		}) {
 			try {
 				let uniqueTagIds: number[] | undefined;
@@ -409,8 +410,45 @@ export class ConsultationRepository {
 					)
 					.returning();
 
+				const upsertPendingContentCheckQuery = data.queueContentCheck
+					? this.db
+						.insert(contentChecks)
+						.values({
+							targetType: "consultation",
+							targetId: data.id,
+							status: "pending",
+							reason: null,
+							checkedAt: null,
+							updatedAt: new Date(),
+						})
+						.onConflictDoUpdate({
+							target: [contentChecks.targetType, contentChecks.targetId],
+							set: {
+								status: "pending",
+								reason: null,
+								checkedAt: null,
+								updatedAt: new Date(),
+							},
+						})
+					: null;
+
 				if (data.tagIds === undefined) {
-					const [updated] = await updateQuery;
+					if (!upsertPendingContentCheckQuery) {
+						const [updated] = await updateQuery;
+
+						if (!updated) {
+							throw new DatabaseError(`相談の更新に失敗しました: id=${data.id}`);
+						}
+
+						return updated;
+					}
+
+					const [updateResult] = await this.db.batch([
+						updateQuery,
+						upsertPendingContentCheckQuery,
+					]);
+
+					const [updated] = updateResult;
 
 					if (!updated) {
 						throw new DatabaseError(`相談の更新に失敗しました: id=${data.id}`);
@@ -433,7 +471,12 @@ export class ConsultationRepository {
 				const statements = insertTaggingsQuery
 					? [updateQuery, deleteTaggingsQuery, insertTaggingsQuery] as const
 					: [updateQuery, deleteTaggingsQuery] as const;
-				const [updateResult] = await this.db.batch(statements);
+
+				const statementsWithContentCheck = upsertPendingContentCheckQuery
+					? [...statements, upsertPendingContentCheckQuery] as const
+					: statements;
+
+				const [updateResult] = await this.db.batch(statementsWithContentCheck);
 
 				const [updated] = updateResult;
 				if (!updated) {
