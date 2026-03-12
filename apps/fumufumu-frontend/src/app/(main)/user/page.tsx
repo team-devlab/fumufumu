@@ -1,4 +1,3 @@
-import Link from "next/link";
 import { fetchCurrentUserApi } from "@/features/user/api/userApi";
 import { fetchUserConsultationsApi } from "@/features/user/api/userConsultationApi";
 import { UserContentTabs } from "@/features/user/components/UserContentTabs";
@@ -15,14 +14,9 @@ export default async function UserPage() {
   if (user === null) {
     return (
       <div className="max-w-4xl mx-auto w-full">
-        <div className="p-6 bg-white rounded-xl shadow border border-gray-200">
+        <div className="p-6 bg-white rounded-xl shadow border border-gray-200 text-center">
           <h1 className="sr-only">ユーザー情報</h1>
-          <p className="text-gray-600 mb-4">
-            ログインすると現在のユーザー情報を表示できます。
-          </p>
-          <Link href="/login" className="text-blue-600 hover:underline">
-            ログインへ
-          </Link>
+          <p className="text-gray-600">ユーザー情報の取得に失敗しました。</p>
         </div>
       </div>
     );

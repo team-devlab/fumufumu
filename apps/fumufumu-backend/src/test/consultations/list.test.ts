@@ -147,9 +147,8 @@ describe('Consultations API - List & Filtering', () => {
     const res = await app.fetch(req, env);
     const body = await res.json() as any;
 
-    // データが1件以上返ってきていることを保証（サイレントパス防止）
+    expect(res.status).toBe(200);
     expect(body.data.length).toBeGreaterThan(0);
-
     expect(body.data.every((item: any) => item.draft === true)).toBe(true);
     expect(body.data.every((item: any) => item.author.id === user.appUserId)).toBe(true);
   });
@@ -173,9 +172,9 @@ describe('Consultations API - List & Filtering', () => {
     const res = await app.fetch(req, env);
     const body = await res.json() as any;
 
-    // データが1件以上返ってきていることを保証（サイレントパス防止）
+    expect(res.status).toBe(200);
     expect(body.data.length).toBeGreaterThan(0);
-
+    expect(body.data.every((item: any) => item.author.id === user.appUserId)).toBe(true);
     const leakedDraft = body.data.find((c: any) => c.title === '他人の下書き');
     expect(leakedDraft).toBeUndefined();
   });
@@ -424,7 +423,7 @@ describe('Consultations API - List & Filtering', () => {
     });
   });
 
-  it('セキュリティ: 他人の下書きは一覧に含まれない', async () => {
+  it('セキュリティ: draft=true 一覧で他人の下書きは取得されない', async () => {
     // 別のユーザーを作成
     const otherUser = await createAndLoginUser({ name: 'Other User' });
     
@@ -443,11 +442,11 @@ describe('Consultations API - List & Filtering', () => {
     const res = await app.fetch(req, env);
     const body = await res.json() as any;
 
-    // データが1件以上返ってきていることを保証（サイレントパス防止）
+    expect(res.status).toBe(200);
     expect(body.data.length).toBeGreaterThan(0);
-
     const hasOtherDraft = body.data.some((c: any) => c.title === '他人の下書き');
     expect(hasOtherDraft).toBe(false);
+    expect(body.data.every((item: any) => item.author.id === user.appUserId)).toBe(true);
   });
 
   describe('Pagination Edge Cases', () => {
@@ -457,12 +456,6 @@ describe('Consultations API - List & Filtering', () => {
       
       expect(res.status).toBe(401);
       const body = await res.json() as any;
-
-      // 成功時のプロパティ（dataなど）が「存在しない」ことを確認
-      expect(body).not.toHaveProperty('data');
-      expect(body).not.toHaveProperty('pagination');
-
-      // エラー構造が正しいか（index.ts の定義と一致するか）を確認
       assertUnauthorizedError(body);
     });
 

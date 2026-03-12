@@ -204,12 +204,10 @@ export const consultationsRoute = new Hono<AppBindings>();
 consultationsRoute.use("/*", authGuard, injectConsultationService);
 
 // ルーティング登録
-// 相談関連
-consultationsRoute.get("/:id", ...getConsultationHandlers);
 consultationsRoute.get("/", ...listConsultationsHandlers);
+consultationsRoute.get("/:id", ...getConsultationHandlers);
 consultationsRoute.post("/", ...createConsultationHandlers);
 consultationsRoute.put("/:id", ...updateConsultationHandlers);
-// 相談に対するアドバイス関連
 consultationsRoute.post("/:id/advice", ...createAdviceHandlers);
 consultationsRoute.get("/:id/advices", ...listAdvicesHandlers);
 consultationsRoute.put("/:id/advice/draft", ...updateDraftAdviceHandlers);

@@ -1,3 +1,4 @@
+import { isRedirectError } from "next/dist/client/components/redirect-error";
 import Link from "next/link";
 import { ROUTES } from "@/config/routes";
 import { fetchCurrentUserApi } from "@/features/user/api/userApi";
@@ -23,6 +24,8 @@ export const ConsultationDetail = async ({ consultationId }: Props) => {
     consultation = await consultationPromise;
   } catch (e) {
     // apiClientはErrorオブジェクトを投げるため、メッセージ内容で判定する
+    if (isRedirectError(e)) throw e;
+
     if (e instanceof Error) {
       // バックエンドが返す error.name (例: NotFoundError) やステータスコード文字列をチェック
       if (e.message === "NotFoundError" || e.message.includes("404")) {

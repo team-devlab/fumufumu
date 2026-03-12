@@ -127,7 +127,7 @@ describe('Consultations API - Detail (GET /:id)', () => {
     expect(draftAdvice).toBeUndefined();
   });
 
-  it('自分の下書き相談は取得できる', async () => {
+  it('下書き相談は所有者なら取得できる', async () => {
     const createReq = createApiRequest('/api/consultations', 'POST', {
       cookie: user.cookie,
       body: {
@@ -178,7 +178,7 @@ describe('Consultations API - Detail (GET /:id)', () => {
     expect(getRes.status).toBe(404);
   });
 
-  it('自分のhidden相談は取得できる', async () => {
+  it('hidden相談は所有者なら取得できる', async () => {
     const createReq = createApiRequest('/api/consultations', 'POST', {
       cookie: user.cookie,
       body: {
