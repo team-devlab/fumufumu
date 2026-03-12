@@ -323,7 +323,7 @@ export class ConsultationService {
 					await this.repository.deleteById(createdConsultation.id);
 				} catch (rollbackError) {
 					console.error("Critical: Compensation failed during consultation content-check creation.", {
-						event: "CONSULTATION_CONTENT_CHECK_COMPENSATION_FAILURE",
+						event: "CONSULTATION_CREATION_CONTENT_CHECK_COMPENSATION_FAILURE",
 						consultationId: createdConsultation.id,
 						authorId,
 						originalError: ConsultationService.toLogError(originalError),
