@@ -63,6 +63,15 @@ describe('Consultations API - Create (POST /)', () => {
     expect(data).toHaveProperty('advices');
     expect(Array.isArray(data.advices)).toBe(true);
     expect(data.advices.length).toBe(0);
+
+    const check = await env.DB
+      .prepare('SELECT status, target_type, target_id FROM content_checks WHERE target_type = ? AND target_id = ?')
+      .bind('consultation', data.id)
+      .first() as { status: string; target_type: string; target_id: number } | null;
+    expect(check).not.toBeNull();
+    expect(check?.status).toBe('pending');
+    expect(check?.target_type).toBe('consultation');
+    expect(check?.target_id).toBe(data.id);
   });
 
   it('下書き作成: draft=trueで相談を作成できる', async () => {
@@ -81,6 +90,12 @@ describe('Consultations API - Create (POST /)', () => {
 
     const data = await res.json() as any;
     expect(data.draft).toBe(true);
+
+    const check = await env.DB
+      .prepare('SELECT id FROM content_checks WHERE target_type = ? AND target_id = ?')
+      .bind('consultation', data.id)
+      .first();
+    expect(check).toBeNull();
   });
 
   it('下書き作成: draft=true かつ tagIds未指定でも作成できる', async () => {

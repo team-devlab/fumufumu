@@ -10,12 +10,14 @@ import * as userSchema from '@/db/schema/user';
 import * as consultationsSchema from '@/db/schema/consultations';
 import * as advicesSchema from '@/db/schema/advices';
 import * as tagsSchema from '@/db/schema/tags';
+import * as contentChecksSchema from '@/db/schema/content-checks';
 
 import { authRouter } from '@/routes/auth.routes';
 import { consultationsRoute } from '@/routes/consultations.controller';
 import { protectedRouter } from '@/routes/protected.routes';
 import { userRoute } from '@/routes/user.controller';
 import { tagsRoute } from '@/routes/tags.controller';
+import { adminContentCheckRoute } from '@/routes/admin-content-check.controller';
 import type { ConsultationService } from '@/services/consultation.service';
 import type { UserService } from '@/services/user.service';
 import type { TagService } from '@/services/tag.service';
@@ -27,6 +29,7 @@ const schema = {
   ...consultationsSchema,
   ...advicesSchema,
   ...tagsSchema,
+  ...contentChecksSchema,
 }
 
 export type DbInstance = DrizzleD1Database<typeof schema>;
@@ -174,6 +177,9 @@ api.route('/users', userRoute);
 
 // タグAPI（/api/tags）
 api.route('/tags', tagsRoute);
+
+// 投稿チェック運営API（/api/admin/content-check）
+api.route('/admin/content-check', adminContentCheckRoute);
 
 // メインアプリにAPIルーターをマウント
 app.route('/api', api);

@@ -8,6 +8,7 @@ import { PAGINATION_CONFIG } from "@/types/consultation.types";
 import type { AdviceFilters } from "@/types/advice.types";
 import { DatabaseError, ConflictError, NotFoundError } from "@/errors/AppError";
 import { advices } from "@/db/schema/advices";
+import { contentChecks } from "@/db/schema/content-checks";
 
 
 export class ConsultationRepository {
@@ -553,5 +554,128 @@ export class ConsultationRepository {
 			throw new NotFoundError(`指定された相談回答(consultationId:${consultationId}, authorId:${authorId})は見つかりませんでした`);
 		}
 		return advice;
+	}
+
+	async createConsultationContentCheck(consultationId: number) {
+		try {
+			const [inserted] = await this.db
+				.insert(contentChecks)
+				.values({
+					targetType: "consultation",
+					targetId: consultationId,
+					status: "pending",
+				})
+				.returning();
+
+			if (!inserted) {
+				throw new DatabaseError("投稿チェックレコードの作成に失敗しました");
+			}
+
+			return inserted;
+		} catch (error) {
+			if (error instanceof DatabaseError || error instanceof ConflictError) {
+				throw error;
+			}
+
+			const errorMessage = (error as Error).message || String(error);
+			if (errorMessage.includes("UNIQUE constraint failed")) {
+				throw new ConflictError(`投稿チェックレコードが既に存在します: consultationId=${consultationId}`);
+			}
+
+			throw new DatabaseError(`投稿チェックレコード作成でデータベースエラーが発生しました: ${errorMessage}`);
+		}
+	}
+
+	async listPendingConsultationContentChecks() {
+		return await this.db
+			.select({
+				id: consultations.id,
+				status: contentChecks.status,
+				createdAt: consultations.createdAt,
+			})
+			.from(contentChecks)
+			.innerJoin(
+				consultations,
+				and(
+					eq(contentChecks.targetType, "consultation"),
+					eq(contentChecks.targetId, consultations.id),
+				),
+			)
+			.where(eq(contentChecks.status, "pending"))
+			.orderBy(contentChecks.createdAt);
+	}
+
+	async findConsultationContentCheckStatusesByIds(ids: number[]) {
+		if (ids.length === 0) return [];
+
+		return await this.db
+			.select({
+				targetId: contentChecks.targetId,
+				status: contentChecks.status,
+			})
+			.from(contentChecks)
+			.where(
+				and(
+					eq(contentChecks.targetType, "consultation"),
+					inArray(contentChecks.targetId, ids),
+				),
+			);
+	}
+
+	async findPendingConsultationDetailsByIds(ids: number[]) {
+		if (ids.length === 0) return [];
+
+		return await this.db
+			.select({
+				id: consultations.id,
+				title: consultations.title,
+				body: consultations.body,
+				authorId: consultations.authorId,
+				status: contentChecks.status,
+				createdAt: consultations.createdAt,
+			})
+			.from(contentChecks)
+			.innerJoin(
+				consultations,
+				and(
+					eq(contentChecks.targetType, "consultation"),
+					eq(contentChecks.targetId, consultations.id),
+				),
+			)
+			.where(
+				and(
+					eq(contentChecks.status, "pending"),
+					inArray(consultations.id, ids),
+				),
+			);
+	}
+
+	async updateConsultationContentCheckDecision(
+		consultationId: number,
+		decision: "approved" | "rejected",
+		reason?: string,
+	) {
+		const [updated] = await this.db
+			.update(contentChecks)
+			.set({
+				status: decision,
+				reason: decision === "rejected" ? reason ?? null : null,
+				checkedAt: new Date(),
+				updatedAt: new Date(),
+			})
+			.where(
+				and(
+					eq(contentChecks.targetType, "consultation"),
+					eq(contentChecks.targetId, consultationId),
+					eq(contentChecks.status, "pending"),
+				),
+			)
+			.returning();
+
+		if (!updated) {
+			throw new NotFoundError(`未処理の投稿チェックが見つかりません: consultationId=${consultationId}`);
+		}
+
+		return updated;
 	}
 }
