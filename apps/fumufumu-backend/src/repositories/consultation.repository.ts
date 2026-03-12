@@ -142,17 +142,6 @@ export class ConsultationRepository {
 			where: eq(consultations.id, id),
 			with: {
 				author: true,
-				advices: {
-					with: {
-						author: true,
-					},
-					where: (advices, { and, eq, isNull }) => and(
-                        eq(advices.draft, false),  // 下書きでない
-                        isNull(advices.hiddenAt)    // 非表示でない
-                    ),
-					// 作成日時の古い順（昇順）
-					orderBy: (advices, { asc }) => [asc(advices.createdAt)],
-				},
 			},
 		});
 
@@ -227,13 +216,17 @@ export class ConsultationRepository {
 		consultationId: number,
 		pagination?: PaginationParams,
 		filters?: AdviceFilters,
+		sortOrder: "asc" | "desc" = "desc",
 	) {
 		const { page = PAGINATION_CONFIG.DEFAULT_PAGE, limit = PAGINATION_CONFIG.DEFAULT_LIMIT } = pagination || {};
 		const offset = (page - 1) * limit;
 
 		return await this.db.query.advices.findMany({
 			where: this.buildAdviceWhereConditions(consultationId, filters),
-			orderBy: (fields, { desc }) => [desc(fields.updatedAt), desc(fields.id)],
+			orderBy: (fields, { asc, desc }) =>
+				sortOrder === "asc"
+					? [asc(fields.createdAt), asc(fields.id)]
+					: [desc(fields.updatedAt), desc(fields.id)],
 			limit,
 			offset,
 			with: {

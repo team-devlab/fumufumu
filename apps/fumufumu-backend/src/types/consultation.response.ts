@@ -17,6 +17,7 @@ export type ConsultationResponse = {
 	author: Author | null;
 
     advices?: AdviceResponse[];
+	advice_pagination?: PaginationMeta;
 };
 
 // 相談リストレスポンス

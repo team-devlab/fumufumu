@@ -1,8 +1,7 @@
 // Presentation層: 相談関連ルート
-import { Hono, type Context } from "hono";
+import { Hono } from "hono";
 import { createFactory } from "hono/factory";
 import { zValidator } from "@hono/zod-validator";
-import { z } from "zod";
 import type { AppBindings } from "@/index";
 import { authGuard } from "@/middlewares/authGuard.middleware";
 import { injectConsultationService } from "@/middlewares/injectService.middleware";
@@ -10,6 +9,7 @@ import type { ConsultationFilters, PaginationParams } from "@/types/consultation
 import type { AdviceFilters } from "@/types/advice.types";
 import {
 	listConsultationsQuerySchema,
+	getConsultationQuerySchema,
 	listAdvicesQuerySchema,
 	createConsultationSchema,
 	updateConsultationSchema,
@@ -32,12 +32,20 @@ export const getConsultationHandlers = factory.createHandlers(
 	zValidator("param", consultationIdParamSchema, (result, c) => {
 		if (!result.success) throw result.error;
 	}),
+	zValidator("query", getConsultationQuerySchema, (result) => {
+		if (!result.success) throw result.error;
+	}),
 	async (c) => {
 		const { id } = c.req.valid("param");
+		const validatedQuery = c.req.valid("query");
 		const service = c.get("consultationService");
 		const appUserId = c.get("appUserId");
+		const pagination: PaginationParams = {
+			page: validatedQuery.page,
+			limit: validatedQuery.limit,
+		};
 
-		const result = await service.getConsultation(id, appUserId);
+		const result = await service.getConsultation(id, appUserId, pagination);
 		return c.json(result, 200);
 	}
 );
