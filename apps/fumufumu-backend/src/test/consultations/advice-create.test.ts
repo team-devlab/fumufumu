@@ -16,6 +16,12 @@ describe('Consultations API - Advice Create (POST /:id/advice)', () => {
       .bind(id)
       .run();
   };
+  const rejectConsultation = async (id: number) => {
+    await env.DB
+      .prepare("UPDATE content_checks SET status = 'rejected', checked_at = (cast(unixepoch('subsecond') * 1000 as integer)), updated_at = (cast(unixepoch('subsecond') * 1000 as integer)) WHERE target_type = 'consultation' AND target_id = ?")
+      .bind(id)
+      .run();
+  };
 
   beforeAll(async () => {
     await setupIntegrationTest();
@@ -216,6 +222,87 @@ describe('Consultations API - Advice Create (POST /:id/advice)', () => {
     const afterCountRow = await env.DB
       .prepare('SELECT COUNT(*) AS count FROM advices WHERE consultation_id = ?')
       .bind(hiddenConsultationId)
+      .first() as { count: number } | null;
+    const afterCount = Number(afterCountRow?.count ?? 0);
+    expect(afterCount).toBe(beforeCount);
+  });
+
+  it('pending相談に公開アドバイス投稿すると404になり、アドバイスレコードも作成されない', async () => {
+    const createConsultationRes = await app.fetch(createApiRequest('/api/consultations', 'POST', {
+      cookie: user.cookie,
+      body: {
+        title: 'pending相談',
+        body: 'pending相談への公開アドバイス拒否を検証する本文です。',
+        draft: false,
+        tagIds: [tagId],
+      },
+    }), env);
+    expect(createConsultationRes.status).toBe(201);
+    const createdConsultation = await createConsultationRes.json() as any;
+    const pendingConsultationId = createdConsultation.id;
+
+    const beforeCountRow = await env.DB
+      .prepare('SELECT COUNT(*) AS count FROM advices WHERE consultation_id = ?')
+      .bind(pendingConsultationId)
+      .first() as { count: number } | null;
+    const beforeCount = Number(beforeCountRow?.count ?? 0);
+
+    const req = createApiRequest(`/api/consultations/${pendingConsultationId}/advice`, 'POST', {
+      cookie: user.cookie,
+      body: {
+        body: 'pending相談へ公開アドバイス投稿を試みる本文です。10文字以上あります。',
+        draft: false,
+      },
+    });
+    const res = await app.fetch(req, env);
+    expect(res.status).toBe(404);
+    const data = await res.json() as any;
+    expect(data.error).toBe('NotFoundError');
+
+    const afterCountRow = await env.DB
+      .prepare('SELECT COUNT(*) AS count FROM advices WHERE consultation_id = ?')
+      .bind(pendingConsultationId)
+      .first() as { count: number } | null;
+    const afterCount = Number(afterCountRow?.count ?? 0);
+    expect(afterCount).toBe(beforeCount);
+  });
+
+  it('rejected相談に公開アドバイス投稿すると404になり、アドバイスレコードも作成されない', async () => {
+    const createConsultationRes = await app.fetch(createApiRequest('/api/consultations', 'POST', {
+      cookie: user.cookie,
+      body: {
+        title: 'rejected相談',
+        body: 'rejected相談への公開アドバイス拒否を検証する本文です。',
+        draft: false,
+        tagIds: [tagId],
+      },
+    }), env);
+    expect(createConsultationRes.status).toBe(201);
+    const createdConsultation = await createConsultationRes.json() as any;
+    const rejectedConsultationId = createdConsultation.id;
+    await rejectConsultation(rejectedConsultationId);
+
+    const beforeCountRow = await env.DB
+      .prepare('SELECT COUNT(*) AS count FROM advices WHERE consultation_id = ?')
+      .bind(rejectedConsultationId)
+      .first() as { count: number } | null;
+    const beforeCount = Number(beforeCountRow?.count ?? 0);
+
+    const req = createApiRequest(`/api/consultations/${rejectedConsultationId}/advice`, 'POST', {
+      cookie: user.cookie,
+      body: {
+        body: 'rejected相談へ公開アドバイス投稿を試みる本文です。10文字以上あります。',
+        draft: false,
+      },
+    });
+    const res = await app.fetch(req, env);
+    expect(res.status).toBe(404);
+    const data = await res.json() as any;
+    expect(data.error).toBe('NotFoundError');
+
+    const afterCountRow = await env.DB
+      .prepare('SELECT COUNT(*) AS count FROM advices WHERE consultation_id = ?')
+      .bind(rejectedConsultationId)
       .first() as { count: number } | null;
     const afterCount = Number(afterCountRow?.count ?? 0);
     expect(afterCount).toBe(beforeCount);

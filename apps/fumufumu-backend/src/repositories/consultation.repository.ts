@@ -82,7 +82,9 @@ export class ConsultationRepository {
 			columns: { id: true },
 			where: and(
 				eq(consultations.id, consultationId),
+				eq(consultations.draft, false),
 				isNull(consultations.hiddenAt),
+				this.buildPublicVisibilityCondition(),
 			),
 		});
 
