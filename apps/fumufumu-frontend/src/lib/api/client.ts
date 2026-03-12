@@ -4,7 +4,8 @@ import { redirect } from "next/navigation";
 const API_URL = process.env.NEXT_PUBLIC_API_URL || "http://localhost:8787";
 
 type ApiOptions = RequestInit & {
-  // 必要に応じて拡張
+  // 401時のログイン画面リダイレクトを無効化する（認証API呼び出し等で利用）
+  skipAuthRedirect?: boolean;
 };
 
 function buildLoginUrl(returnTo?: string): string {
@@ -18,6 +19,7 @@ export async function apiClient<T>(
   endpoint: string,
   options: ApiOptions = {},
 ): Promise<T> {
+  const { skipAuthRedirect = false, ...requestOptions } = options;
   const url = `${API_URL}${endpoint.startsWith("/") ? endpoint : `/${endpoint}`}`;
 
   const defaultHeaders = {
@@ -25,10 +27,10 @@ export async function apiClient<T>(
   };
 
   const config: RequestInit = {
-    ...options,
+    ...requestOptions,
     headers: {
       ...defaultHeaders,
-      ...options.headers,
+      ...requestOptions.headers,
     },
     // これが最重要：異なるドメイン間でCookie（セッションID）を自動送受信する設定
     credentials: "include",
@@ -38,7 +40,7 @@ export async function apiClient<T>(
     const response = await fetch(url, config);
 
     if (!response.ok) {
-      if (response.status === 401) {
+      if (response.status === 401 && !skipAuthRedirect) {
         if (typeof window !== "undefined") {
           window.location.href = buildLoginUrl(window.location.pathname);
         } else {

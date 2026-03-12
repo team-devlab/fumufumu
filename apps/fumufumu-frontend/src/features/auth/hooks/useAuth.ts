@@ -31,8 +31,10 @@ export const useAuth = () => {
     try {
       await authApi.signin(credentials);
       router.push(resolveReturnTo(returnTo));
-    } catch (err) {
-      setError(err instanceof Error ? err.message : "ログインに失敗しました");
+    } catch {
+      setError(
+        "ログインに失敗しました。メールアドレスまたはパスワードをご確認ください。",
+      );
     } finally {
       setIsLoading(false);
     }

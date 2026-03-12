@@ -2,7 +2,7 @@
 
 import Link from "next/link";
 import { useSearchParams } from "next/navigation";
-import { useState } from "react";
+import { useEffect, useState } from "react";
 import { Button } from "@/components/ui/Button";
 import { useAuth } from "../hooks/useAuth";
 
@@ -11,6 +11,7 @@ export const LoginForm = () => {
   const searchParams = useSearchParams();
   const [email, setEmail] = useState("");
   const [password, setPassword] = useState("");
+  const [hasLoginFailure, setHasLoginFailure] = useState(false);
 
   const handleSubmit = (e: React.FormEvent) => {
     e.preventDefault();
@@ -21,7 +22,7 @@ export const LoginForm = () => {
 
   const reasonConfig: Record<string, { message: string; className: string }> = {
     unauthorized: {
-      message: "このページはログインが必要です。",
+      message: "ログインが必要です。",
       className: "border-[#A7F3D0] bg-[#ECFEF6] text-[#0F4D3F]",
     },
     session_expired: {
@@ -32,11 +33,19 @@ export const LoginForm = () => {
 
   const reasonInfo = reason ? reasonConfig[reason] : null;
 
+  useEffect(() => {
+    if (error) {
+      setHasLoginFailure(true);
+    }
+  }, [error]);
+
+  const showReasonMessage = Boolean(reasonInfo) && !hasLoginFailure;
+
   return (
     <div className="text-center">
       <h1 className="text-3xl font-bold text-gray-800 mb-6">ログイン</h1>
 
-      {reasonInfo && (
+      {showReasonMessage && reasonInfo && (
         <div
           className={`mb-4 rounded-2xl border px-4 py-3 text-sm ${reasonInfo.className}`}
         >
@@ -45,7 +54,7 @@ export const LoginForm = () => {
       )}
 
       {error && (
-        <div className="mb-4 p-3 bg-red-100 text-red-700 rounded-lg text-sm">
+        <div className="mb-4 rounded-2xl border border-red-300 bg-red-50 px-4 py-3 text-sm text-red-800">
           {error}
         </div>
       )}

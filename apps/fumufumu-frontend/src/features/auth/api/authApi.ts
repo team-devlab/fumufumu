@@ -10,6 +10,7 @@ export const authApi = {
     return apiClient<AuthResponse>("/api/auth/signup", {
       method: "POST",
       body: JSON.stringify(data),
+      skipAuthRedirect: true,
     });
   },
 
@@ -17,6 +18,7 @@ export const authApi = {
     return apiClient<AuthResponse>("/api/auth/signin", {
       method: "POST",
       body: JSON.stringify(data),
+      skipAuthRedirect: true,
     });
   },
 };
