@@ -278,6 +278,7 @@ describe('Consultations API - Detail (GET /:id)', () => {
     }), env);
     expect(consultationRes.status).toBe(201);
     const consultation = await consultationRes.json() as any;
+    await approveConsultation(consultation.id);
 
     const adviceBodies = [
       '回答1: ページング検証用の本文です。',
@@ -330,6 +331,7 @@ describe('Consultations API - Detail (GET /:id)', () => {
     }), env);
     expect(consultationRes.status).toBe(201);
     const consultation = await consultationRes.json() as any;
+    await approveConsultation(consultation.id);
 
     for (let i = 1; i <= 3; i++) {
       const adviceRes = await app.fetch(createApiRequest(`/api/consultations/${consultation.id}/advice`, 'POST', {
