@@ -1,7 +1,12 @@
 // サービス注入ミドルウェア: Contextにサービスインスタンスを注入する
 import type { Context, Next } from "hono";
 import type { AppBindings } from "@/index";
-import { createConsultationService, createUserService, createTagService } from "@/services/service.factory";
+import {
+	createConsultationService,
+	createConsultationContentCheckService,
+	createUserService,
+	createTagService,
+} from "@/services/service.factory";
 
 /**
  * ConsultationServiceを注入するミドルウェア
@@ -23,6 +28,20 @@ export async function injectConsultationService(
 	const db = c.get("db");
 	const consultationService = createConsultationService(db);
 	c.set("consultationService", consultationService);
+	await next();
+}
+
+/**
+ * ConsultationContentCheckServiceを注入するミドルウェア
+ * DBインスタンスからConsultationContentCheckServiceを生成してContextに格納する
+ */
+export async function injectConsultationContentCheckService(
+	c: Context<AppBindings>,
+	next: Next,
+) {
+	const db = c.get("db");
+	const consultationContentCheckService = createConsultationContentCheckService(db);
+	c.set("consultationContentCheckService", consultationContentCheckService);
 	await next();
 }
 

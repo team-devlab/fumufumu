@@ -19,6 +19,7 @@ import { userRoute } from '@/routes/user.controller';
 import { tagsRoute } from '@/routes/tags.controller';
 import { adminContentCheckRoute } from '@/routes/admin-content-check.controller';
 import type { ConsultationService } from '@/services/consultation.service';
+import type { ConsultationContentCheckService } from '@/services/consultation-content-check.service';
 import type { UserService } from '@/services/user.service';
 import type { TagService } from '@/services/tag.service';
 
@@ -47,6 +48,7 @@ export interface Variables {
   appUserId: number;
   db: DbInstance;
   consultationService: ConsultationService;
+  consultationContentCheckService: ConsultationContentCheckService;
   userService: UserService;
   tagService: TagService;
 }

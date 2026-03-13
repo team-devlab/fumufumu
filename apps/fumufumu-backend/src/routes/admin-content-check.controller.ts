@@ -3,7 +3,7 @@ import { createFactory } from "hono/factory";
 import { zValidator } from "@hono/zod-validator";
 import type { AppBindings } from "@/index";
 import { authGuard } from "@/middlewares/authGuard.middleware";
-import { injectConsultationService } from "@/middlewares/injectService.middleware";
+import { injectConsultationContentCheckService } from "@/middlewares/injectService.middleware";
 import {
   listConsultationContentChecksQuerySchema,
   consultationIdParamSchema,
@@ -18,7 +18,7 @@ const listConsultationContentChecksHandlers = factory.createHandlers(
   }),
   async (c) => {
     const query = c.req.valid("query");
-    const service = c.get("consultationService");
+    const service = c.get("consultationContentCheckService");
 
     if (query.view === "summary") {
       const result = await service.listPendingConsultationContentChecks();
@@ -40,7 +40,7 @@ const decideConsultationContentCheckHandlers = factory.createHandlers(
   async (c) => {
     const { consultationId } = c.req.valid("param");
     const body = c.req.valid("json");
-    const service = c.get("consultationService");
+    const service = c.get("consultationContentCheckService");
 
     const result = await service.decideConsultationContentCheck(
       consultationId,
@@ -54,6 +54,6 @@ const decideConsultationContentCheckHandlers = factory.createHandlers(
 
 export const adminContentCheckRoute = new Hono<AppBindings>();
 
-adminContentCheckRoute.use("/*", authGuard, injectConsultationService);
+adminContentCheckRoute.use("/*", authGuard, injectConsultationContentCheckService);
 adminContentCheckRoute.get("/consultations", ...listConsultationContentChecksHandlers);
 adminContentCheckRoute.post("/consultations/:consultationId/decision", ...decideConsultationContentCheckHandlers);

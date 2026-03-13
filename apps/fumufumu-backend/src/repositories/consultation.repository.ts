@@ -637,6 +637,9 @@ export class ConsultationRepository {
 		return advice;
 	}
 
+	/**
+	 * 公開相談の作成/公開化時に、相談単位の投稿チェックをpendingで作成する
+	 */
 	async createConsultationContentCheck(consultationId: number) {
 		try {
 			const [inserted] = await this.db
@@ -667,42 +670,9 @@ export class ConsultationRepository {
 		}
 	}
 
-	async listPendingConsultationContentChecks() {
-		return await this.db
-			.select({
-				id: consultations.id,
-				status: contentChecks.status,
-				createdAt: consultations.createdAt,
-			})
-			.from(contentChecks)
-			.innerJoin(
-				consultations,
-				and(
-					eq(contentChecks.targetType, "consultation"),
-					eq(contentChecks.targetId, consultations.id),
-				),
-			)
-			.where(eq(contentChecks.status, "pending"))
-			.orderBy(contentChecks.createdAt);
-	}
-
-	async findConsultationContentCheckStatusesByIds(ids: number[]) {
-		if (ids.length === 0) return [];
-
-		return await this.db
-			.select({
-				targetId: contentChecks.targetId,
-				status: contentChecks.status,
-			})
-			.from(contentChecks)
-			.where(
-				and(
-					eq(contentChecks.targetType, "consultation"),
-					inArray(contentChecks.targetId, ids),
-				),
-			);
-	}
-
+	/**
+	 * 公開APIの可視性判定で使う、相談1件のチェック状態を取得する
+	 */
 	async findConsultationContentCheckByConsultationId(consultationId: number) {
 		return await this.db.query.contentChecks.findFirst({
 			where: and(
@@ -710,62 +680,5 @@ export class ConsultationRepository {
 				eq(contentChecks.targetId, consultationId),
 			),
 		});
-	}
-
-	async findPendingConsultationDetailsByIds(ids: number[]) {
-		if (ids.length === 0) return [];
-
-		return await this.db
-			.select({
-				id: consultations.id,
-				title: consultations.title,
-				body: consultations.body,
-				authorId: consultations.authorId,
-				status: contentChecks.status,
-				createdAt: consultations.createdAt,
-			})
-			.from(contentChecks)
-			.innerJoin(
-				consultations,
-				and(
-					eq(contentChecks.targetType, "consultation"),
-					eq(contentChecks.targetId, consultations.id),
-				),
-			)
-			.where(
-				and(
-					eq(contentChecks.status, "pending"),
-					inArray(consultations.id, ids),
-				),
-			);
-	}
-
-	async updateConsultationContentCheckDecision(
-		consultationId: number,
-		decision: "approved" | "rejected",
-		reason?: string,
-	) {
-		const [updated] = await this.db
-			.update(contentChecks)
-			.set({
-				status: decision,
-				reason: decision === "rejected" ? reason ?? null : null,
-				checkedAt: new Date(),
-				updatedAt: new Date(),
-			})
-			.where(
-				and(
-					eq(contentChecks.targetType, "consultation"),
-					eq(contentChecks.targetId, consultationId),
-					eq(contentChecks.status, "pending"),
-				),
-			)
-			.returning();
-
-		if (!updated) {
-			throw new NotFoundError(`未処理の投稿チェックが見つかりません: consultationId=${consultationId}`);
-		}
-
-		return updated;
 	}
 }
