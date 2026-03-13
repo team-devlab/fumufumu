@@ -82,9 +82,7 @@ export class ConsultationRepository {
 			columns: { id: true },
 			where: and(
 				eq(consultations.id, consultationId),
-				eq(consultations.draft, false),
-				isNull(consultations.hiddenAt),
-				this.buildPublicVisibilityCondition(),
+				this.buildPublicConsultationCondition(),
 			),
 		});
 
@@ -125,22 +123,23 @@ export class ConsultationRepository {
 		return or(approvedCheckExists, noCheckExists) as SQL;
 	}
 
+	private buildPublicConsultationCondition(): SQL {
+		return and(
+			eq(consultations.draft, false),
+			isNull(consultations.hiddenAt),
+			this.buildPublicVisibilityCondition(),
+		) as SQL;
+	}
+
 	/**
 	 * フィルタ条件からWHERE句を構築する（findAll / count 共通）
 	 */
 	private buildWhereConditions(filters?: ConsultationFilters): SQL | undefined {
 		const conditions: SQL[] = [];
 
-		// NOTE: デフォルトで非表示(hiddenAt)の相談は除外する
-        conditions.push(isNull(consultations.hiddenAt));
-
 		if (filters?.userId !== undefined) {
             conditions.push(eq(consultations.authorId, filters.userId));
         }
-
-		if (filters?.draft !== undefined) {
-			conditions.push(eq(consultations.draft, filters.draft));
-		}
 
 		if (filters?.solved !== undefined) {
 			conditions.push(
@@ -150,8 +149,11 @@ export class ConsultationRepository {
 			);
 		}
 
-		if (filters?.draft !== true) {
-			conditions.push(this.buildPublicVisibilityCondition());
+		if (filters?.draft === true) {
+			conditions.push(eq(consultations.draft, true));
+			conditions.push(isNull(consultations.hiddenAt));
+		} else {
+			conditions.push(this.buildPublicConsultationCondition());
 		}
 
 		return conditions.length > 0 ? and(...conditions) : undefined;

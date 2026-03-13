@@ -198,6 +198,23 @@ export class ConsultationService {
 		}
 	}
 
+	private async assertConsultationReadableOrThrow(
+		consultationId: number,
+		consultation: {
+			authorId: number | null;
+			draft: boolean;
+			hiddenAt: Date | null;
+		},
+		requestUserId?: number,
+	): Promise<void> {
+		const contentCheck = await this.repository.findConsultationContentCheckByConsultationId(consultationId);
+		const isHiddenConsultation = consultation.draft || consultation.hiddenAt !== null;
+		const isNotApproved = contentCheck !== undefined && contentCheck.status !== "approved";
+		if ((isHiddenConsultation && consultation.authorId !== requestUserId) || isNotApproved) {
+			throw new NotFoundError(`相談が見つかりません: id=${consultationId}`);
+		}
+	}
+
 	async getConsultation(
 		id: number,
 		requestUserId: number,
@@ -205,14 +222,7 @@ export class ConsultationService {
 	) :Promise<ConsultationResponse> {
 		const { page = 1, limit = 20 } = pagination || {};
 		const consultation = await this.repository.findFirstById(id);
-		const contentCheck = await this.repository.findConsultationContentCheckByConsultationId(id);
-
-		// NOTE: 権限チェック
-		const isHidden = consultation.draft || consultation.hiddenAt !== null;
-		const isNotApproved = contentCheck !== undefined && contentCheck.status !== "approved";
-		if ((isHidden && consultation.authorId !== requestUserId) || isNotApproved) {
-			throw new NotFoundError(`相談が見つかりません: id=${id}`);
-		}
+		await this.assertConsultationReadableOrThrow(id, consultation, requestUserId);
 
 		const [adviceList, adviceTotalCount] = await Promise.all([
 			this.repository.findAdvicesByConsultationId(
@@ -283,12 +293,7 @@ export class ConsultationService {
 		const { page = 1, limit = 20 } = pagination || {};
 
 		const consultation = await this.repository.findConsultationByIdForAccessCheck(consultationId);
-		const contentCheck = await this.repository.findConsultationContentCheckByConsultationId(consultationId);
-		const isHiddenConsultation = consultation.draft || consultation.hiddenAt !== null;
-		const isNotApproved = contentCheck !== undefined && contentCheck.status !== "approved";
-		if ((isHiddenConsultation && consultation.authorId !== requestUserId) || isNotApproved) {
-			throw new NotFoundError(`相談が見つかりません: id=${consultationId}`);
-		}
+		await this.assertConsultationReadableOrThrow(consultationId, consultation, requestUserId);
 
 		const [adviceList, totalCount] = await Promise.all([
 			this.repository.findAdvicesByConsultationId(consultationId, { page, limit }, filters),
