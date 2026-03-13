@@ -123,6 +123,81 @@ export class ConsultationService {
 		};
 	}
 
+	private async attachTagsOrRollback(
+		consultationId: number,
+		authorId: number,
+		tagIds?: number[],
+	): Promise<void> {
+		if (!tagIds || tagIds.length === 0) {
+			return;
+		}
+
+		try {
+			await this.repository.attachTags(consultationId, tagIds);
+		} catch (originalError) {
+			console.error("Consultation tag attach failed.", {
+				event: "CONSULTATION_CREATION_TAG_ATTACH_FAILED",
+				consultationId,
+				authorId,
+				tagIds,
+				error: ConsultationService.toLogError(originalError),
+			});
+
+			try {
+				await this.repository.deleteById(consultationId);
+			} catch (rollbackError) {
+				// NOTE: 構造化ログを出力して原因追求に必要な情報の消失を防ぐ
+				console.error("Critical: Compensation failed during consultation creation.", {
+					event: "CONSULTATION_CREATION_COMPENSATION_FAILURE",
+					consultationId,
+					authorId,
+					tagIds,
+					originalError: ConsultationService.toLogError(originalError),
+					rollbackError: ConsultationService.toLogError(rollbackError),
+				});
+
+				throw new CompensationFailedError(
+					`相談作成のタグ処理で失敗し、補償削除(ID:${consultationId})にも失敗しました。手動でのデータ削除(SQL etc.)が必要です。`,
+				);
+			}
+
+			throw originalError;
+		}
+	}
+
+	private async createContentCheckOrRollback(
+		consultationId: number,
+		authorId: number,
+	): Promise<void> {
+		try {
+			await this.repository.createConsultationContentCheck(consultationId);
+		} catch (originalError) {
+			console.error("Consultation content-check creation failed.", {
+				event: "CONSULTATION_CREATION_CONTENT_CHECK_FAILED",
+				consultationId,
+				authorId,
+				error: ConsultationService.toLogError(originalError),
+			});
+
+			try {
+				await this.repository.deleteById(consultationId);
+			} catch (rollbackError) {
+				console.error("Critical: Compensation failed during consultation content-check creation.", {
+					event: "CONSULTATION_CREATION_CONTENT_CHECK_COMPENSATION_FAILURE",
+					consultationId,
+					authorId,
+					originalError: ConsultationService.toLogError(originalError),
+					rollbackError: ConsultationService.toLogError(rollbackError),
+				});
+				throw new CompensationFailedError(
+					`投稿チェック作成で失敗し、補償削除(ID:${consultationId})にも失敗しました。手動でのデータ削除が必要です。`,
+				);
+			}
+
+			throw originalError;
+		}
+	}
+
 	async getConsultation(
 		id: number,
 		requestUserId: number,
@@ -279,67 +354,10 @@ export class ConsultationService {
 			authorId,
 		});
 
-		try {
-			if (data.tagIds && data.tagIds.length > 0) {
-				await this.repository.attachTags(createdConsultation.id, data.tagIds);
-			}
-		} catch (originalError) {
-			console.error("Consultation tag attach failed.", {
-				event: "CONSULTATION_CREATION_TAG_ATTACH_FAILED",
-				consultationId: createdConsultation.id,
-				authorId,
-				tagIds: data.tagIds,
-				error: ConsultationService.toLogError(originalError),
-			});
-
-			try {
-				await this.repository.deleteById(createdConsultation.id);
-			} catch (rollbackError) {
-			    // NOTE: 構造化ログを出力して原因追求に必要な情報の消失を防ぐ
-                console.error("Critical: Compensation failed during consultation creation.", {
-                    event: "CONSULTATION_CREATION_COMPENSATION_FAILURE",
-                    consultationId: createdConsultation.id,
-                    authorId,
-                    tagIds: data.tagIds,
-                    originalError: ConsultationService.toLogError(originalError),
-                    rollbackError: ConsultationService.toLogError(rollbackError),
-                });
-                
-                throw new CompensationFailedError(
-                    `相談作成のタグ処理で失敗し、補償削除(ID:${createdConsultation.id})にも失敗しました。手動でのデータ削除(SQL etc.)が必要です。`
-                );
-			}
-			throw originalError;
-		}
+		await this.attachTagsOrRollback(createdConsultation.id, authorId, data.tagIds);
 
 		if (!data.draft) {
-			try {
-				await this.repository.createConsultationContentCheck(createdConsultation.id);
-			} catch (originalError) {
-				console.error("Consultation content-check creation failed.", {
-					event: "CONSULTATION_CREATION_CONTENT_CHECK_FAILED",
-					consultationId: createdConsultation.id,
-					authorId,
-					error: ConsultationService.toLogError(originalError),
-				});
-
-				try {
-					await this.repository.deleteById(createdConsultation.id);
-				} catch (rollbackError) {
-					console.error("Critical: Compensation failed during consultation content-check creation.", {
-						event: "CONSULTATION_CREATION_CONTENT_CHECK_COMPENSATION_FAILURE",
-						consultationId: createdConsultation.id,
-						authorId,
-						originalError: ConsultationService.toLogError(originalError),
-						rollbackError: ConsultationService.toLogError(rollbackError),
-					});
-					throw new CompensationFailedError(
-						`投稿チェック作成で失敗し、補償削除(ID:${createdConsultation.id})にも失敗しました。手動でのデータ削除が必要です。`,
-					);
-				}
-
-				throw originalError;
-			}
+			await this.createContentCheckOrRollback(createdConsultation.id, authorId);
 		}
 
 		return this.toConsultationResponse(createdConsultation, true);
