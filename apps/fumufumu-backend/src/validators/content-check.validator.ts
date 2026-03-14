@@ -33,7 +33,6 @@ const commaSeparatedIdsSchema = z
 
 export const listConsultationContentChecksQuerySchema = z
   .object({
-    status: z.enum(["pending"]).optional().default("pending"),
     view: z.enum(["summary", "detail"]).optional().default("summary"),
     ids: commaSeparatedIdsSchema.optional(),
   })

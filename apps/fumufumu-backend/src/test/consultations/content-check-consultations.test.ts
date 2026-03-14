@@ -49,7 +49,6 @@ describe('Admin Content Check API - Consultations', () => {
     const req = createApiRequest('/api/admin/content-check/consultations', 'GET', {
       cookie: user.cookie,
       queryParams: {
-        status: 'pending',
         view: 'summary',
       },
     });
@@ -106,7 +105,6 @@ describe('Admin Content Check API - Consultations', () => {
     const req = createApiRequest('/api/admin/content-check/consultations', 'GET', {
       cookie: user.cookie,
       queryParams: {
-        status: 'pending',
         view: 'detail',
         ids: `${pending.id},${approved.id},99999999`,
       },
@@ -174,7 +172,6 @@ describe('Admin Content Check API - Consultations', () => {
   it('認証なしは401エラー', async () => {
     const req = createApiRequest('/api/admin/content-check/consultations', 'GET', {
       queryParams: {
-        status: 'pending',
         view: 'summary',
       },
     });

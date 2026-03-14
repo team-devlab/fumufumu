@@ -25,11 +25,7 @@ const listConsultationContentChecksHandlers = factory.createHandlers(
       return c.json(result, 200);
     }
 
-    if (!query.ids) {
-      throw new ValidationError("view=detail の場合は ids が必須です");
-    }
-    
-    const result = await service.findPendingConsultationsByIds(query.ids);
+    const result = await service.findPendingConsultationsByIds(query.ids ?? []);
     return c.json(result, 200);
   },
 );
