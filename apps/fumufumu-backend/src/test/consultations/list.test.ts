@@ -277,6 +277,32 @@ describe('Consultations API - List & Filtering', () => {
     });
   });
 
+  it('本人プロフィール用の userId 指定一覧では pending の公開相談も取得できる', async () => {
+    const createRes = await app.fetch(createApiRequest('/api/consultations', 'POST', {
+      cookie: user.cookie,
+      body: {
+        title: '本人プロフィール向けpending相談',
+        body: '本人プロフィールでは投稿チェック中として見えるべき相談本文です。',
+        draft: false,
+        tagIds: [tagId],
+      },
+    }), env);
+    expect(createRes.status).toBe(201);
+
+    const created = await createRes.json() as { id: number };
+
+    const listRes = await app.fetch(createApiRequest('/api/consultations', 'GET', {
+      cookie: user.cookie,
+      queryParams: { userId: user.appUserId.toString() },
+    }), env);
+    expect(listRes.status).toBe(200);
+
+    const body = await listRes.json() as any;
+    expect(Array.isArray(body.data)).toBe(true);
+
+    const pendingOwnConsultation = body.data.find((item: any) => item.id === created.id);
+    expect(pendingOwnConsultation).toBeDefined();
+  });
   it('body_previewは100文字に切り取られている', async () => {
     // 100文字以上の本文で相談を作成
     const longBody = 'A'.repeat(150);
