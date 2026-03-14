@@ -59,7 +59,7 @@ export const decideConsultationContentCheckSchema = z
   .superRefine((data, ctx) => {
     if (data.decision === "rejected" && !data.reason) {
       ctx.addIssue({
-        code: z.ZodIssueCode.custom,
+        code: "custom",
         path: ["reason"],
         message: "却下時は理由を入力してください",
       });
