@@ -2,6 +2,8 @@
 import type { DbInstance } from "@/index";
 import { ConsultationRepository } from "@/repositories/consultation.repository";
 import { ConsultationService } from "@/services/consultation.service";
+import { ConsultationContentCheckRepository } from "@/repositories/consultation-content-check.repository";
+import { ConsultationContentCheckService } from "@/services/consultation-content-check.service";
 import { UserRepository } from "@/repositories/user.repository";
 import { UserService } from "@/services/user.service";
 import { TagRepository } from "@/repositories/tag.repository";
@@ -17,6 +19,18 @@ import { TagService } from "@/services/tag.service";
 export function createConsultationService(db: DbInstance): ConsultationService {
 	const repository = new ConsultationRepository(db);
 	return new ConsultationService(repository);
+}
+
+/**
+ * ConsultationContentCheckServiceのファクトリー関数
+ * DBインスタンスから依存関係を解決してServiceを生成する
+ *
+ * @param db - データベースインスタンス（リクエストごとに異なる）
+ * @returns 依存関係が解決されたConsultationContentCheckServiceインスタンス
+ */
+export function createConsultationContentCheckService(db: DbInstance): ConsultationContentCheckService {
+	const repository = new ConsultationContentCheckRepository(db);
+	return new ConsultationContentCheckService(repository);
 }
 
 /**

@@ -12,6 +12,7 @@ export type ConsultationFilters = {
 	userId?: number;
 	draft?: boolean;
 	solved?: boolean;
+	includeUnapprovedForOwn?: boolean;
 };
 
 /**

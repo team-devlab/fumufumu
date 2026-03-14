@@ -83,6 +83,17 @@ describe('Consultations API - Update (PUT /:id)', () => {
     const data = await res.json() as any;
     expect(data.id).toBe(consultationId);
     expect(data.draft).toBe(false);
+
+    const check = await env.DB
+      .prepare("SELECT status, target_type, target_id, reason, checked_at FROM content_checks WHERE target_type = 'consultation' AND target_id = ?")
+      .bind(consultationId)
+      .first() as { status: string; target_type: string; target_id: number; reason: string | null; checked_at: number | null } | null;
+    expect(check).not.toBeNull();
+    expect(check?.status).toBe('pending');
+    expect(check?.target_type).toBe('consultation');
+    expect(check?.target_id).toBe(consultationId);
+    expect(check?.reason).toBeNull();
+    expect(check?.checked_at).toBeNull();
   });
 
   it('下書き状態から公開更新時、tagIds未指定なら400エラーを返す', async () => {

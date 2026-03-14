@@ -89,9 +89,9 @@ export class ConsultationService {
 	}
 
 	/**
-	 * 相談回答データをレスポンス形式に変換する
-	 * * @param advice - Repository層から取得した相談回答データ（作成時 or 詳細取得時）
-	 * @returns API レスポンス形式の相談回答データ
+	 * 相談アドバイスデータをレスポンス形式に変換する
+	 * * @param advice - Repository層から取得した相談アドバイスデータ（作成時 or 詳細取得時）
+	 * @returns API レスポンス形式の相談アドバイスデータ
 	 */
 	private toAdviceResponse(advice: AdviceEntity | AdviceEntityFromList): AdviceResponse {
 		return {
@@ -123,6 +123,98 @@ export class ConsultationService {
 		};
 	}
 
+	private async attachTagsOrRollback(
+		consultationId: number,
+		authorId: number,
+		tagIds?: number[],
+	): Promise<void> {
+		if (!tagIds || tagIds.length === 0) {
+			return;
+		}
+
+		try {
+			await this.repository.attachTags(consultationId, tagIds);
+		} catch (originalError) {
+			console.error("Consultation tag attach failed.", {
+				event: "CONSULTATION_CREATION_TAG_ATTACH_FAILED",
+				consultationId,
+				authorId,
+				tagIds,
+				error: ConsultationService.toLogError(originalError),
+			});
+
+			try {
+				await this.repository.deleteById(consultationId);
+			} catch (rollbackError) {
+				// NOTE: 構造化ログを出力して原因追求に必要な情報の消失を防ぐ
+				console.error("Critical: Compensation failed during consultation creation.", {
+					event: "CONSULTATION_CREATION_COMPENSATION_FAILURE",
+					consultationId,
+					authorId,
+					tagIds,
+					originalError: ConsultationService.toLogError(originalError),
+					rollbackError: ConsultationService.toLogError(rollbackError),
+				});
+
+				throw new CompensationFailedError(
+					`相談作成のタグ処理で失敗し、補償削除(ID:${consultationId})にも失敗しました。手動でのデータ削除(SQL etc.)が必要です。`,
+				);
+			}
+
+			throw originalError;
+		}
+	}
+
+	private async createContentCheckOrRollback(
+		consultationId: number,
+		authorId: number,
+	): Promise<void> {
+		try {
+			await this.repository.createConsultationContentCheck(consultationId);
+		} catch (originalError) {
+			console.error("Consultation content-check creation failed.", {
+				event: "CONSULTATION_CREATION_CONTENT_CHECK_FAILED",
+				consultationId,
+				authorId,
+				error: ConsultationService.toLogError(originalError),
+			});
+
+			try {
+				await this.repository.deleteById(consultationId);
+			} catch (rollbackError) {
+				console.error("Critical: Compensation failed during consultation content-check creation.", {
+					event: "CONSULTATION_CREATION_CONTENT_CHECK_COMPENSATION_FAILURE",
+					consultationId,
+					authorId,
+					originalError: ConsultationService.toLogError(originalError),
+					rollbackError: ConsultationService.toLogError(rollbackError),
+				});
+				throw new CompensationFailedError(
+					`投稿チェック作成で失敗し、補償削除(ID:${consultationId})にも失敗しました。手動でのデータ削除が必要です。`,
+				);
+			}
+
+			throw originalError;
+		}
+	}
+
+	private async assertConsultationReadableOrThrow(
+		consultationId: number,
+		consultation: {
+			authorId: number | null;
+			draft: boolean;
+			hiddenAt: Date | null;
+		},
+		requestUserId?: number,
+	): Promise<void> {
+		const contentCheck = await this.repository.findConsultationContentCheckByConsultationId(consultationId);
+		const isHiddenConsultation = consultation.draft || consultation.hiddenAt !== null;
+		const isNotApproved = contentCheck !== undefined && contentCheck.status !== "approved";
+		if ((isHiddenConsultation && consultation.authorId !== requestUserId) || isNotApproved) {
+			throw new NotFoundError(`相談が見つかりません: id=${consultationId}`);
+		}
+	}
+
 	async getConsultation(
 		id: number,
 		requestUserId: number,
@@ -130,12 +222,7 @@ export class ConsultationService {
 	) :Promise<ConsultationResponse> {
 		const { page = 1, limit = 20 } = pagination || {};
 		const consultation = await this.repository.findFirstById(id);
-
-		// NOTE: 権限チェック
-		const isHidden = consultation.draft || consultation.hiddenAt !== null;
-		if (isHidden && consultation.authorId !== requestUserId) {
-			throw new NotFoundError(`相談が見つかりません: id=${id}`);
-		}
+		await this.assertConsultationReadableOrThrow(id, consultation, requestUserId);
 
 		const [adviceList, adviceTotalCount] = await Promise.all([
 			this.repository.findAdvicesByConsultationId(
@@ -172,7 +259,7 @@ export class ConsultationService {
         }
 
 		// NOTE(ビジネスロジック): 下書き取得時は、強制的に「自分のデータ」に絞り込む
-        if (secureFilters.draft === true) {
+		if (secureFilters.draft === true) {
 			// セキュリティガード: requestUserIdが未定義の場合、Repository側で全件露出するリスクを防ぐため、即時空配列を返す
 			// 認証必須のエンドポイントなら本来あり得ないが、安全のため
             if (requestUserId === undefined) {
@@ -183,6 +270,15 @@ export class ConsultationService {
             }
             secureFilters.userId = requestUserId;
         }
+
+		if (
+			secureFilters.draft !== true &&
+			secureFilters.userId !== undefined &&
+			requestUserId !== undefined &&
+			secureFilters.userId === requestUserId
+		) {
+			secureFilters.includeUnapprovedForOwn = true;
+		}
 
 		// 並列で取得（パフォーマンス向上）
 		const [consultationList, totalCount] = await Promise.all([
@@ -206,10 +302,7 @@ export class ConsultationService {
 		const { page = 1, limit = 20 } = pagination || {};
 
 		const consultation = await this.repository.findConsultationByIdForAccessCheck(consultationId);
-		const isHiddenConsultation = consultation.draft || consultation.hiddenAt !== null;
-		if (isHiddenConsultation && consultation.authorId !== requestUserId) {
-			throw new NotFoundError(`相談が見つかりません: id=${consultationId}`);
-		}
+		await this.assertConsultationReadableOrThrow(consultationId, consultation, requestUserId);
 
 		const [adviceList, totalCount] = await Promise.all([
 			this.repository.findAdvicesByConsultationId(consultationId, { page, limit }, filters),
@@ -275,37 +368,10 @@ export class ConsultationService {
 			authorId,
 		});
 
-		try {
-			if (data.tagIds && data.tagIds.length > 0) {
-				await this.repository.attachTags(createdConsultation.id, data.tagIds);
-			}
-		} catch (originalError) {
-			console.error("Consultation tag attach failed.", {
-				event: "CONSULTATION_CREATION_TAG_ATTACH_FAILED",
-				consultationId: createdConsultation.id,
-				authorId,
-				tagIds: data.tagIds,
-				error: ConsultationService.toLogError(originalError),
-			});
+		await this.attachTagsOrRollback(createdConsultation.id, authorId, data.tagIds);
 
-			try {
-				await this.repository.deleteById(createdConsultation.id);
-			} catch (rollbackError) {
-			    // NOTE: 構造化ログを出力して原因追求に必要な情報の消失を防ぐ
-                console.error("Critical: Compensation failed during consultation creation.", {
-                    event: "CONSULTATION_CREATION_COMPENSATION_FAILURE",
-                    consultationId: createdConsultation.id,
-                    authorId,
-                    tagIds: data.tagIds,
-                    originalError: ConsultationService.toLogError(originalError),
-                    rollbackError: ConsultationService.toLogError(rollbackError),
-                });
-                
-                throw new CompensationFailedError(
-                    `相談作成のタグ処理で失敗し、補償削除(ID:${createdConsultation.id})にも失敗しました。手動でのデータ削除(SQL etc.)が必要です。`
-                );
-			}
-			throw originalError;
+		if (!data.draft) {
+			await this.createContentCheckOrRollback(createdConsultation.id, authorId);
 		}
 
 		return this.toConsultationResponse(createdConsultation, true);
@@ -337,6 +403,8 @@ export class ConsultationService {
 		if (updateRuleError) {
 			throw new ValidationError(CONSULTATION_TAG_RULE_MESSAGES[updateRuleError]);
 		}
+
+		const shouldQueueContentCheck = existingConsultation.draft === true && data.draft === false;
     	
 		const updatedConsultation = await this.repository.update({
 			id,
@@ -345,6 +413,7 @@ export class ConsultationService {
 			draft: data.draft,
 			authorId: existingConsultation.authorId ?? requestUserId,
 			tagIds: data.tagIds,
+			queueContentCheck: shouldQueueContentCheck,
 		})
 			.catch((error) => {
 				if (data.tagIds !== undefined) {
@@ -369,12 +438,12 @@ export class ConsultationService {
 	
 	/**
 	 * 
-	 * 相談に対する回答を作成する
+	 * 相談に対するアドバイスを作成する
 	 * 
 	 * @param id - 相談ID
-	 * @param data.body - 回答本文
+	 * @param data.body - アドバイス本文
 	 * @param data.draft - 下書きフラグ（true: 下書き, false: 公開）
-	 * @param authorId - 回答者ID（認証ユーザー）
+	 * @param authorId - アドバイス者ID（認証ユーザー）
 	 * @returns 
 	 */
 	async createAdvice(id: number, data: AdviceContent, authorId: number): Promise<AdviceResponse> {
@@ -391,17 +460,17 @@ export class ConsultationService {
 	 * アドバイスの下書きを更新する
 	 * 
 	 * @param id - 相談ID
-	 * @param data.body - 回答本文
-	 * @param authorId - 回答者ID（認証ユーザー）
-	 * @returns 更新された相談回答のレスポンス
+	 * @param data.body - アドバイス本文
+	 * @param authorId - アドバイス者ID（認証ユーザー）
+	 * @returns 更新された相談アドバイスのレスポンス
 	 */
 		async updateDraftAdvice(id: number, data: UpdateDraftAdviceContentSchema, authorId: number): Promise<AdviceSavedResponse> {
 			const existingAdvice = await this.repository.findFirstAdviceByConsultation(id, authorId);
 			if (!existingAdvice) {
-				throw new NotFoundError(`指定された相談回答(consultationId:${id})は見つかりませんでした`);
+				throw new NotFoundError(`指定された相談アドバイス(consultationId:${id})は見つかりませんでした`);
 			}
 			if (existingAdvice.draft === false) {
-				throw new NotFoundError('相談回答は公開されているため、更新できません。');
+				throw new NotFoundError('相談アドバイスは公開されているため、更新できません。');
 			}
 			const updatedAdvice = await this.repository.updateDraftAdvice({
 				consultationId: id,
@@ -416,4 +485,5 @@ export class ConsultationService {
 				created_at: updatedAdvice.createdAt.toISOString(),
 			});
 		}
-	}
+
+}
