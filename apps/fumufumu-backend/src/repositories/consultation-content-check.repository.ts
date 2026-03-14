@@ -30,38 +30,19 @@ export class ConsultationContentCheckRepository {
 	}
 
 	/**
-	 * detail取得時の補助として、指定ID群のチェック状態をまとめて取得する
+	 * 運営detail向けに、指定IDのチェック状態と相談情報を1クエリで取得する
 	 */
-	async findConsultationContentCheckStatusesByIds(ids: number[]) {
+	async findConsultationChecksWithConsultationByIds(ids: number[]) {
 		if (ids.length === 0) return [];
 
 		return await this.db
 			.select({
 				targetId: contentChecks.targetId,
 				status: contentChecks.status,
-			})
-			.from(contentChecks)
-			.where(
-				and(
-					eq(contentChecks.targetType, "consultation"),
-					inArray(contentChecks.targetId, ids),
-				),
-			);
-	}
-
-	/**
-	 * 運営detail向けに、pending中の相談だけ本文付きで取得する
-	 */
-	async findPendingConsultationDetailsByIds(ids: number[]) {
-		if (ids.length === 0) return [];
-
-		return await this.db
-			.select({
 				id: consultations.id,
 				title: consultations.title,
 				body: consultations.body,
 				authorId: consultations.authorId,
-				status: contentChecks.status,
 				createdAt: consultations.createdAt,
 			})
 			.from(contentChecks)
@@ -74,8 +55,7 @@ export class ConsultationContentCheckRepository {
 			)
 			.where(
 				and(
-					eq(contentChecks.status, "pending"),
-					inArray(consultations.id, ids),
+					inArray(contentChecks.targetId, ids),
 				),
 			);
 	}

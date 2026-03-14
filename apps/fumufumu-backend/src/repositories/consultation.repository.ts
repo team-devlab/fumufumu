@@ -153,7 +153,12 @@ export class ConsultationRepository {
 			conditions.push(eq(consultations.draft, true));
 			conditions.push(isNull(consultations.hiddenAt));
 		} else {
-			conditions.push(this.buildPublicConsultationCondition());
+			conditions.push(eq(consultations.draft, false));
+			conditions.push(isNull(consultations.hiddenAt));
+
+			if (!filters?.includeUnapprovedForOwn) {
+				conditions.push(this.buildPublicVisibilityCondition());
+			}
 		}
 
 		return conditions.length > 0 ? and(...conditions) : undefined;

@@ -259,7 +259,7 @@ export class ConsultationService {
         }
 
 		// NOTE(ビジネスロジック): 下書き取得時は、強制的に「自分のデータ」に絞り込む
-        if (secureFilters.draft === true) {
+		if (secureFilters.draft === true) {
 			// セキュリティガード: requestUserIdが未定義の場合、Repository側で全件露出するリスクを防ぐため、即時空配列を返す
 			// 認証必須のエンドポイントなら本来あり得ないが、安全のため
             if (requestUserId === undefined) {
@@ -270,6 +270,15 @@ export class ConsultationService {
             }
             secureFilters.userId = requestUserId;
         }
+
+		if (
+			secureFilters.draft !== true &&
+			secureFilters.userId !== undefined &&
+			requestUserId !== undefined &&
+			secureFilters.userId === requestUserId
+		) {
+			secureFilters.includeUnapprovedForOwn = true;
+		}
 
 		// 並列で取得（パフォーマンス向上）
 		const [consultationList, totalCount] = await Promise.all([

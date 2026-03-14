@@ -21,31 +21,43 @@ export class ConsultationContentCheckService {
 	 * 運営向けdetailレスポンスを組み立てる（missing/non-pendingの内訳も返す）
 	 */
 	async findPendingConsultationsByIds(ids: number[]) {
-		const [statuses, pendingConsultations] = await Promise.all([
-			this.repository.findConsultationContentCheckStatusesByIds(ids),
-			this.repository.findPendingConsultationDetailsByIds(ids),
-		]);
+		const rows = await this.repository.findConsultationChecksWithConsultationByIds(ids);
+		const seenIds = new Set<number>();
+		const consultations: Array<{
+			id: number;
+			title: string;
+			body: string;
+			author_id: number | null;
+			status: string;
+			created_at: string;
+		}> = [];
+		const nonPending: Array<{ id: number; current_status: string }> = [];
 
-		const statusById = new Map(statuses.map((row) => [row.targetId, row.status]));
-		const pendingIdSet = new Set(pendingConsultations.map((row) => row.id));
+		for (const row of rows) {
+			seenIds.add(row.targetId);
 
-		const missingIds = ids.filter((id) => !statusById.has(id));
-		const nonPending = ids
-			.filter((id) => statusById.has(id) && !pendingIdSet.has(id))
-			.map((id) => ({
-				id,
-				current_status: statusById.get(id)!,
-			}));
+			if (row.status === "pending") {
+				consultations.push({
+					id: row.id,
+					title: row.title,
+					body: row.body,
+					author_id: row.authorId,
+					status: row.status,
+					created_at: row.createdAt.toISOString(),
+				});
+				continue;
+			}
+
+			nonPending.push({
+				id: row.targetId,
+				current_status: row.status,
+			});
+		}
+
+		const missingIds = ids.filter((id) => !seenIds.has(id));
 
 		return {
-			consultations: pendingConsultations.map((row) => ({
-				id: row.id,
-				title: row.title,
-				body: row.body,
-				author_id: row.authorId,
-				status: row.status,
-				created_at: row.createdAt.toISOString(),
-			})),
+			consultations,
 			missing_ids: missingIds,
 			non_pending: nonPending,
 		};
