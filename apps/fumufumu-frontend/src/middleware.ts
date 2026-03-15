@@ -4,9 +4,6 @@ const SESSION_COOKIE = "better-auth.session_token";
 
 export function middleware(request: NextRequest) {
   const { pathname } = request.nextUrl;
-  const response = NextResponse.next();
-  response.headers.set("x-pathname", pathname);
-
   const hasCookie = request.cookies.has(SESSION_COOKIE);
 
   if (!hasCookie) {
@@ -16,7 +13,14 @@ export function middleware(request: NextRequest) {
     return NextResponse.redirect(loginUrl);
   }
 
-  return response;
+  const requestHeaders = new Headers(request.headers);
+  requestHeaders.set("x-pathname", pathname);
+
+  return NextResponse.next({
+    request: {
+      headers: requestHeaders,
+    },
+  });
 }
 
 export const config = {
