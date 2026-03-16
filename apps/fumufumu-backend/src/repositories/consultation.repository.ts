@@ -568,6 +568,28 @@ export class ConsultationRepository {
 				throw new DatabaseError(`相談アドバイスの作成に失敗しました id=${data.consultationId}`);
 			}
 
+			if (!data.draft) {
+				try {
+					await this.db.insert(contentChecks).values({
+						targetType: "advice",
+						targetId: insertedAdvice.id,
+						status: "pending",
+					});
+				} catch (contentCheckError) {
+					try {
+						await this.db.delete(advices).where(eq(advices.id, insertedAdvice.id));
+					} catch (rollbackError) {
+						throw new DatabaseError(
+							`アドバイス投稿チェック作成に失敗し、補償削除も失敗しました: contentCheckError=${String(contentCheckError)}, rollbackError=${String(rollbackError)}`,
+						);
+					}
+
+					throw new DatabaseError(
+						`アドバイス投稿チェック作成に失敗しました: ${String(contentCheckError)}`,
+					);
+				}
+			}
+
 			const author = await this.db.query.users.findFirst({
 				where: eq(users.id, data.authorId),
 			});

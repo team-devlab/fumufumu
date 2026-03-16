@@ -85,4 +85,16 @@ export class ConsultationContentCheckService {
 			updated_at: updated.updatedAt.toISOString(),
 		};
 	}
+
+	async listPendingAdviceContentChecks() {
+		const rows = await this.repository.listPendingAdviceContentChecks();
+		return {
+			advices: rows.map((row) => ({
+				id: row.id,
+				consultation_id: row.consultationId,
+				status: row.status,
+				created_at: row.createdAt.toISOString(),
+			})),
+		};
+	}
 }

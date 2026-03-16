@@ -1,5 +1,6 @@
 import type { DbInstance } from "@/index";
 import { consultations } from "@/db/schema/consultations";
+import { advices } from "@/db/schema/advices";
 import { contentChecks } from "@/db/schema/content-checks";
 import { and, eq, inArray } from "drizzle-orm";
 import { NotFoundError } from "@/errors/AppError";
@@ -90,5 +91,28 @@ export class ConsultationContentCheckRepository {
 		}
 
 		return updated;
+	}
+
+	/**
+	 * 運営一覧(summary)向けに、pendingのアドバイスチェックを作成順で取得する
+	 */
+	async listPendingAdviceContentChecks() {
+		return await this.db
+			.select({
+				id: advices.id,
+				consultationId: advices.consultationId,
+				status: contentChecks.status,
+				createdAt: advices.createdAt,
+			})
+			.from(contentChecks)
+			.innerJoin(
+				advices,
+				and(
+					eq(contentChecks.targetType, "advice"),
+					eq(contentChecks.targetId, advices.id),
+				),
+			)
+			.where(eq(contentChecks.status, "pending"))
+			.orderBy(contentChecks.createdAt);
 	}
 }
