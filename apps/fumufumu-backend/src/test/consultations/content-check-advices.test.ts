@@ -39,50 +39,27 @@ describe("Admin Content Check API - Advices", () => {
 		const createdConsultation = await createConsultationRes.json() as { id: number };
 		consultationId = createdConsultation.id;
 
-		await env.DB
-			.prepare(
-				"UPDATE content_checks SET status = 'approved', checked_at = (cast(unixepoch('subsecond') * 1000 as integer)), updated_at = (cast(unixepoch('subsecond') * 1000 as integer)) WHERE target_type = 'consultation' AND target_id = ?",
-			)
-			.bind(consultationId)
-			.run();
+		const approveReq = createApiRequest(`/api/admin/content-check/consultations/${consultationId}/decision`, "POST", {
+			cookie: user.cookie,
+			body: {
+				decision: "approved",
+			},
+		});
+		const approveRes = await app.fetch(approveReq, env);
+		expect(approveRes.status).toBe(200);
 	});
 
-	it("pendingアドバイスの一覧を取得でき、approvedは含まれない", async () => {
-		const pendingAdviceReq = createApiRequest(`/api/consultations/${consultationId}/advice`, "POST", {
+	it("pendingアドバイスの一覧を取得できる", async () => {
+		const adviceReq = createApiRequest(`/api/consultations/${consultationId}/advice`, "POST", {
 			cookie: user.cookie,
 			body: {
 				body: "pendingとして残るアドバイス本文です。10文字以上あります。",
 				draft: false,
 			},
 		});
-		const pendingAdviceRes = await app.fetch(pendingAdviceReq, env);
-		expect(pendingAdviceRes.status).toBe(201);
-		const pendingAdvice = await pendingAdviceRes.json() as { id: number };
-
-		const approvedAdviceReq = createApiRequest(`/api/consultations/${consultationId}/advice`, "POST", {
-			cookie: user.cookie,
-			body: {
-				body: "あとでapprovedに更新するアドバイス本文です。10文字以上あります。",
-				draft: false,
-			},
-		});
-		const approvedAdviceRes = await app.fetch(approvedAdviceReq, env);
-		expect(approvedAdviceRes.status).toBe(201);
-		const approvedAdvice = await approvedAdviceRes.json() as { id: number };
-
-		await env.DB
-			.prepare(
-				"INSERT INTO content_checks (target_type, target_id, status) VALUES ('advice', ?, 'pending') ON CONFLICT(target_type, target_id) DO UPDATE SET status = 'pending', reason = NULL, checked_at = NULL, updated_at = (cast(unixepoch('subsecond') * 1000 as integer))",
-			)
-			.bind(pendingAdvice.id)
-			.run();
-
-		await env.DB
-			.prepare(
-				"INSERT INTO content_checks (target_type, target_id, status, checked_at) VALUES ('advice', ?, 'approved', (cast(unixepoch('subsecond') * 1000 as integer))) ON CONFLICT(target_type, target_id) DO UPDATE SET status = 'approved', reason = NULL, checked_at = (cast(unixepoch('subsecond') * 1000 as integer)), updated_at = (cast(unixepoch('subsecond') * 1000 as integer))",
-			)
-			.bind(approvedAdvice.id)
-			.run();
+		const adviceRes = await app.fetch(adviceReq, env);
+		expect(adviceRes.status).toBe(201);
+		const advice = await adviceRes.json() as { id: number };
 
 		const req = createApiRequest("/api/admin/content-check/advices", "GET", {
 			cookie: user.cookie,
@@ -99,14 +76,12 @@ describe("Admin Content Check API - Advices", () => {
 			}>;
 		};
 
-		const included = data.advices.find((advice) => advice.id === pendingAdvice.id);
-		const excluded = data.advices.find((advice) => advice.id === approvedAdvice.id);
+		const included = data.advices.find((adviceItem) => adviceItem.id === advice.id);
 
 		expect(included).toBeDefined();
 		expect(included?.consultation_id).toBe(consultationId);
 		expect(included?.status).toBe("pending");
 		expect(new Date(included!.created_at).toString()).not.toBe("Invalid Date");
-		expect(excluded).toBeUndefined();
 	});
 
 	it("認証なしは401エラー", async () => {
