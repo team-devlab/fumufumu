@@ -7,6 +7,7 @@ import type {
   SigninCredentials,
   SignupCredentials,
 } from "@/features/auth/types";
+import { ApiError } from "@/lib/api/client";
 import { authApi } from "../api/authApi";
 
 export const useAuth = () => {
@@ -31,10 +32,14 @@ export const useAuth = () => {
     try {
       await authApi.signin(credentials);
       router.push(resolveReturnTo(returnTo));
-    } catch {
-      setError(
-        "ログインに失敗しました。メールアドレスまたはパスワードをご確認ください。",
-      );
+    } catch (err) {
+      if (err instanceof ApiError && err.status === 401) {
+        setError(
+          "ログインに失敗しました。メールアドレスまたはパスワードをご確認ください。",
+        );
+      } else {
+        setError("ログインに失敗しました。時間をおいて再度お試しください。");
+      }
     } finally {
       setIsLoading(false);
     }

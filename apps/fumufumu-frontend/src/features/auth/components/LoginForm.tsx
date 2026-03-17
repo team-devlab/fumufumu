@@ -2,7 +2,7 @@
 
 import Link from "next/link";
 import { useSearchParams } from "next/navigation";
-import { useEffect, useState } from "react";
+import { useState } from "react";
 import { Button } from "@/components/ui/Button";
 import { useAuth } from "../hooks/useAuth";
 
@@ -11,7 +11,6 @@ export const LoginForm = () => {
   const searchParams = useSearchParams();
   const [email, setEmail] = useState("");
   const [password, setPassword] = useState("");
-  const [hasLoginFailure, setHasLoginFailure] = useState(false);
 
   const handleSubmit = (e: React.FormEvent) => {
     e.preventDefault();
@@ -32,14 +31,7 @@ export const LoginForm = () => {
   };
 
   const reasonInfo = reason ? reasonConfig[reason] : null;
-
-  useEffect(() => {
-    if (error) {
-      setHasLoginFailure(true);
-    }
-  }, [error]);
-
-  const showReasonMessage = Boolean(reasonInfo) && !hasLoginFailure;
+  const showReasonMessage = Boolean(reasonInfo) && !error && !isLoading;
 
   return (
     <div className="text-center">

@@ -2,19 +2,21 @@ import { type NextRequest, NextResponse } from "next/server";
 
 const SESSION_COOKIE = "better-auth.session_token";
 
-export function middleware(request: NextRequest) {
-  const { pathname } = request.nextUrl;
+export function proxy(request: NextRequest) {
+  const { pathname, search } = request.nextUrl;
+  const returnTo = `${pathname}${search}`;
   const hasCookie = request.cookies.has(SESSION_COOKIE);
 
   if (!hasCookie) {
     const loginUrl = new URL("/login", request.url);
     loginUrl.searchParams.set("reason", "unauthorized");
-    loginUrl.searchParams.set("returnTo", pathname);
+    loginUrl.searchParams.set("returnTo", returnTo);
     return NextResponse.redirect(loginUrl);
   }
 
   const requestHeaders = new Headers(request.headers);
-  requestHeaders.set("x-pathname", pathname);
+  // server-side の apiClient() が 401 リダイレクト時の returnTo を復元するために使う。
+  requestHeaders.set("x-pathname", returnTo);
 
   return NextResponse.next({
     request: {
@@ -24,6 +26,5 @@ export function middleware(request: NextRequest) {
 }
 
 export const config = {
-  // matcher に含まれないパスは認証不要（公開ルート）
-  matcher: ["/((?!_next/static|_next/image|favicon\\.ico|login|signup|api).*)"],
+  matcher: ["/consultations/:path*", "/user/:path*"],
 };

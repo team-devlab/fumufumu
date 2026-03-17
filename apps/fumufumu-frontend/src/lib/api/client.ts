@@ -8,6 +8,16 @@ type ApiOptions = RequestInit & {
   skipAuthRedirect?: boolean;
 };
 
+export class ApiError extends Error {
+  status: number;
+
+  constructor(status: number, message: string) {
+    super(message);
+    this.name = "ApiError";
+    this.status = status;
+  }
+}
+
 function buildLoginUrl(returnTo?: string): string {
   const params = new URLSearchParams();
   params.set("reason", "session_expired");
@@ -52,7 +62,11 @@ export async function apiClient<T>(
       }
 
       const errorData = await response.json().catch(() => ({}));
-      throw new Error(errorData.error || `API Error: ${response.status}`);
+      const message =
+        typeof errorData.error === "string"
+          ? errorData.error
+          : `API Error: ${response.status}`;
+      throw new ApiError(response.status, message);
     }
 
     // レスポンスが空の場合はnullを返す等の処理も可能
