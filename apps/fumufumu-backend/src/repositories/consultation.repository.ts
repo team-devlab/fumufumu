@@ -528,9 +528,8 @@ export class ConsultationRepository {
 			draft: boolean;
 		}) {
 		try {
-			if (!data.draft) {
-				await this.findVisibleConsultationOrThrow(data.consultationId);
-			}
+			// 回答投稿（公開/下書き）は、公開可視な相談に対してのみ許可する
+			await this.findVisibleConsultationOrThrow(data.consultationId);
 
 			const insertQuery = this.db
 				.insert(advices)
