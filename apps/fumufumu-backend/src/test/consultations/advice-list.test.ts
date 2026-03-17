@@ -15,6 +15,18 @@ describe('Consultations API - Advice List (GET /:id/advices)', () => {
 	let draftConsultationId: number;
 	let hiddenConsultationId: number;
 	let tagId: number;
+	const approveConsultation = async (consultationId: number) => {
+		await env.DB
+			.prepare("UPDATE content_checks SET status = 'approved', checked_at = (cast(unixepoch('subsecond') * 1000 as integer)), updated_at = (cast(unixepoch('subsecond') * 1000 as integer)) WHERE target_type = 'consultation' AND target_id = ?")
+			.bind(consultationId)
+			.run();
+	};
+	const rejectConsultation = async (consultationId: number) => {
+		await env.DB
+			.prepare("UPDATE content_checks SET status = 'rejected', checked_at = (cast(unixepoch('subsecond') * 1000 as integer)), updated_at = (cast(unixepoch('subsecond') * 1000 as integer)) WHERE target_type = 'consultation' AND target_id = ?")
+			.bind(consultationId)
+			.run();
+	};
 	const draftAdviceBody = '下書き回答（一覧非表示）のテストです。10文字以上あります。';
 	const hiddenAdviceBody = '非表示回答（一覧非表示）のテストです。10文字以上あります。';
 	const filterTargetPublicBodies = [
@@ -59,6 +71,7 @@ describe('Consultations API - Advice List (GET /:id/advices)', () => {
 		expect(consultationRes.status).toBe(201);
 		const consultation = await consultationRes.json() as any;
 		consultationId = consultation.id;
+		await approveConsultation(consultationId);
 
 		for (let i = 1; i <= 25; i++) {
 			const adviceRes = await app.fetch(createApiRequest(`/api/consultations/${consultationId}/advice`, 'POST', {
@@ -119,6 +132,7 @@ describe('Consultations API - Advice List (GET /:id/advices)', () => {
 		expect(hiddenConsultationRes.status).toBe(201);
 		const hiddenConsultation = await hiddenConsultationRes.json() as any;
 		hiddenConsultationId = hiddenConsultation.id;
+		await approveConsultation(hiddenConsultationId);
 		await env.DB
 			.prepare("UPDATE consultations SET hidden_at = (cast(unixepoch('subsecond') * 1000 as integer)) WHERE id = ?")
 			.bind(hiddenConsultationId)
@@ -136,6 +150,7 @@ describe('Consultations API - Advice List (GET /:id/advices)', () => {
 		expect(userIdFilterConsultationRes.status).toBe(201);
 		const userIdFilterConsultation = await userIdFilterConsultationRes.json() as any;
 		userIdFilterConsultationId = userIdFilterConsultation.id;
+		await approveConsultation(userIdFilterConsultationId);
 
 		for (const body of filterTargetPublicBodies) {
 			const adviceRes = await app.fetch(createApiRequest(`/api/consultations/${userIdFilterConsultationId}/advice`, 'POST', {
@@ -462,5 +477,52 @@ describe('Consultations API - Advice List (GET /:id/advices)', () => {
 		expect(body.pagination.total_pages).toBe(0);
 		expect(body.pagination.has_next).toBe(false);
 		expect(body.pagination.has_prev).toBe(false);
+	});
+
+	it('未承認(pending)の相談の回答一覧は取得できない（404）', async () => {
+		const createRes = await app.fetch(createApiRequest('/api/consultations', 'POST', {
+			cookie: user.cookie,
+			body: {
+				title: 'pending相談',
+				body: '未承認相談は回答一覧も非公開であるべきです。10文字以上あります。',
+				draft: false,
+				tagIds: [tagId],
+			},
+		}), env);
+		expect(createRes.status).toBe(201);
+		const created = await createRes.json() as any;
+
+		const req = createApiRequest(`/api/consultations/${created.id}/advices`, 'GET', {
+			cookie: user.cookie,
+		});
+		const res = await app.fetch(req, env);
+		expect(res.status).toBe(404);
+		const body = await res.json() as any;
+		expect(body.error).toBe('NotFoundError');
+		expect(body.message).toBe(`相談が見つかりません: id=${created.id}`);
+	});
+
+	it('未承認(rejected)の相談の回答一覧は取得できない（404）', async () => {
+		const createRes = await app.fetch(createApiRequest('/api/consultations', 'POST', {
+			cookie: user.cookie,
+			body: {
+				title: 'rejected相談',
+				body: 'reject済み相談も回答一覧は非公開であるべきです。10文字以上あります。',
+				draft: false,
+				tagIds: [tagId],
+			},
+		}), env);
+		expect(createRes.status).toBe(201);
+		const created = await createRes.json() as any;
+		await rejectConsultation(created.id);
+
+		const req = createApiRequest(`/api/consultations/${created.id}/advices`, 'GET', {
+			cookie: user.cookie,
+		});
+		const res = await app.fetch(req, env);
+		expect(res.status).toBe(404);
+		const body = await res.json() as any;
+		expect(body.error).toBe('NotFoundError');
+		expect(body.message).toBe(`相談が見つかりません: id=${created.id}`);
 	});
 });

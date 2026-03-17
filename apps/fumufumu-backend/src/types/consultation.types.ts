@@ -14,6 +14,8 @@ export type ConsultationFilters = {
 	solved?: boolean;
 };
 
+export type ConsultationListVisibilityScope = "public" | "own";
+
 /**
  * ページネーション用パラメータ（リクエスト）
  */

@@ -11,6 +11,12 @@ describe('Consultations API - Advice Draft Update (PUT /:id/advice/draft)', () =
   let attacker: Awaited<ReturnType<typeof createAndLoginUser>>;
   let consultationId: number;
   let tagId: number;
+  const approveConsultation = async (id: number) => {
+    await env.DB
+      .prepare("UPDATE content_checks SET status = 'approved', checked_at = (cast(unixepoch('subsecond') * 1000 as integer)), updated_at = (cast(unixepoch('subsecond') * 1000 as integer)) WHERE target_type = 'consultation' AND target_id = ?")
+      .bind(id)
+      .run();
+  };
 
   beforeAll(async () => {
     await setupIntegrationTest();
@@ -40,6 +46,7 @@ describe('Consultations API - Advice Draft Update (PUT /:id/advice/draft)', () =
 
     const consultation = await consultationRes.json() as any;
     consultationId = consultation.id;
+    await approveConsultation(consultationId);
 
     const adviceRes = await app.fetch(createApiRequest(`/api/consultations/${consultationId}/advice`, 'POST', {
       cookie: user.cookie,
@@ -144,6 +151,7 @@ describe('Consultations API - Advice Draft Update (PUT /:id/advice/draft)', () =
     }), env);
     expect(consultationRes.status).toBe(201);
     const consultation = await consultationRes.json() as any;
+    await approveConsultation(consultation.id);
 
     const adviceRes = await app.fetch(createApiRequest(`/api/consultations/${consultation.id}/advice`, 'POST', {
       cookie: user.cookie,
@@ -165,6 +173,6 @@ describe('Consultations API - Advice Draft Update (PUT /:id/advice/draft)', () =
     expect(updateRes.status).toBe(404);
     const body = await updateRes.json() as any;
     expect(body.error).toBe('NotFoundError');
-    expect(body.message).toBe('相談回答は公開されているため、更新できません。');
+    expect(body.message).toBe('相談アドバイスは公開されているため、更新できません。');
   });
 });

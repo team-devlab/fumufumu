@@ -2,12 +2,13 @@ import { consultations } from "@/db/schema/consultations";
 import { users } from "@/db/schema/user";
 import { consultationTaggings, tags } from "@/db/schema/tags";
 import type { DbInstance } from "@/index";
-import { eq, and, isNull, isNotNull, inArray, type SQL, sql } from "drizzle-orm";
+import { eq, and, isNull, isNotNull, inArray, type SQL, sql, exists, notExists, or } from "drizzle-orm";
 import type { ConsultationFilters, PaginationParams } from "@/types/consultation.types";
 import { PAGINATION_CONFIG } from "@/types/consultation.types";
 import type { AdviceFilters } from "@/types/advice.types";
 import { DatabaseError, ConflictError, NotFoundError } from "@/errors/AppError";
 import { advices } from "@/db/schema/advices";
+import { contentChecks } from "@/db/schema/content-checks";
 
 
 export class ConsultationRepository {
@@ -81,7 +82,7 @@ export class ConsultationRepository {
 			columns: { id: true },
 			where: and(
 				eq(consultations.id, consultationId),
-				isNull(consultations.hiddenAt),
+				this.buildPublicConsultationCondition(),
 			),
 		});
 
@@ -92,22 +93,53 @@ export class ConsultationRepository {
 		return consultation;
 	}
 
+	private buildPublicVisibilityCondition(): SQL {
+		const approvedCheckExists = exists(
+			this.db
+				.select({ id: contentChecks.id })
+				.from(contentChecks)
+				.where(
+					and(
+						eq(contentChecks.targetType, "consultation"),
+						eq(contentChecks.targetId, consultations.id),
+						eq(contentChecks.status, "approved"),
+					),
+				),
+		);
+
+		const noCheckExists = notExists(
+			this.db
+				.select({ id: contentChecks.id })
+				.from(contentChecks)
+				.where(
+					and(
+						eq(contentChecks.targetType, "consultation"),
+						eq(contentChecks.targetId, consultations.id),
+					),
+				),
+		);
+
+		// 既存データ(no-check)は表示を維持しつつ、check付きは approved のみ表示する
+		return or(approvedCheckExists, noCheckExists) as SQL;
+	}
+
+	private buildPublicConsultationCondition(): SQL {
+		return and(
+			eq(consultations.draft, false),
+			isNull(consultations.hiddenAt),
+			this.buildPublicVisibilityCondition(),
+		) as SQL;
+	}
+
 	/**
 	 * フィルタ条件からWHERE句を構築する（findAll / count 共通）
 	 */
 	private buildWhereConditions(filters?: ConsultationFilters): SQL | undefined {
 		const conditions: SQL[] = [];
 
-		// NOTE: デフォルトで非表示(hiddenAt)の相談は除外する
-        conditions.push(isNull(consultations.hiddenAt));
-
 		if (filters?.userId !== undefined) {
             conditions.push(eq(consultations.authorId, filters.userId));
         }
-
-		if (filters?.draft !== undefined) {
-			conditions.push(eq(consultations.draft, filters.draft));
-		}
 
 		if (filters?.solved !== undefined) {
 			conditions.push(
@@ -117,11 +149,23 @@ export class ConsultationRepository {
 			);
 		}
 
+		if (filters?.draft === true) {
+			conditions.push(eq(consultations.draft, true));
+			conditions.push(isNull(consultations.hiddenAt));
+		} else {
+			conditions.push(eq(consultations.draft, false));
+			conditions.push(isNull(consultations.hiddenAt));
+
+			if (!filters?.includeUnapprovedForOwn) {
+				conditions.push(this.buildPublicVisibilityCondition());
+			}
+		}
+
 		return conditions.length > 0 ? and(...conditions) : undefined;
 	}
 
 	/**
-	 * 回答一覧のWHERE句を構築する（findAdvicesByConsultationId / countAdvicesByConsultationId 共通）
+	 * アドバイス一覧のWHERE句を構築する（findAdvicesByConsultationId / countAdvicesByConsultationId 共通）
 	 */
 	private buildAdviceWhereConditions(consultationId: number, filters?: AdviceFilters): SQL {
 		const conditions: SQL[] = [
@@ -338,6 +382,7 @@ export class ConsultationRepository {
 		draft: boolean;
 		authorId: number;
 		tagIds?: number[];
+		queueContentCheck?: boolean;
 		}) {
 			try {
 				let uniqueTagIds: number[] | undefined;
@@ -374,8 +419,45 @@ export class ConsultationRepository {
 					)
 					.returning();
 
+				const upsertPendingContentCheckQuery = data.queueContentCheck
+					? this.db
+						.insert(contentChecks)
+						.values({
+							targetType: "consultation",
+							targetId: data.id,
+							status: "pending",
+							reason: null,
+							checkedAt: null,
+							updatedAt: new Date(),
+						})
+						.onConflictDoUpdate({
+							target: [contentChecks.targetType, contentChecks.targetId],
+							set: {
+								status: "pending",
+								reason: null,
+								checkedAt: null,
+								updatedAt: new Date(),
+							},
+						})
+					: null;
+
 				if (data.tagIds === undefined) {
-					const [updated] = await updateQuery;
+					if (!upsertPendingContentCheckQuery) {
+						const [updated] = await updateQuery;
+
+						if (!updated) {
+							throw new DatabaseError(`相談の更新に失敗しました: id=${data.id}`);
+						}
+
+						return updated;
+					}
+
+					const [updateResult] = await this.db.batch([
+						updateQuery,
+						upsertPendingContentCheckQuery,
+					]);
+
+					const [updated] = updateResult;
 
 					if (!updated) {
 						throw new DatabaseError(`相談の更新に失敗しました: id=${data.id}`);
@@ -398,7 +480,12 @@ export class ConsultationRepository {
 				const statements = insertTaggingsQuery
 					? [updateQuery, deleteTaggingsQuery, insertTaggingsQuery] as const
 					: [updateQuery, deleteTaggingsQuery] as const;
-				const [updateResult] = await this.db.batch(statements);
+
+				const statementsWithContentCheck = upsertPendingContentCheckQuery
+					? [...statements, upsertPendingContentCheckQuery] as const
+					: statements;
+
+				const [updateResult] = await this.db.batch(statementsWithContentCheck);
 
 				const [updated] = updateResult;
 				if (!updated) {
@@ -426,12 +513,12 @@ export class ConsultationRepository {
 
 	/**
 	 * 
-	 * @param data - 作成する相談回答データ
+	 * @param data - 作成する相談アドバイスデータ
 	 * @param data.consultationId - 相談ID
-	 * @param data.authorId - 回答者ID
-	 * @param data.body - 回答本文
+	 * @param data.authorId - アドバイス者ID
+	 * @param data.body - アドバイス本文
 	 * @param data.draft - 下書きフラグ（true: 下書き, false: 公開）
-	 * @returns 作成された相談回答データ（authorリレーション含む）
+	 * @returns 作成された相談アドバイスデータ（authorリレーション含む）
 	 * @throws {Error} データベースエラー、作成失敗時
 	 */
 		async createAdvice(data: {
@@ -441,9 +528,8 @@ export class ConsultationRepository {
 			draft: boolean;
 		}) {
 		try {
-			if (!data.draft) {
-				await this.findVisibleConsultationOrThrow(data.consultationId);
-			}
+			// 回答投稿（公開/下書き）は、公開可視な相談に対してのみ許可する
+			await this.findVisibleConsultationOrThrow(data.consultationId);
 
 			const insertQuery = this.db
 				.insert(advices)
@@ -472,13 +558,13 @@ export class ConsultationRepository {
 
 				// 親が見つからない（または非表示）のチェック
 				if (updateResult.length === 0) {
-					throw new NotFoundError(`指定された相談(ID:${data.consultationId})は見つかりませんでした`);
+					throw new NotFoundError(`指定された相談(id:${data.consultationId})は見つかりませんでした`);
 				}
 				insertedAdvice = insertResult[0];
 			}
 
 			if (!insertedAdvice) {
-				throw new DatabaseError("相談回答の作成に失敗しました");
+				throw new DatabaseError(`相談アドバイスの作成に失敗しました id=${data.consultationId}`);
 			}
 
 			const author = await this.db.query.users.findFirst({
@@ -512,12 +598,12 @@ export class ConsultationRepository {
 	/**
 	 * アドバイスの下書きを更新する
 	 * 
-	 * @param data - 更新する相談回答データ
+	 * @param data - 更新する相談アドバイスデータ
 	 * @param data.consultationId - 相談ID
-	 * @param data.authorId - 回答者ID
-	 * @param data.body - 回答本文
+	 * @param data.authorId - アドバイス者ID
+	 * @param data.body - アドバイス本文
 	 * @param data.draft - 下書きフラグ（true: 下書き, false: 公開）
-	 * @returns 更新された相談回答データ
+	 * @returns 更新された相談アドバイスデータ
 	 */
 	async updateDraftAdvice(data: {
 		consultationId: number;
@@ -539,7 +625,7 @@ export class ConsultationRepository {
 			)
 			.returning();
 		if (!updated) {
-			throw new NotFoundError(`指定された相談回答(consultationId:${data.consultationId}, authorId:${data.authorId})は見つかりませんでした`);
+			throw new NotFoundError(`指定された相談アドバイス(consultationId:${data.consultationId}, authorId:${data.authorId})は見つかりませんでした`);
 		}
 
 		return updated;
@@ -550,8 +636,53 @@ export class ConsultationRepository {
 			where: and(eq(advices.consultationId, consultationId), eq(advices.authorId, authorId)),
 		});
 		if (!advice) {
-			throw new NotFoundError(`指定された相談回答(consultationId:${consultationId}, authorId:${authorId})は見つかりませんでした`);
+			throw new NotFoundError(`指定された相談アドバイス(consultationId:${consultationId}, authorId:${authorId})は見つかりませんでした`);
 		}
 		return advice;
+	}
+
+	/**
+	 * 公開相談の作成/公開化時に、相談単位の投稿チェックをpendingで作成する
+	 */
+	async createConsultationContentCheck(consultationId: number) {
+		try {
+			const [inserted] = await this.db
+				.insert(contentChecks)
+				.values({
+					targetType: "consultation",
+					targetId: consultationId,
+					status: "pending",
+				})
+				.returning();
+
+			if (!inserted) {
+				throw new DatabaseError("投稿チェックレコードの作成に失敗しました");
+			}
+
+			return inserted;
+		} catch (error) {
+			if (error instanceof DatabaseError || error instanceof ConflictError) {
+				throw error;
+			}
+
+			const errorMessage = (error as Error).message || String(error);
+			if (errorMessage.includes("UNIQUE constraint failed")) {
+				throw new ConflictError(`投稿チェックレコードが既に存在します: consultationId=${consultationId}`);
+			}
+
+			throw new DatabaseError(`投稿チェックレコード作成でデータベースエラーが発生しました: ${errorMessage}`);
+		}
+	}
+
+	/**
+	 * 公開APIの可視性判定で使う、相談1件のチェック状態を取得する
+	 */
+	async findConsultationContentCheckByConsultationId(consultationId: number) {
+		return await this.db.query.contentChecks.findFirst({
+			where: and(
+				eq(contentChecks.targetType, "consultation"),
+				eq(contentChecks.targetId, consultationId),
+			),
+		});
 	}
 }
