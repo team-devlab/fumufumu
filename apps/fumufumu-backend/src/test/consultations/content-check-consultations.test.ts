@@ -90,6 +90,48 @@ describe('Admin Content Check API - Consultations', () => {
     const res = await app.fetch(req, env);
     expect(res.status).toBe(404);
   });
+    it('rejected相談は通常一覧APIに露出しない', async () => {
+    const created = await createPublicConsultation('rejected-hidden-from-list');
+    const decideReq = createApiRequest(`/api/admin/content-check/consultations/${created.id}/decision`, 'POST', {
+      cookie: user.cookie,
+      body: {
+        decision: 'rejected',
+        reason: '一覧には露出させない',
+      },
+    });
+    const decideRes = await app.fetch(decideReq, env);
+    expect(decideRes.status).toBe(200);
+
+    const req = createApiRequest('/api/consultations', 'GET', {
+      cookie: anotherUser.cookie,
+    });
+
+    const res = await app.fetch(req, env);
+    expect(res.status).toBe(200);
+    const data = await res.json() as { data: Array<{ id: number }> };
+
+    expect(data.data.some((item) => item.id === created.id)).toBe(false);
+  });
+
+  it('rejected相談は通常詳細APIで取得できない', async () => {
+    const created = await createPublicConsultation('rejected-hidden-from-detail');
+    const decideReq = createApiRequest(`/api/admin/content-check/consultations/${created.id}/decision`, 'POST', {
+      cookie: user.cookie,
+      body: {
+        decision: 'rejected',
+        reason: '詳細には露出させない',
+      },
+    });
+    const decideRes = await app.fetch(decideReq, env);
+    expect(decideRes.status).toBe(200);
+
+    const req = createApiRequest(`/api/consultations/${created.id}`, 'GET', {
+      cookie: anotherUser.cookie,
+    });
+
+    const res = await app.fetch(req, env);
+    expect(res.status).toBe(404);
+  });
 
   it('detail: ids指定でpending詳細とmissing/non_pendingを返す', async () => {
     const pending = await createPublicConsultation('content-check-detail-pending');
