@@ -12,8 +12,9 @@ export type ConsultationFilters = {
 	userId?: number;
 	draft?: boolean;
 	solved?: boolean;
-	includeUnapprovedForOwn?: boolean;
 };
+
+export type ConsultationListVisibilityScope = "public" | "own";
 
 /**
  * ページネーション用パラメータ（リクエスト）
