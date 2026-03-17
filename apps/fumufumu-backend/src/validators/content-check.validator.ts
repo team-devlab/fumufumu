@@ -13,7 +13,7 @@ const commaSeparatedIdsSchema = z
     const parts = value.split(",").map((part) => part.trim()).filter((part) => part.length > 0);
     if (parts.length === 0) {
       ctx.addIssue({
-        code: z.ZodIssueCode.custom,
+        code: "custom",
         message: "idsは1件以上指定してください",
       });
       return z.NEVER;
@@ -22,7 +22,7 @@ const commaSeparatedIdsSchema = z
     const parsedIds = parts.map((part) => Number(part));
     if (parsedIds.some((id) => !Number.isInteger(id) || id <= 0)) {
       ctx.addIssue({
-        code: z.ZodIssueCode.custom,
+        code: "custom",
         message: "idsは正の整数をカンマ区切りで指定してください",
       });
       return z.NEVER;
@@ -39,7 +39,7 @@ export const listConsultationContentChecksQuerySchema = z
   .superRefine((data, ctx) => {
     if (data.view === "detail" && (!data.ids || data.ids.length === 0)) {
       ctx.addIssue({
-        code: z.ZodIssueCode.custom,
+        code: "custom",
         path: ["ids"],
         message: "view=detail の場合は ids が必須です",
       });

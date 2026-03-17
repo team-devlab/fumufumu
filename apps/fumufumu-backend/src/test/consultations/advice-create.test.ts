@@ -266,6 +266,46 @@ describe('Consultations API - Advice Create (POST /:id/advice)', () => {
     const afterCount = Number(afterCountRow?.count ?? 0);
     expect(afterCount).toBe(beforeCount);
   });
+  
+    it('pending相談に下書きアドバイス投稿すると404になり、アドバイスレコードも作成されない', async () => {
+    const createConsultationRes = await app.fetch(createApiRequest('/api/consultations', 'POST', {
+      cookie: user.cookie,
+      body: {
+        title: 'pending相談(draft advice)',
+        body: 'pending相談への下書きアドバイス拒否を検証する本文です。',
+        draft: false,
+        tagIds: [tagId],
+      },
+    }), env);
+    expect(createConsultationRes.status).toBe(201);
+    const createdConsultation = await createConsultationRes.json() as any;
+    const pendingConsultationId = createdConsultation.id;
+
+    const beforeCountRow = await env.DB
+      .prepare('SELECT COUNT(*) AS count FROM advices WHERE consultation_id = ?')
+      .bind(pendingConsultationId)
+      .first() as { count: number } | null;
+    const beforeCount = Number(beforeCountRow?.count ?? 0);
+
+    const req = createApiRequest(`/api/consultations/${pendingConsultationId}/advice`, 'POST', {
+      cookie: user.cookie,
+      body: {
+        body: 'pending相談へ下書きアドバイス投稿を試みる本文です。10文字以上あります。',
+        draft: true,
+      },
+    });
+    const res = await app.fetch(req, env);
+    expect(res.status).toBe(404);
+    const data = await res.json() as any;
+    expect(data.error).toBe('NotFoundError');
+
+    const afterCountRow = await env.DB
+      .prepare('SELECT COUNT(*) AS count FROM advices WHERE consultation_id = ?')
+      .bind(pendingConsultationId)
+      .first() as { count: number } | null;
+    const afterCount = Number(afterCountRow?.count ?? 0);
+    expect(afterCount).toBe(beforeCount);
+  });
 
   it('rejected相談に公開アドバイス投稿すると404になり、アドバイスレコードも作成されない', async () => {
     const createConsultationRes = await app.fetch(createApiRequest('/api/consultations', 'POST', {

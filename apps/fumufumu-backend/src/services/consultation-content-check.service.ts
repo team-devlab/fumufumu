@@ -1,7 +1,10 @@
 import type { ConsultationContentCheckRepository } from "@/repositories/consultation-content-check.repository";
+import type { ContentCheckStatus } from "@/db/schema/content-checks";
 
 export class ConsultationContentCheckService {
 	constructor(private repository: ConsultationContentCheckRepository) {}
+	
+	private static readonly PENDING_STATUS: ContentCheckStatus = "pending";
 
 	/**
 	 * 運営向けsummaryレスポンスを組み立てる
@@ -28,7 +31,7 @@ export class ConsultationContentCheckService {
 			title: string;
 			body: string;
 			author_id: number | null;
-			status: string;
+			status: ContentCheckStatus;
 			created_at: string;
 		}> = [];
 		const nonPending: Array<{ id: number; current_status: string }> = [];
@@ -36,7 +39,7 @@ export class ConsultationContentCheckService {
 		for (const row of rows) {
 			seenIds.add(row.targetId);
 
-			if (row.status === "pending") {
+			if (row.status === ConsultationContentCheckService.PENDING_STATUS) {
 				consultations.push({
 					id: row.id,
 					title: row.title,

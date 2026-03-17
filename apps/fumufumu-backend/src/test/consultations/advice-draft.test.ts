@@ -46,6 +46,7 @@ describe('Consultations API - Advice Draft Update (PUT /:id/advice/draft)', () =
 
     const consultation = await consultationRes.json() as any;
     consultationId = consultation.id;
+    await approveConsultation(consultationId);
 
     const adviceRes = await app.fetch(createApiRequest(`/api/consultations/${consultationId}/advice`, 'POST', {
       cookie: user.cookie,
