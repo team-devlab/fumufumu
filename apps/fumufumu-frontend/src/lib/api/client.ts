@@ -54,6 +54,8 @@ export async function apiClient<T>(
         if (typeof window !== "undefined") {
           const returnTo = `${window.location.pathname}${window.location.search}`;
           window.location.href = buildLoginUrl(returnTo);
+        // window.location 代入だけでは処理が止まらないため、caller の catch に流さない。
+        return new Promise(() => {});
         } else {
           const { headers } = await import("next/headers");
           const headersList = await headers();
