@@ -52,7 +52,8 @@ export async function apiClient<T>(
     if (!response.ok) {
       if (response.status === 401 && !skipAuthRedirect) {
         if (typeof window !== "undefined") {
-          window.location.href = buildLoginUrl(window.location.pathname);
+          const returnTo = `${window.location.pathname}${window.location.search}`;
+          window.location.href = buildLoginUrl(returnTo);
         } else {
           const { headers } = await import("next/headers");
           const headersList = await headers();
