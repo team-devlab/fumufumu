@@ -1,4 +1,5 @@
 import "server-only";
+import { isRedirectError } from "next/dist/client/components/redirect-error";
 import { cookies } from "next/headers";
 import { apiClient } from "@/lib/api/client";
 import type { User } from "../types";
@@ -11,9 +12,8 @@ export const fetchCurrentUserApi = async (): Promise<User | null> => {
       headers: { Cookie: cookieStore.toString() },
       cache: "no-store",
     });
-  } catch (_error) {
-    // 未ログインやエラー時はnullを返して処理を継続させる（画面側で判断）
-    // console.warn("Failed to fetch current user:", error);
+  } catch (error) {
+    if (isRedirectError(error)) throw error;
     return null;
   }
 };

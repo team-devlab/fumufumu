@@ -5,26 +5,49 @@ import { useState } from "react";
 import { Button } from "@/components/ui/Button";
 import { useAuth } from "../hooks/useAuth";
 
-export const LoginForm = () => {
+type LoginFormProps = {
+  reason?: string | null;
+  returnTo?: string | null;
+};
+
+export const LoginForm = ({ reason, returnTo }: LoginFormProps) => {
   const { signin, isLoading, error } = useAuth();
   const [email, setEmail] = useState("");
   const [password, setPassword] = useState("");
 
   const handleSubmit = (e: React.FormEvent) => {
     e.preventDefault();
-    signin({ email, password });
+    signin({ email, password }, returnTo);
   };
+
+  const reasonConfig: Record<string, { message: string; className: string }> = {
+    unauthorized: {
+      message: "ログインが必要です🔐",
+      className: "border-[#A7F3D0] bg-[#ECFEF6] text-[#0F4D3F]",
+    },
+    session_expired: {
+      message: "セッションが終了しました。再度ログインお願いします🌿",
+      className: "border-amber-300 bg-amber-50 text-amber-800",
+    },
+  };
+
+  const reasonInfo = reason ? reasonConfig[reason] : null;
+  const showReasonMessage = Boolean(reasonInfo) && !error && !isLoading;
 
   return (
     <div className="text-center">
       <h1 className="text-3xl font-bold text-gray-800 mb-6">ログイン</h1>
 
-      <div className="mb-4 rounded-2xl border border-[#A7F3D0] bg-[#ECFEF6] px-4 py-3 text-sm text-[#0F4D3F]">
-        ⚠️ セッションが切れました。再ログインしてください。
-      </div>
+      {showReasonMessage && reasonInfo && (
+        <div
+          className={`mb-4 rounded-2xl border px-4 py-3 text-sm ${reasonInfo.className}`}
+        >
+          {reasonInfo.message}
+        </div>
+      )}
 
       {error && (
-        <div className="mb-4 p-3 bg-red-100 text-red-700 rounded-lg text-sm">
+        <div className="mb-4 rounded-2xl border border-red-300 bg-red-50 px-4 py-3 text-sm text-red-800">
           {error}
         </div>
       )}

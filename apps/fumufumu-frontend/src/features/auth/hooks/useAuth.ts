@@ -7,6 +7,7 @@ import type {
   SigninCredentials,
   SignupCredentials,
 } from "@/features/auth/types";
+import { ApiError } from "@/lib/api/client";
 import { authApi } from "../api/authApi";
 
 export const useAuth = () => {
@@ -14,14 +15,31 @@ export const useAuth = () => {
   const [isLoading, setIsLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
 
-  const signin = async (credentials: SigninCredentials) => {
+  const resolveReturnTo = (returnTo?: string | null) => {
+    if (!returnTo) return ROUTES.CONSULTATION.LIST;
+    if (!returnTo.startsWith("/") || returnTo.startsWith("//")) {
+      return ROUTES.CONSULTATION.LIST;
+    }
+    return returnTo;
+  };
+
+  const signin = async (
+    credentials: SigninCredentials,
+    returnTo?: string | null,
+  ) => {
     setIsLoading(true);
     setError(null);
     try {
       await authApi.signin(credentials);
-      router.push(ROUTES.CONSULTATION.LIST);
+      router.push(resolveReturnTo(returnTo));
     } catch (err) {
-      setError(err instanceof Error ? err.message : "ログインに失敗しました");
+      if (err instanceof ApiError && err.status === 401) {
+        setError(
+          "ログインに失敗しました。メールアドレスまたはパスワードをご確認ください。",
+        );
+      } else {
+        setError("ログインに失敗しました。時間をおいて再度お試しください。");
+      }
     } finally {
       setIsLoading(false);
     }

@@ -3,6 +3,7 @@ import { ConsultationNewContainer } from "@/features/consultation/components/Con
 import type { Tag } from "@/features/consultation/types";
 
 export const metadata = { title: "新規相談作成 | Fumufumu App" };
+export const dynamic = "force-dynamic";
 
 export default async function NewConsultationPage() {
   let availableTags: Tag[] = [];

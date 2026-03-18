@@ -1,3 +1,4 @@
+import { isRedirectError } from "next/dist/client/components/redirect-error";
 import { notFound } from "next/navigation";
 import { fetchConsultationDetailApi } from "@/features/consultation/api/consultationApi";
 import { AdviceConfirmContainer } from "@/features/consultation/components/AdviceConfirmContainer";
@@ -14,7 +15,8 @@ export default async function AdviceConfirmPage({ params }: PageProps) {
 
   try {
     consultation = await fetchConsultationDetailApi(id);
-  } catch (_error) {
+  } catch (error) {
+    if (isRedirectError(error)) throw error;
     notFound();
   }
 
