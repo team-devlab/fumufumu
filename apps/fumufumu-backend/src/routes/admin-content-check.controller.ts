@@ -52,8 +52,15 @@ const decideConsultationContentCheckHandlers = factory.createHandlers(
   },
 );
 
+const listAdviceContentChecksHandlers = factory.createHandlers(async (c) => {
+  const service = c.get("consultationContentCheckService");
+  const result = await service.listPendingAdviceContentChecks();
+  return c.json(result, 200);
+});
+
 export const adminContentCheckRoute = new Hono<AppBindings>();
 
 adminContentCheckRoute.use("/*", authGuard, injectConsultationContentCheckService);
 adminContentCheckRoute.get("/consultations", ...listConsultationContentChecksHandlers);
 adminContentCheckRoute.post("/consultations/:consultationId/decision", ...decideConsultationContentCheckHandlers);
+adminContentCheckRoute.get("/advices", ...listAdviceContentChecksHandlers);

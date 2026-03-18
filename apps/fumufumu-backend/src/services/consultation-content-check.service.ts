@@ -1,8 +1,8 @@
-import type { ConsultationContentCheckRepository } from "@/repositories/consultation-content-check.repository";
+import type { ContentCheckRepository } from "@/repositories/content-check.repository";
 import type { ContentCheckStatus } from "@/db/schema/content-checks";
 
 export class ConsultationContentCheckService {
-	constructor(private repository: ConsultationContentCheckRepository) {}
+	constructor(private repository: ContentCheckRepository) {}
 	
 	private static readonly PENDING_STATUS: ContentCheckStatus = "pending";
 
@@ -86,6 +86,18 @@ export class ConsultationContentCheckService {
 			reason: updated.reason,
 			checked_at: updated.checkedAt?.toISOString() ?? null,
 			updated_at: updated.updatedAt.toISOString(),
+		};
+	}
+
+	async listPendingAdviceContentChecks() {
+		const rows = await this.repository.listPendingAdviceContentChecks();
+		return {
+			advices: rows.map((row) => ({
+				id: row.id,
+				consultation_id: row.consultationId,
+				status: row.status,
+				created_at: row.createdAt.toISOString(),
+			})),
 		};
 	}
 }
