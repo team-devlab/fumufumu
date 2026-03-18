@@ -1,23 +1,24 @@
 "use client";
 
 import Link from "next/link";
-import { useSearchParams } from "next/navigation";
 import { useState } from "react";
 import { Button } from "@/components/ui/Button";
 import { useAuth } from "../hooks/useAuth";
 
-export const LoginForm = () => {
+type LoginFormProps = {
+  reason?: string | null;
+  returnTo?: string | null;
+};
+
+export const LoginForm = ({ reason, returnTo }: LoginFormProps) => {
   const { signin, isLoading, error } = useAuth();
-  const searchParams = useSearchParams();
   const [email, setEmail] = useState("");
   const [password, setPassword] = useState("");
 
   const handleSubmit = (e: React.FormEvent) => {
     e.preventDefault();
-    signin({ email, password }, searchParams.get("returnTo"));
+    signin({ email, password }, returnTo);
   };
-
-  const reason = searchParams.get("reason");
 
   const reasonConfig: Record<string, { message: string; className: string }> = {
     unauthorized: {
