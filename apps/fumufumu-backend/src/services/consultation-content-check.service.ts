@@ -1,8 +1,8 @@
-import type { ConsultationContentCheckRepository } from "@/repositories/consultation-content-check.repository";
+import type { ContentCheckRepository } from "@/repositories/content-check.repository";
 import type { ContentCheckStatus } from "@/db/schema/content-checks";
 
 export class ConsultationContentCheckService {
-	constructor(private repository: ConsultationContentCheckRepository) {}
+	constructor(private repository: ContentCheckRepository) {}
 	
 	private static readonly PENDING_STATUS: ContentCheckStatus = "pending";
 

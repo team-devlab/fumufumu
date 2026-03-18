@@ -5,7 +5,7 @@ import { contentChecks } from "@/db/schema/content-checks";
 import { and, eq, inArray } from "drizzle-orm";
 import { NotFoundError } from "@/errors/AppError";
 
-export class ConsultationContentCheckRepository {
+export class ContentCheckRepository {
 	constructor(private db: DbInstance) {}
 
 	/**
