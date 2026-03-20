@@ -100,4 +100,47 @@ export class ConsultationContentCheckService {
 			})),
 		};
 	}
+
+	async findPendingAdvicesByIds(ids: number[]) {
+		const rows = await this.repository.findAdviceChecksWithAdviceByIds(ids);
+		const seenIds = new Set<number>();
+		const advices: Array<{
+			id: number;
+			consultation_id: number;
+			body: string;
+			author_id: number | null;
+			status: ContentCheckStatus;
+			created_at: string;
+		}> = [];
+		const nonPending: Array<{ id: number; current_status: string }> = [];
+
+		for (const row of rows) {
+			seenIds.add(row.targetId);
+
+			if (row.status === ConsultationContentCheckService.PENDING_STATUS) {
+				advices.push({
+					id: row.id,
+					consultation_id: row.consultationId,
+					body: row.body,
+					author_id: row.authorId,
+					status: row.status,
+					created_at: row.createdAt.toISOString(),
+				});
+				continue;
+			}
+
+			nonPending.push({
+				id: row.targetId,
+				current_status: row.status,
+			});
+		}
+
+		const missingIds = ids.filter((id) => !seenIds.has(id));
+
+		return {
+			advices,
+			missing_ids: missingIds,
+			non_pending: nonPending,
+		};
+	}
 }
