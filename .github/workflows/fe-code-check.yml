@@ -1,4 +1,4 @@
-name: Frontend Code Check (Biome, Tests & Build)
+name: Frontend Code Check (Biome, Tests, Webpack Build & Turbopack Monitor)
 
 on:
   pull_request:
@@ -9,7 +9,7 @@ on:
 
 jobs:
   frontend_quality:
-    name: Biome, Vitest & Webpack Build Check
+    name: Biome, Vitest, Webpack Build & Turbopack Monitor
     runs-on: ubuntu-latest
 
     defaults:
