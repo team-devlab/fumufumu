@@ -857,12 +857,13 @@ Cloudflare では OpenNext の対応状況が重要になる。
 以下の順番を推奨する。  
 各ステップは、それ単体でレビュー・動作確認・ロールバックがしやすい粒度にしている。
 
-#### Step 1. frontend の PR チェックに `next build` を追加する
+#### Step 1. frontend の PR チェックに build を追加し、`webpack` 本線 + `Turbopack` 監視に分ける
 
 目的:
 
 - deploy 前に build 崩れを PR で検知できるようにする
 - Cloudflare へ寄せる前に、現行 frontend CI の信頼性を上げる
+- 本線の安定性を確保しつつ、将来の Turbopack 移行に向けた観測を継続する
 
 主な変更対象:
 
@@ -872,20 +873,36 @@ Cloudflare では OpenNext の対応状況が重要になる。
 
 - deploy にはまだ触れず、純粋に品質ゲートだけを強化できる
 - 以後の frontend 変更の安全性が上がる
+- bundler 方針を明文化し、チーム内の判断根拠をコードとドキュメントで一致させられる
 
 動作確認:
 
 - ローカルで `apps/fumufumu-frontend` にて `pnpm build`
 - PR で frontend workflow が通ること
+- `Run Next.js Build (Webpack)` が必須で成功すること
+- `Run Next.js Build (Turbopack monitor)` は失敗しても workflow 全体は失敗扱いにしないこと
 
 コミットメッセージ案:
 
 ```text
-ci: frontend PRチェックに next build を追加
+ci: frontend PRチェックを webpack本線 + Turbopack監視に整理
 
-- frontend 配備前に Next.js の build 崩れを PR で検知するため
-- Cloudflare 移行前に既存CIの信頼性を先に上げるため
+- PRの必須ゲートは webpack build で安定運用するため
+- Turbopack は非blocking監視で将来移行の判断材料を残すため
+- frontend 変更時のみ実行して無関係PRのCI負荷を抑えるため
 ```
+
+Step 1 方針メモ（2026-03-20 追記）:
+
+- 当面の deploy/CI 本線は `webpack`（`pnpm build`）とする
+- `Turbopack` は monitor レーン（`continue-on-error: true`）で継続実行する
+- 理由:
+  - Next.js 16 では Turbopack がデフォルトだが、プロジェクト依存で build の安定性に差が出るため
+  - 無料枠優先・manual production deploy 前提の Phase 1 では、まず必須ゲートの再現性を優先するため
+- 見直し条件:
+  - Turbopack monitor が連続 10 回成功したとき
+  - Next.js minor/patch を更新したとき
+  - Step 7（Cloudflare 向け build 基盤）を導入したとき
 
 #### Step 2. backend の CORS / Auth URL / Cookie 設定を環境変数ベースに寄せる
 
