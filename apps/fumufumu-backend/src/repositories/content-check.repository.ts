@@ -115,4 +115,31 @@ export class ContentCheckRepository {
 			.where(eq(contentChecks.status, "pending"))
 			.orderBy(contentChecks.createdAt);
 	}
+
+	/**
+	 * 運営detail向けに、指定IDのチェック状態とアドバイス情報を1クエリで取得する
+	 */
+	async findAdviceChecksWithAdviceByIds(ids: number[]) {
+		if (ids.length === 0) return [];
+
+		return await this.db
+			.select({
+				targetId: contentChecks.targetId,
+				status: contentChecks.status,
+				id: advices.id,
+				consultationId: advices.consultationId,
+				body: advices.body,
+				authorId: advices.authorId,
+				createdAt: advices.createdAt,
+			})
+			.from(contentChecks)
+			.innerJoin(
+				advices,
+				and(
+					eq(contentChecks.targetType, "advice"),
+					eq(contentChecks.targetId, advices.id),
+				),
+			)
+			.where(inArray(contentChecks.targetId, ids));
+	}
 }

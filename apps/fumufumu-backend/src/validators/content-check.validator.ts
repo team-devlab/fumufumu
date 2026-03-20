@@ -31,7 +31,7 @@ const commaSeparatedIdsSchema = z
     return parsedIds;
   });
 
-export const listConsultationContentChecksQuerySchema = z
+const listContentChecksQuerySchema = z
   .object({
     view: z.enum(["summary", "detail"]).optional().default("summary"),
     ids: commaSeparatedIdsSchema.optional(),
@@ -45,6 +45,9 @@ export const listConsultationContentChecksQuerySchema = z
       });
     }
   });
+
+export const listConsultationContentChecksQuerySchema = listContentChecksQuerySchema;
+export const listAdviceContentChecksQuerySchema = listContentChecksQuerySchema;
 
 export const consultationIdParamSchema = z.object({
   consultationId: positiveIntegerStringSchema,
@@ -66,5 +69,6 @@ export const decideConsultationContentCheckSchema = z
   });
 
 export type ListConsultationContentChecksQuery = z.infer<typeof listConsultationContentChecksQuerySchema>;
+export type ListAdviceContentChecksQuery = z.infer<typeof listAdviceContentChecksQuerySchema>;
 export type ConsultationIdParam = z.infer<typeof consultationIdParamSchema>;
 export type DecideConsultationContentCheckInput = z.infer<typeof decideConsultationContentCheckSchema>;

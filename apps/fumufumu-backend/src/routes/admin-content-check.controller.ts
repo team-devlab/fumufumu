@@ -6,6 +6,7 @@ import { authGuard } from "@/middlewares/authGuard.middleware";
 import { injectConsultationContentCheckService } from "@/middlewares/injectService.middleware";
 import {
   listConsultationContentChecksQuerySchema,
+  listAdviceContentChecksQuerySchema,
   consultationIdParamSchema,
   decideConsultationContentCheckSchema,
 } from "@/validators/content-check.validator";
@@ -52,11 +53,23 @@ const decideConsultationContentCheckHandlers = factory.createHandlers(
   },
 );
 
-const listAdviceContentChecksHandlers = factory.createHandlers(async (c) => {
-  const service = c.get("consultationContentCheckService");
-  const result = await service.listPendingAdviceContentChecks();
-  return c.json(result, 200);
-});
+const listAdviceContentChecksHandlers = factory.createHandlers(
+  zValidator("query", listAdviceContentChecksQuerySchema, (result) => {
+    if (!result.success) throw result.error;
+  }),
+  async (c) => {
+    const query = c.req.valid("query");
+    const service = c.get("consultationContentCheckService");
+
+    if (query.view === "summary") {
+      const result = await service.listPendingAdviceContentChecks();
+      return c.json(result, 200);
+    }
+
+    const result = await service.findPendingAdvicesByIds(query.ids ?? []);
+    return c.json(result, 200);
+  },
+);
 
 export const adminContentCheckRoute = new Hono<AppBindings>();
 
