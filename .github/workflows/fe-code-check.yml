@@ -3,10 +3,13 @@ name: Frontend Code Check (Biome & Tests)
 on:
   pull_request:
     branches: [main, master]
+    paths:
+      - 'apps/fumufumu-frontend/**'
+      - '.github/workflows/fe-code-check.yml'
 
 jobs:
   frontend_quality:
-    name: Biome, Vitest & Build Check
+    name: Biome, Vitest & Webpack Build Check
     runs-on: ubuntu-latest
 
     defaults:
@@ -44,5 +47,9 @@ jobs:
       - name: Run Vitest Tests
         run: pnpm test
 
-      - name: Run Next.js Build
+      - name: Run Next.js Build (Webpack)
         run: pnpm build
+
+      - name: Run Next.js Build (Turbopack monitor)
+        continue-on-error: true
+        run: pnpm exec next build
