@@ -125,7 +125,7 @@ describe("Admin Content Check API - Advices", () => {
 		expect(Array.isArray(data.non_pending)).toBe(true);
 	});
 
-	it("detail: view=detail で ids 未指定は400エラー", async () => {
+	it("detail: ids 未指定は400エラー", async () => {
 		const req = createApiRequest("/api/admin/content-check/advices", "GET", {
 			cookie: user.cookie,
 			queryParams: {
