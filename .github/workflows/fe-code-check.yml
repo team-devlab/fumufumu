@@ -6,7 +6,7 @@ on:
 
 jobs:
   frontend_quality:
-    name: Biome & Vitest Check
+    name: Biome, Vitest & Build Check
     runs-on: ubuntu-latest
 
     defaults:
@@ -43,3 +43,6 @@ jobs:
       
       - name: Run Vitest Tests
         run: pnpm test
+
+      - name: Run Next.js Build
+        run: pnpm build
