@@ -1,12 +1,15 @@
-name: Frontend Code Check (Biome & Tests)
+name: Frontend Code Check (Biome, Tests, Webpack Build & Turbopack Monitor)
 
 on:
   pull_request:
     branches: [main, master]
+    paths:
+      - 'apps/fumufumu-frontend/**'
+      - '.github/workflows/fe-code-check.yml'
 
 jobs:
   frontend_quality:
-    name: Biome & Vitest Check
+    name: Biome, Vitest, Webpack Build & Turbopack Monitor
     runs-on: ubuntu-latest
 
     defaults:
@@ -43,3 +46,28 @@ jobs:
       
       - name: Run Vitest Tests
         run: pnpm test
+
+      # PR の必須品質ゲートは安定性を優先して webpack build を本線にする
+      - name: Run Next.js Build (Webpack)
+        run: pnpm build
+
+      # Turbopack は将来移行に向けた監視目的で実行し、当面は non-blocking にする
+      - name: Run Next.js Build (Turbopack monitor)
+        id: turbopack_monitor
+        continue-on-error: true
+        run: pnpm exec next build
+
+      # non-blocking の監視結果を Job Summary に明示し、失敗傾向を追いやすくする
+      - name: Summarize Turbopack monitor result
+        if: always()
+        run: |
+          if [ "${{ steps.turbopack_monitor.outcome }}" = "failure" ]; then
+            echo "### Turbopack monitor" >> "$GITHUB_STEP_SUMMARY"
+            echo "" >> "$GITHUB_STEP_SUMMARY"
+            echo "- Result: failed (non-blocking)" >> "$GITHUB_STEP_SUMMARY"
+            echo "- Action: keep webpack as required gate and investigate Turbopack failures." >> "$GITHUB_STEP_SUMMARY"
+          else
+            echo "### Turbopack monitor" >> "$GITHUB_STEP_SUMMARY"
+            echo "" >> "$GITHUB_STEP_SUMMARY"
+            echo "- Result: passed" >> "$GITHUB_STEP_SUMMARY"
+          fi
