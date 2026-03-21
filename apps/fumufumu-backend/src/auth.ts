@@ -10,7 +10,9 @@ import type { Env, DbInstance } from './index';
  */
 export function createBetterAuth(db: DbInstance, env: Env) {
 	// HTTPS環境（本番環境など）かどうかの判定
-	// FRONTEND_URL または BETTER_AUTH_URL に https が含まれていればセキュア環境とみなす
+	// 注意: ローカル開発環境の FRONTEND_URL に本番のHTTPS URLをカンマ区切りで混ぜると、
+	// isSecureがtrueになり、ローカルでCookie(Secure: true)が保存されなくなります。
+	// 各環境の FRONTEND_URL には、その環境固有のURLのみを設定してください。
 	const isSecure = env.FRONTEND_URL?.includes('https://') || env.BETTER_AUTH_URL?.startsWith('https://');
 
 	return betterAuth({
