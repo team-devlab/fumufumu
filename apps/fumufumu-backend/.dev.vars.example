@@ -6,3 +6,16 @@ BETTER_AUTH_SECRET=
 
 # Better Auth のベースURL。ローカル開発URLを設定してください。
 BETTER_AUTH_URL=
+
+# 許可するフロントエンドのURL（複数ある場合はカンマ区切り）
+# ローカル開発環境の例:
+FRONTEND_URL=http://localhost:3000
+
+# (将来用) Cookieのドメイン指定
+# 本番環境などでフロントエンドとAPIをサブドメインで分けてCookieを共有する場合に設定します。
+# 例: .example.com
+# ローカル開発時や単一ドメイン運用時は未設定で問題ありません。
+# COOKIE_DOMAIN=
+
+# ...その他の設定...
+VERCEL_TEAM_SLUG=your-team-slug
