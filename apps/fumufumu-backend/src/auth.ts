@@ -9,6 +9,10 @@ import type { Env, DbInstance } from './index';
  * @returns Better Authインスタンス
  */
 export function createBetterAuth(db: DbInstance, env: Env) {
+	// HTTPS環境（本番環境など）かどうかの判定
+	// FRONTEND_URL または BETTER_AUTH_URL に https が含まれていればセキュア環境とみなす
+	const isSecure = env.FRONTEND_URL?.includes('https://') || env.BETTER_AUTH_URL?.startsWith('https://');
+
 	return betterAuth({
 		database: drizzleAdapter(db, {
 			provider: "sqlite",
@@ -38,13 +42,17 @@ export function createBetterAuth(db: DbInstance, env: Env) {
 		baseURL: env.BETTER_AUTH_URL,
 		// セキュリティ設定（重要）
 		advanced: {
-            // クロスドメインでCookieを有効にする設定
-            defaultCookieAttributes: {
-                sameSite: "none", // 異なるドメイン間で送受信するため必須
-                secure: true,     // HTTPS必須
-                httpOnly: true    // JSからのアクセス禁止（セキュリティ確保）
-            }
-        },
+			defaultCookieAttributes: {
+				// クロスドメイン(HTTPS)なら none、ローカル(HTTP)なら lax に切り替え
+				sameSite: isSecure ? "none" : "lax",
+				// HTTPS環境のみ true にする
+				secure: isSecure,
+				// JSからのアクセス禁止（セキュリティ確保）
+				httpOnly: true,
+				// 環境変数で指定があればドメインをセット（本番でのサブドメイン共有などに使用）
+				domain: env.COOKIE_DOMAIN || undefined,
+			}
+		},
 	});
 }
 
