@@ -133,8 +133,8 @@ app.use('/api/*', async (c, next) => {
         return origin;
       }
 
-      // VercelのPreview環境（*.vercel.app）は動的に許可を残しておく
-      if (origin.endsWith('.vercel.app')) {
+      // VercelのPreview環境（fumufumu- から始まるもの）は動的に許可を残しておく
+      if (/^https:\/\/fumufumu-.*\.vercel\.app$/.test(origin)) {
         return origin;
       }
 
