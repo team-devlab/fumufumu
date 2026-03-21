@@ -122,7 +122,10 @@ app.use('*', async (c, next) => {
 // 1. CORSミドルウェアの設定 (Authの前に配置)
 app.use('/api/*', async (c, next) => {
   // 環境変数から許可するOriginを取得（カンマ区切りで複数指定可能にする）
-  const allowedOrigins = (c.env.FRONTEND_URL || '').split(',').map(url => url.trim());
+    // 💡 運用ミス防止のため、末尾のスラッシュがあれば自動で削除する
+    const allowedOrigins = (c.env.FRONTEND_URL || '')
+      .split(',')
+      .map(url => url.trim().replace(/\/$/, ''));
 
   const corsMiddleware = cors({
     origin: (origin) => {
