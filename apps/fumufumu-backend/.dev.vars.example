@@ -6,3 +6,7 @@ BETTER_AUTH_SECRET=
 
 # Better Auth のベースURL。ローカル開発URLを設定してください。
 BETTER_AUTH_URL=
+
+# 許可するフロントエンドのURL（複数ある場合はカンマ区切り）
+# ローカル開発環境の例:
+FRONTEND_URL=http://localhost:3000

@@ -39,6 +39,7 @@ export interface Env {
   DB: D1Database;
   BETTER_AUTH_SECRET: string;
   BETTER_AUTH_URL: string;
+  FRONTEND_URL: string;
   COOKIE_DOMAIN?: string;
 }
 
@@ -118,20 +119,37 @@ app.use('*', async (c, next) => {
 });
 
 // 1. CORSミドルウェアの設定 (Authの前に配置)
-app.use('/api/*', cors({
-  origin: (origin) => {
-    // 許可するフロントエンドのドメインを指定
-    // 開発環境と本番環境(Vercel)の両方を許可
-    return origin.endsWith('.vercel.app') || origin.includes('localhost')
-      ? origin
-      : 'https://fumufumu-phi.vercel.app'; // フォールバック
-  },
-  allowHeaders: ['Content-Type', 'Authorization', 'Cookie'],
-  allowMethods: ['POST', 'GET', 'OPTIONS', 'PUT', 'DELETE'],
-  exposeHeaders: ['Set-Cookie'],
-  maxAge: 600,
-  credentials: true, // Cookieをやり取りするために必須
-}));
+app.use('/api/*', async (c, next) => {
+  // 環境変数から許可するOriginを取得（カンマ区切りで複数指定可能にする）
+  const allowedOrigins = (c.env.FRONTEND_URL || '').split(',').map(url => url.trim());
+
+  const corsMiddleware = cors({
+    origin: (origin) => {
+      // Originヘッダーがない場合（サーバー間通信など）はフォールバックを返す
+      if (!origin) return allowedOrigins[0] || '*';
+
+      // 環境変数に完全一致するOriginなら許可
+      if (allowedOrigins.includes(origin)) {
+        return origin;
+      }
+
+      // VercelのPreview環境（*.vercel.app）は動的に許可を残しておく
+      if (origin.endsWith('.vercel.app')) {
+        return origin;
+      }
+
+      // 許可されない場合はフォールバック（ブラウザがCORSエラーを出す）
+      return allowedOrigins[0] || '*';
+    },
+    allowHeaders: ['Content-Type', 'Authorization', 'Cookie'],
+    allowMethods: ['POST', 'GET', 'OPTIONS', 'PUT', 'DELETE'],
+    exposeHeaders: ['Set-Cookie'],
+    maxAge: 600,
+    credentials: true, // Cookieをやり取りするために必須
+  });
+
+  return corsMiddleware(c, next);
+});
 
 app.get('/', (c) => {
   return c.text('Hello Hono!')
