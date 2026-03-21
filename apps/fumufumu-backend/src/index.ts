@@ -41,6 +41,7 @@ export interface Env {
   BETTER_AUTH_URL: string;
   FRONTEND_URL: string;
   COOKIE_DOMAIN?: string;
+  VERCEL_TEAM_SLUG?: string;
 }
 
 // Hono Context (Variables) の拡張
@@ -133,8 +134,10 @@ app.use('/api/*', async (c, next) => {
         return origin;
       }
 
-      // VercelのPreview環境（fumufumu- から始まるもの）は動的に許可を残しておく
-      if (/^https:\/\/fumufumu-.*\.vercel\.app$/.test(origin)) {
+      // Vercelのプレビュー環境を安全に動的許可
+      // (VERCEL_TEAM_SLUG が設定されている場合のみ、それに一致するプレビューURLを許可)
+      const vercelSlug = c.env.VERCEL_TEAM_SLUG;
+      if (vercelSlug && origin.startsWith('https://fumufumu-') && origin.endsWith(`-${vercelSlug}.vercel.app`)) {
         return origin;
       }
 

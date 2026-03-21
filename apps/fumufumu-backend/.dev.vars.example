@@ -16,3 +16,6 @@ FRONTEND_URL=http://localhost:3000
 # 例: .example.com
 # ローカル開発時や単一ドメイン運用時は未設定で問題ありません。
 # COOKIE_DOMAIN=
+
+# ...その他の設定...
+VERCEL_TEAM_SLUG=your-team-slug
