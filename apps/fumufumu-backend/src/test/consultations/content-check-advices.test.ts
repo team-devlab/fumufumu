@@ -11,6 +11,19 @@ describe("Admin Content Check API - Advices", () => {
 	let consultationId: number;
 	let tagId: number;
 
+	const createPendingAdvice = async (body: string) => {
+		const adviceReq = createApiRequest(`/api/consultations/${consultationId}/advice`, "POST", {
+			cookie: user.cookie,
+			body: {
+				body,
+				draft: false,
+			},
+		});
+		const adviceRes = await app.fetch(adviceReq, env);
+		expect(adviceRes.status).toBe(201);
+		return await adviceRes.json() as { id: number };
+	};
+
 	beforeAll(async () => {
 		await setupIntegrationTest();
 		user = await createAndLoginUser();
@@ -50,16 +63,7 @@ describe("Admin Content Check API - Advices", () => {
 	});
 
 	it("pendingアドバイスの一覧を取得できる", async () => {
-		const adviceReq = createApiRequest(`/api/consultations/${consultationId}/advice`, "POST", {
-			cookie: user.cookie,
-			body: {
-				body: "pendingとして残るアドバイス本文です。10文字以上あります。",
-				draft: false,
-			},
-		});
-		const adviceRes = await app.fetch(adviceReq, env);
-		expect(adviceRes.status).toBe(201);
-		const advice = await adviceRes.json() as { id: number };
+		const advice = await createPendingAdvice("pendingとして残るアドバイス本文です。10文字以上あります。");
 
 		const req = createApiRequest("/api/admin/content-check/advices", "GET", {
 			cookie: user.cookie,
@@ -106,22 +110,22 @@ describe("Admin Content Check API - Advices", () => {
 	});
 
 	it("detail: ids指定でpending詳細とmissingを返す", async () => {
-		const pendingAdviceReq = createApiRequest(`/api/consultations/${consultationId}/advice`, "POST", {
+		const pendingAdvice = await createPendingAdvice("detailで返すpendingアドバイス本文です。10文字以上あります。");
+		const approvedAdvice = await createPendingAdvice("detailでnon_pending検証に使うアドバイス本文です。10文字以上あります。");
+		const approveReq = createApiRequest(`/api/admin/content-check/advices/${approvedAdvice.id}/decision`, "POST", {
 			cookie: user.cookie,
 			body: {
-				body: "detailで返すpendingアドバイス本文です。10文字以上あります。",
-				draft: false,
+				decision: "approved",
 			},
 		});
-		const pendingAdviceRes = await app.fetch(pendingAdviceReq, env);
-		expect(pendingAdviceRes.status).toBe(201);
-		const pendingAdvice = await pendingAdviceRes.json() as { id: number };
+		const approveRes = await app.fetch(approveReq, env);
+		expect(approveRes.status).toBe(200);
 
 		const req = createApiRequest("/api/admin/content-check/advices", "GET", {
 			cookie: user.cookie,
 			queryParams: {
 				view: "detail",
-				ids: `${pendingAdvice.id},99999999`,
+				ids: `${pendingAdvice.id},${approvedAdvice.id},99999999`,
 			},
 		});
 		const res = await app.fetch(req, env);
@@ -146,8 +150,118 @@ describe("Admin Content Check API - Advices", () => {
 		expect(pendingItem?.body).toBe("detailで返すpendingアドバイス本文です。10文字以上あります。");
 		expect(new Date(pendingItem!.created_at).toString()).not.toBe("Invalid Date");
 		expect(data.missing_ids).toContain(99999999);
-		// TODO: advice decision APIを実装後、non_pending（approved/rejected）の検証を追加する。
-		expect(Array.isArray(data.non_pending)).toBe(true);
+		expect(data.non_pending).toContainEqual({ id: approvedAdvice.id, current_status: "approved" });
+	});
+
+	it("decision: approvedに更新できる", async () => {
+		const created = await createPendingAdvice("decisionでapproved検証に使うアドバイス本文です。10文字以上あります。");
+
+		const req = createApiRequest(`/api/admin/content-check/advices/${created.id}/decision`, "POST", {
+			cookie: user.cookie,
+			body: {
+				decision: "approved",
+			},
+		});
+		const res = await app.fetch(req, env);
+		expect(res.status).toBe(200);
+
+		const data = await res.json() as {
+			advice_id: number;
+			status: string;
+			reason: string | null;
+			checked_at: string | null;
+			updated_at: string;
+		};
+
+		expect(data.advice_id).toBe(created.id);
+		expect(data.status).toBe("approved");
+		expect(data.reason).toBeNull();
+		expect(data.checked_at).not.toBeNull();
+		expect(new Date(data.updated_at).toString()).not.toBe("Invalid Date");
+	});
+
+	it("decision: rejected + reason で更新できる", async () => {
+		const created = await createPendingAdvice("decisionでrejected検証に使うアドバイス本文です。10文字以上あります。");
+
+		const req = createApiRequest(`/api/admin/content-check/advices/${created.id}/decision`, "POST", {
+			cookie: user.cookie,
+			body: {
+				decision: "rejected",
+				reason: "ガイドライン違反のため却下",
+			},
+		});
+		const res = await app.fetch(req, env);
+		expect(res.status).toBe(200);
+
+		const data = await res.json() as {
+			advice_id: number;
+			status: string;
+			reason: string | null;
+			checked_at: string | null;
+			updated_at: string;
+		};
+
+		expect(data.advice_id).toBe(created.id);
+		expect(data.status).toBe("rejected");
+		expect(data.reason).toBe("ガイドライン違反のため却下");
+		expect(data.checked_at).not.toBeNull();
+		expect(new Date(data.updated_at).toString()).not.toBe("Invalid Date");
+	});
+
+	it("decision: rejected で reason 未指定は400エラー", async () => {
+		const created = await createPendingAdvice("decisionでreason必須検証に使うアドバイス本文です。10文字以上あります。");
+
+		const req = createApiRequest(`/api/admin/content-check/advices/${created.id}/decision`, "POST", {
+			cookie: user.cookie,
+			body: {
+				decision: "rejected",
+			},
+		});
+		const res = await app.fetch(req, env);
+		expect(res.status).toBe(400);
+
+		const data = await res.json() as unknown;
+		assertValidationError(data);
+	});
+
+	it("decision: すでに処理済みのアドバイスに対しては404エラー", async () => {
+		const created = await createPendingAdvice("decisionで二重判定検証に使うアドバイス本文です。10文字以上あります。");
+
+		const firstReq = createApiRequest(`/api/admin/content-check/advices/${created.id}/decision`, "POST", {
+			cookie: user.cookie,
+			body: {
+				decision: "approved",
+			},
+		});
+		const firstRes = await app.fetch(firstReq, env);
+		expect(firstRes.status).toBe(200);
+
+		const secondReq = createApiRequest(`/api/admin/content-check/advices/${created.id}/decision`, "POST", {
+			cookie: user.cookie,
+			body: {
+				decision: "rejected",
+				reason: "二重判定の確認",
+			},
+		});
+		const secondRes = await app.fetch(secondReq, env);
+		expect(secondRes.status).toBe(404);
+
+		const data = await secondRes.json() as { error: string };
+		expect(data.error).toBe("NotFoundError");
+	});
+
+	it("decision: 存在しないアドバイスに対しては404エラー", async () => {
+		const req = createApiRequest("/api/admin/content-check/advices/99999999/decision", "POST", {
+			cookie: user.cookie,
+			body: {
+				decision: "approved",
+			},
+		});
+		const res = await app.fetch(req, env);
+		expect(res.status).toBe(404);
+
+		const data = await res.json() as { error: string };
+		expect(data.error).toBe("NotFoundError");
 	});
 
 	it("detail: ids が不正値のときは400エラー", async () => {
@@ -181,6 +295,19 @@ describe("Admin Content Check API - Advices", () => {
 
 	it("認証なしは401エラー", async () => {
 		const req = createApiRequest("/api/admin/content-check/advices", "GET");
+		const res = await app.fetch(req, env);
+		expect(res.status).toBe(401);
+
+		const data = await res.json() as unknown;
+		assertUnauthorizedError(data);
+	});
+
+	it("decision: 認証なしは401エラー", async () => {
+		const req = createApiRequest("/api/admin/content-check/advices/1/decision", "POST", {
+			body: {
+				decision: "approved",
+			},
+		});
 		const res = await app.fetch(req, env);
 		expect(res.status).toBe(401);
 
