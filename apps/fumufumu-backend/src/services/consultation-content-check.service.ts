@@ -6,6 +6,35 @@ export class ConsultationContentCheckService {
 	
 	private static readonly PENDING_STATUS: ContentCheckStatus = "pending";
 
+	private classifyPendingRows<T extends { targetId: number; status: ContentCheckStatus }>(
+		rows: T[],
+		ids: number[],
+	) {
+		const seenIds = new Set<number>();
+		const pendingRows: T[] = [];
+		const nonPending: Array<{ id: number; current_status: string }> = [];
+
+		for (const row of rows) {
+			seenIds.add(row.targetId);
+
+			if (row.status === ConsultationContentCheckService.PENDING_STATUS) {
+				pendingRows.push(row);
+				continue;
+			}
+
+			nonPending.push({
+				id: row.targetId,
+				current_status: row.status,
+			});
+		}
+
+		return {
+			pendingRows,
+			non_pending: nonPending,
+			missing_ids: ids.filter((id) => !seenIds.has(id)),
+		};
+	}
+
 	/**
 	 * 運営向けsummaryレスポンスを組み立てる
 	 */
@@ -25,7 +54,7 @@ export class ConsultationContentCheckService {
 	 */
 	async findPendingConsultationsByIds(ids: number[]) {
 		const rows = await this.repository.findConsultationChecksWithConsultationByIds(ids);
-		const seenIds = new Set<number>();
+		const classified = this.classifyPendingRows(rows, ids);
 		const consultations: Array<{
 			id: number;
 			title: string;
@@ -33,36 +62,19 @@ export class ConsultationContentCheckService {
 			author_id: number | null;
 			status: ContentCheckStatus;
 			created_at: string;
-		}> = [];
-		const nonPending: Array<{ id: number; current_status: string }> = [];
-
-		for (const row of rows) {
-			seenIds.add(row.targetId);
-
-			if (row.status === ConsultationContentCheckService.PENDING_STATUS) {
-				consultations.push({
-					id: row.id,
-					title: row.title,
-					body: row.body,
-					author_id: row.authorId,
-					status: row.status,
-					created_at: row.createdAt.toISOString(),
-				});
-				continue;
-			}
-
-			nonPending.push({
-				id: row.targetId,
-				current_status: row.status,
-			});
-		}
-
-		const missingIds = ids.filter((id) => !seenIds.has(id));
+		}> = classified.pendingRows.map((row) => ({
+			id: row.id,
+			title: row.title,
+			body: row.body,
+			author_id: row.authorId,
+			status: row.status,
+			created_at: row.createdAt.toISOString(),
+		}));
 
 		return {
 			consultations,
-			missing_ids: missingIds,
-			non_pending: nonPending,
+			missing_ids: classified.missing_ids,
+			non_pending: classified.non_pending,
 		};
 	}
 
@@ -98,6 +110,32 @@ export class ConsultationContentCheckService {
 				status: row.status,
 				created_at: row.createdAt.toISOString(),
 			})),
+		};
+	}
+
+	async findPendingAdvicesByIds(ids: number[]) {
+		const rows = await this.repository.findAdviceChecksWithAdviceByIds(ids);
+		const classified = this.classifyPendingRows(rows, ids);
+		const advices: Array<{
+			id: number;
+			consultation_id: number;
+			body: string;
+			author_id: number | null;
+			status: ContentCheckStatus;
+			created_at: string;
+		}> = classified.pendingRows.map((row) => ({
+			id: row.id,
+			consultation_id: row.consultationId,
+			body: row.body,
+			author_id: row.authorId,
+			status: row.status,
+			created_at: row.createdAt.toISOString(),
+		}));
+
+		return {
+			advices,
+			missing_ids: classified.missing_ids,
+			non_pending: classified.non_pending,
 		};
 	}
 }
