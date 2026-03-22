@@ -53,6 +53,10 @@ export const consultationIdParamSchema = z.object({
   consultationId: positiveIntegerStringSchema,
 });
 
+export const adviceIdParamSchema = z.object({
+  adviceId: positiveIntegerStringSchema,
+});
+
 export const decideConsultationContentCheckSchema = z
   .object({
     decision: z.enum(["approved", "rejected"]),
@@ -71,4 +75,5 @@ export const decideConsultationContentCheckSchema = z
 export type ListConsultationContentChecksQuery = z.infer<typeof listConsultationContentChecksQuerySchema>;
 export type ListAdviceContentChecksQuery = z.infer<typeof listAdviceContentChecksQuerySchema>;
 export type ConsultationIdParam = z.infer<typeof consultationIdParamSchema>;
+export type AdviceIdParam = z.infer<typeof adviceIdParamSchema>;
 export type DecideConsultationContentCheckInput = z.infer<typeof decideConsultationContentCheckSchema>;
