@@ -84,6 +84,27 @@ describe("Admin Content Check API - Advices", () => {
 		expect(new Date(included!.created_at).toString()).not.toBe("Invalid Date");
 	});
 
+	it("summary: view=summary 明示指定でも一覧を取得できる", async () => {
+		const req = createApiRequest("/api/admin/content-check/advices", "GET", {
+			cookie: user.cookie,
+			queryParams: {
+				view: "summary",
+			},
+		});
+		const res = await app.fetch(req, env);
+		expect(res.status).toBe(200);
+
+		const data = await res.json() as {
+			advices: Array<{
+				id: number;
+				consultation_id: number;
+				status: string;
+				created_at: string;
+			}>;
+		};
+		expect(Array.isArray(data.advices)).toBe(true);
+	});
+
 	it("detail: ids指定でpending詳細とmissingを返す", async () => {
 		const pendingAdviceReq = createApiRequest(`/api/consultations/${consultationId}/advice`, "POST", {
 			cookie: user.cookie,
@@ -119,10 +140,29 @@ describe("Admin Content Check API - Advices", () => {
 			non_pending: Array<{ id: number; current_status: string }>;
 		};
 
-		expect(data.advices.some((item) => item.id === pendingAdvice.id)).toBe(true);
+		const pendingItem = data.advices.find((item) => item.id === pendingAdvice.id);
+		expect(pendingItem).toBeDefined();
+		expect(pendingItem?.status).toBe("pending");
+		expect(pendingItem?.body).toBe("detailで返すpendingアドバイス本文です。10文字以上あります。");
+		expect(new Date(pendingItem!.created_at).toString()).not.toBe("Invalid Date");
 		expect(data.missing_ids).toContain(99999999);
 		// TODO: advice decision APIを実装後、non_pending（approved/rejected）の検証を追加する。
 		expect(Array.isArray(data.non_pending)).toBe(true);
+	});
+
+	it("detail: ids が不正値のときは400エラー", async () => {
+		const req = createApiRequest("/api/admin/content-check/advices", "GET", {
+			cookie: user.cookie,
+			queryParams: {
+				view: "detail",
+				ids: "abc,1",
+			},
+		});
+		const res = await app.fetch(req, env);
+		expect(res.status).toBe(400);
+
+		const data = await res.json() as unknown;
+		assertValidationError(data);
 	});
 
 	it("detail: ids 未指定は400エラー", async () => {
