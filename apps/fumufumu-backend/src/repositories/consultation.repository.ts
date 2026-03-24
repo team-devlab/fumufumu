@@ -230,7 +230,7 @@ export class ConsultationRepository {
 
 		return await this.db.query.consultations.findMany({
 			where: this.buildWhereConditions(filters),
-			orderBy: (fields, { desc }) => [desc(fields.createdAt)],
+			orderBy: (fields, { desc }) => [desc(fields.createdAt), desc(fields.id)],
 			limit: limit,
 			offset: offset,
 			with: {
