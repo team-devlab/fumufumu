@@ -34,3 +34,8 @@ export const STORAGE_KEYS = {
   // アドバイス投稿フォームの一時保存用 (SessionStorage)
   ADVICE_FORM: "advice-form-storage",
 } as const;
+
+export const CONSULTATION_PAGINATION = {
+  INITIAL_PAGE: 1,
+  DEFAULT_PER_PAGE: 5,
+} as const;

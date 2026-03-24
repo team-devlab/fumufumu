@@ -56,16 +56,27 @@ const MOCK_DATA: Consultation[] = [
   },
 ];
 
-export const fetchConsultationsMock =
-  async (): Promise<ConsultationListResponse> => {
-    return new Promise((resolve) => {
-      setTimeout(() => {
-        resolve({
-          meta: {
-            total: MOCK_DATA.length,
-          },
-          data: MOCK_DATA,
-        });
-      }, 1000);
-    });
-  };
+export const fetchConsultationsMock = async (
+  page: number,
+  limit: number,
+): Promise<ConsultationListResponse> => {
+  return new Promise((resolve) => {
+    setTimeout(() => {
+      const start = (page - 1) * limit;
+      const pageData = MOCK_DATA.slice(start, start + limit);
+      const totalItems = MOCK_DATA.length;
+      const totalPages = Math.ceil(totalItems / limit);
+      resolve({
+        pagination: {
+          current_page: page,
+          per_page: limit,
+          total_items: totalItems,
+          total_pages: totalPages,
+          has_next: page < totalPages,
+          has_prev: page > 1,
+        },
+        data: pageData,
+      });
+    }, 1000);
+  });
+};
