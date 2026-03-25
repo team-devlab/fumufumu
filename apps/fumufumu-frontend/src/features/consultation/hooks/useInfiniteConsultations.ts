@@ -75,7 +75,6 @@ export function useInfiniteConsultations(
 
   const sentinelRef = useRef<HTMLDivElement>(null);
   const abortRef = useRef<AbortController | null>(null);
-  const isIntersectingRef = useRef(false);
   const perPageRef = useRef(initialPerPage);
   const stateRef = useRef(state);
   stateRef.current = state;
@@ -90,11 +89,6 @@ export function useInfiniteConsultations(
     if (!hasNext) return;
     if (appendError !== null && !force) return;
     if (isAuthError) return;
-
-    // fetch 開始前に isIntersecting をリセット。
-    // これにより SUCCESS 後の chain-load effect が古い true を読まなくなる。
-    // IO が次のフレームで最新の交差状態を報告するまで次の fetch を待機させる。
-    isIntersectingRef.current = false;
 
     const nextPage = page + 1;
     dispatch({ type: "FETCH_MORE_START" });
@@ -132,25 +126,6 @@ export function useInfiniteConsultations(
     fetchMore({ force: true });
   }, [fetchMore]);
 
-  // 連鎖ロード effect
-  useEffect(() => {
-    if (
-      !state.isFetching &&
-      state.hasNext &&
-      state.appendError === null &&
-      !state.isAuthError &&
-      isIntersectingRef.current
-    ) {
-      fetchMore();
-    }
-  }, [
-    state.isFetching,
-    state.hasNext,
-    state.appendError,
-    state.isAuthError,
-    fetchMore,
-  ]);
-
   // IntersectionObserver
   useEffect(() => {
     if (!state.hasNext || state.appendError !== null || state.isAuthError) {
@@ -163,7 +138,6 @@ export function useInfiniteConsultations(
     const observer = new IntersectionObserver(
       (entries) => {
         const entry = entries[0];
-        isIntersectingRef.current = entry.isIntersecting;
         if (entry.isIntersecting) {
           fetchMore();
         }
@@ -175,7 +149,7 @@ export function useInfiniteConsultations(
     return () => {
       observer.disconnect();
     };
-  }, [fetchMore, state.hasNext, state.appendError, state.isAuthError]);
+  }, [fetchMore, state.hasNext, state.appendError, state.isAuthError, state.page]);
 
   // アンマウント時クリーンアップ
   useEffect(() => {
