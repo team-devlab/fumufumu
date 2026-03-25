@@ -127,6 +127,9 @@ export function useInfiniteConsultations(
   }, [fetchMore]);
 
   // IntersectionObserver
+  // state.page を deps に含めることで、fetch 成功（= page 変化）ごとに
+  // observer を再接続し、sentinel が画面内に残っていれば連鎖ロードを行う。
+  // biome-ignore lint/correctness/useExhaustiveDependencies: state.page は observer 再接続のトリガーとして意図的に含めている
   useEffect(() => {
     if (!state.hasNext || state.appendError !== null || state.isAuthError) {
       return;
@@ -149,7 +152,13 @@ export function useInfiniteConsultations(
     return () => {
       observer.disconnect();
     };
-  }, [fetchMore, state.hasNext, state.appendError, state.isAuthError, state.page]);
+  }, [
+    fetchMore,
+    state.hasNext,
+    state.appendError,
+    state.isAuthError,
+    state.page,
+  ]);
 
   // アンマウント時クリーンアップ
   useEffect(() => {
