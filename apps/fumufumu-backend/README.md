@@ -28,11 +28,11 @@ export WRANGLER_D1_CONFIG=wrangler.local.jsonc
 export WRANGLER_D1_CONFIG=wrangler.ci.jsonc
 ```
 
-deploy 実行時は deploy 用 config を明示する:
+deploy 実行時は deploy 用 config を明示し、`DEPLOY_APPROVED=1` は実行時のみ付与する:
 
 ```bash
-export DEPLOY_APPROVED=1
 export WRANGLER_DEPLOY_CONFIG=wrangler.local.jsonc
+DEPLOY_APPROVED=1 pnpm deploy
 ```
 
 ### 実行順序
@@ -51,9 +51,14 @@ pnpm d1:time-travel:info
 
 障害時の復旧コマンド雛形（Step 2 の bookmark を利用）:
 
+- 実行前チェック: 現状は書き込み停止機能が未実装のため、アクセスが少ない時間帯で実施する
+- 実行前チェック: 影響範囲を共有し、復旧後の確認は気づいたチームメンバーが実施する
+
 ```bash
 wrangler d1 time-travel restore DB --bookmark=<bookmark_from_step_2> --config "${WRANGLER_D1_CONFIG:-wrangler.local.jsonc}"
 ```
+
+復旧後は Step 4 → Step 6 を再実行して状態確認する。
 
 3. migration 適用
 
@@ -69,6 +74,8 @@ pnpm d1:migrations:list:remote
 
 5. DB read/write スモーク確認（例）
 
+前提: 恒常運用する専用 smoke ユーザーで実行し、Write で作成するデータには `[smoke]` プレフィックスを付ける。
+
 ```bash
 # 認証（Cookie取得）
 curl -fS -c /tmp/fumufumu-smoke.cookie \
@@ -83,7 +90,7 @@ curl -fS -b /tmp/fumufumu-smoke.cookie \
 # Write: 下書き相談作成
 curl -fS -X POST -b /tmp/fumufumu-smoke.cookie \
   -H 'content-type: application/json' \
-  -d '{"title":"migration smoke","body":"this is migration smoke check body","draft":true}' \
+  -d '{"title":"[smoke] migration check","body":"this is migration smoke check body","draft":true}' \
   https://<backend-production-url>/api/consultations
 ```
 
@@ -97,7 +104,8 @@ curl -fS https://<backend-production-url>/health
 
 - `WRANGLER_D1_CONFIG` が未設定の場合、`wrangler.local.jsonc` を参照する。
 - deploy の対象 Worker は `WRANGLER_DEPLOY_CONFIG` で指定した設定ファイル内の `name` で決定する。
-- `DEPLOY_APPROVED=1` を明示しない場合、`pnpm deploy` は実行を中断する（誤実行防止）。
+- `DEPLOY_APPROVED=1` を実行時に明示しない場合、`pnpm deploy` は実行を中断する（誤実行防止）。
 - `WRANGLER_DEPLOY_CONFIG` が未設定の場合、`pnpm deploy` は `wrangler.local.jsonc` を参照する。
 - ローカル適用は `pnpm local:migration` を使う。
+- smoke確認は専用ユーザーで実行し、`[smoke]` プレフィックスのデータを運用側で定期クリーンアップする。
 - 将来、同一 config のまま複数 DB を切り替えて実行する要件が出た場合は、`D1_DATABASE_NAME` のような env 引数方式へ戻す。
