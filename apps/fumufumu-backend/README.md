@@ -55,7 +55,7 @@ pnpm d1:time-travel:info
 - 実行前チェック: 影響範囲を共有し、復旧後の確認は気づいたチームメンバーが実施する
 
 ```bash
-wrangler d1 time-travel restore DB --bookmark=<bookmark_from_step_2> --config "${WRANGLER_D1_CONFIG:-wrangler.local.jsonc}"
+pnpm exec wrangler d1 time-travel restore DB --bookmark=<bookmark_from_step_2> --config "${WRANGLER_D1_CONFIG:-wrangler.local.jsonc}"
 ```
 
 復旧後は Step 4 → Step 6 を再実行して状態確認する。
@@ -108,4 +108,5 @@ curl -fS https://<backend-production-url>/health
 - `WRANGLER_DEPLOY_CONFIG` が未設定の場合、`pnpm deploy` は `wrangler.local.jsonc` を参照する。
 - ローカル適用は `pnpm local:migration` を使う。
 - smoke確認は専用ユーザーで実行し、`[smoke]` プレフィックスのデータを運用側で定期クリーンアップする。
+- smokeデータの削除例: `pnpm exec wrangler d1 execute DB --remote --command "DELETE FROM consultations WHERE title LIKE '[smoke]%';" --config "${WRANGLER_D1_CONFIG:-wrangler.local.jsonc}"`
 - 将来、同一 config のまま複数 DB を切り替えて実行する要件が出た場合は、`D1_DATABASE_NAME` のような env 引数方式へ戻す。
