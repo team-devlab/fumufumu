@@ -7,12 +7,25 @@
 
 本番の D1 migration は backend deploy に内包せず、手動で独立実行する。
 実行時は binding 名ではなく `database_name` を使うため、`D1_DATABASE_NAME` を必須にする。
+また、機微な識別子を `wrangler.jsonc` に置かない運用のため、migration 実行時は `--config` を使う。
 
 ### 事前準備
 
 ```bash
 cd apps/fumufumu-backend
+cp wrangler.local.jsonc.example wrangler.local.jsonc
+# wrangler.local.jsonc に account_id / database_name / database_id を設定
 export D1_DATABASE_NAME=<production_database_name>
+```
+
+必要に応じて設定ファイルを切り替える:
+
+```bash
+# デフォルト: wrangler.local.jsonc
+export WRANGLER_D1_CONFIG=wrangler.local.jsonc
+
+# 例: CI で生成した設定ファイルを使う場合
+export WRANGLER_D1_CONFIG=wrangler.ci.jsonc
 ```
 
 ### 実行順序
@@ -44,4 +57,5 @@ curl -fS https://<backend-production-url>/health
 ### 補足
 
 - `D1_DATABASE_NAME` が未設定の場合、migration 系スクリプトは実行を中断する。
+- `WRANGLER_D1_CONFIG` が未設定の場合、`wrangler.local.jsonc` を参照する。
 - ローカル適用は `pnpm local:migration` を使う。
