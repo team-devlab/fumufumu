@@ -1,6 +1,7 @@
 {
   "$schema": "node_modules/wrangler/config-schema.json",
-  "name": "api",
+  "account_id": "YOUR_CLOUDFLARE_ACCOUNT_ID",
+  "name": "your-worker-name",
   "main": "src/index.ts",
   "compatibility_date": "2025-10-26",
   "dev": {
@@ -14,8 +15,8 @@
   "d1_databases": [
     {
       "binding": "DB",
-      "database_name": "YOUR_DB_NAME",
-      "database_id": "YOUR_DB_ID",
+      "database_name": "YOUR_D1_DATABASE_NAME",
+      "database_id": "YOUR_D1_DATABASE_ID",
       "migrations_dir": "./drizzle"
     }
   ]

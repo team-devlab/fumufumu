@@ -1,7 +1,7 @@
 {
   "$schema": "node_modules/wrangler/config-schema.json",
   "account_id": "YOUR_CLOUDFLARE_ACCOUNT_ID",
-  "name": "fumufumu-worker",
+  "name": "your-worker-name",
   "main": "src/index.ts",
   "compatibility_date": "2025-10-26",
   "dev": {

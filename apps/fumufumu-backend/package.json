@@ -3,7 +3,9 @@
   "type": "module",
   "scripts": {
     "dev": "wrangler dev",
-    "deploy": "wrangler deploy --minify",
+    "deploy:require-worker-name": "test -n \"$WORKER_NAME\" || (echo \"WORKER_NAME is required\" && exit 1)",
+    "deploy:require-config": "test -f \"${WRANGLER_DEPLOY_CONFIG:-wrangler.local.jsonc}\" || (echo \"Wrangler deploy config not found: ${WRANGLER_DEPLOY_CONFIG:-wrangler.local.jsonc}\" && exit 1)",
+    "deploy": "pnpm deploy:require-worker-name && pnpm deploy:require-config && wrangler deploy --minify --name \"$WORKER_NAME\" --config \"${WRANGLER_DEPLOY_CONFIG:-wrangler.local.jsonc}\"",
     "cf-typegen": "wrangler types --env-interface CloudflareBindings",
     "test": "vitest",
     "test:unit": "vitest --config vitest.unit.config.ts",
