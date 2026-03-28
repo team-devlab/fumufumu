@@ -171,7 +171,66 @@
 
 ---
 
-## 6. dedupe（MVP）
+## 6. 実装フロー（修正版）
+
+以下は、MVPで採用する実装フローの確定版。  
+指摘反映済みポイント:
+- 401分岐を「API失敗」の子分岐に配置
+- `isFetching` ガードを明示
+- `nextPage = page + 1` のステップを明示
+- dedupeはMVPで省略可能と注記
+
+```mermaid
+flowchart TD
+    A["画面を開く"] --> B["初期読み込み開始 (page=1)"]
+    B --> C["API取得 (page=1)"]
+    C --> D{"初回API成功?"}
+
+    D -- "No" --> E["初期エラー表示 (再試行)"]
+    E --> B
+
+    D -- "Yes" --> F{"data.length > 0 ?"}
+    F -- "No" --> G["空状態を表示して終了"]
+    F -- "Yes" --> H["一覧表示 (page=1)"]
+
+    H --> I{"has_next = true ?"}
+    I -- "No" --> J["終端表示"]
+    I -- "Yes" --> K["下端監視中 (Observer)"]
+
+    K --> L{"最下部に到達?"}
+    L -- "No" --> K
+    L -- "Yes" --> M{"isFetching = true ?"}
+
+    M -- "Yes" --> K
+    M -- "No" --> N["isFetching = true に設定"]
+
+    N --> O["nextPage = page + 1"]
+    O --> P["API取得 (page=nextPage)"]
+    P --> Q{"追加API成功?"}
+
+    Q -- "Yes" --> R["データ追記して page = nextPage"]
+    R --> S["isFetching = false に設定"]
+    S --> I
+
+    Q -- "No" --> T{"401エラー?"}
+    T -- "Yes" --> U["isFetching = false に設定"]
+    U --> V["再ログイン導線へ"]
+
+    T -- "No" --> W["下部エラー表示 (再試行)"]
+    W --> X["isFetching = false に設定"]
+    X --> Y{"再試行する?"}
+    Y -- "Yes" --> M
+    Y -- "No" --> K
+```
+
+### 注記（MVP）
+
+- dedupe（重複除去）は省略可能とする
+- 省略時は既知リスク（重複表示の可能性）を実装コメントとPR説明に明記する
+
+---
+
+## 7. dedupe（MVP）
 
 ### 方針
 
@@ -187,7 +246,7 @@
 
 ---
 
-## 7. テスト方針
+## 8. テスト方針
 
 - reducerの状態遷移テストを追加する
 - IntersectionObserver のモックを使ったコンポーネントテストを追加する
