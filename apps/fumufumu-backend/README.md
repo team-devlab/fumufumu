@@ -85,10 +85,11 @@ read -rsp "Smoke user password: " SMOKE_USER_PASSWORD
 echo
 
 # 認証（Cookie取得）
-curl -fS -c "$COOKIE_FILE" \
-  -H 'content-type: application/json' \
-  -d "{\"email\":\"${SMOKE_USER_EMAIL}\",\"password\":\"${SMOKE_USER_PASSWORD}\"}" \
-  https://<backend-production-url>/api/auth/signin
+printf '{"email":"%s","password":"%s"}' "$SMOKE_USER_EMAIL" "$SMOKE_USER_PASSWORD" \
+  | curl -fS -c "$COOKIE_FILE" \
+    -H 'content-type: application/json' \
+    --data @- \
+    https://<backend-production-url>/api/auth/signin
 unset SMOKE_USER_PASSWORD
 
 # Read: ユーザー情報取得
