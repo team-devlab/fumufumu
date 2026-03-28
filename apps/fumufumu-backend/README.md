@@ -2,7 +2,7 @@
 - curl http://127.0.0.1:8787/
 - ローカルタグ一覧: `pnpm tags:list`
 - ローカルタグ追加: `pnpm tags:add キャリア 人間関係 技術`
-- 手動デプロイ: `WORKER_NAME=<production_worker_name> WRANGLER_DEPLOY_CONFIG=wrangler.local.jsonc pnpm deploy`
+- 手動デプロイ: `WRANGLER_DEPLOY_CONFIG=wrangler.local.jsonc pnpm deploy`
 
 ## D1 migration runbook (production)
 
@@ -15,7 +15,7 @@
 ```bash
 cd apps/fumufumu-backend
 cp wrangler.local.jsonc.example wrangler.local.jsonc
-# wrangler.local.jsonc に worker name / account_id / database_name / database_id を設定
+# wrangler.local.jsonc に account_id / name / database_name / database_id を設定
 export D1_DATABASE_NAME=<production_database_name>
 ```
 
@@ -29,10 +29,9 @@ export WRANGLER_D1_CONFIG=wrangler.local.jsonc
 export WRANGLER_D1_CONFIG=wrangler.ci.jsonc
 ```
 
-deploy 実行時は `WORKER_NAME` と deploy 用 config も明示する:
+deploy 実行時は deploy 用 config を明示する:
 
 ```bash
-export WORKER_NAME=<production_worker_name>
 export WRANGLER_DEPLOY_CONFIG=wrangler.local.jsonc
 ```
 
@@ -66,6 +65,6 @@ curl -fS https://<backend-production-url>/health
 
 - `D1_DATABASE_NAME` が未設定の場合、migration 系スクリプトは実行を中断する。
 - `WRANGLER_D1_CONFIG` が未設定の場合、`wrangler.local.jsonc` を参照する。
-- `WORKER_NAME` が未設定の場合、`pnpm deploy` は実行を中断する。
+- deploy の対象 Worker は `WRANGLER_DEPLOY_CONFIG` で指定した設定ファイル内の `name` で決定する。
 - `WRANGLER_DEPLOY_CONFIG` が未設定の場合、`pnpm deploy` は `wrangler.local.jsonc` を参照する。
 - ローカル適用は `pnpm local:migration` を使う。
