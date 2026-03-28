@@ -60,7 +60,11 @@ jobs:
         jq 'del(.d1_databases)' wrangler.jsonc > wrangler.tmp.jsonc && mv wrangler.tmp.jsonc wrangler.jsonc
         echo "Existing D1 database configuration cleared."
 
-        # 1.2. D1バインディングを一時的に設定ファイルに追記
+        # 1.2. account_id をCIのSecret値で上書き
+        jq --arg account_id "$CLOUDFLARE_ACCOUNT_ID" '.account_id = $account_id' wrangler.jsonc > wrangler.tmp.jsonc && mv wrangler.tmp.jsonc wrangler.jsonc
+        echo "Cloudflare account_id injected into wrangler.jsonc for CI deployment."
+
+        # 1.3. D1バインディングを一時的に設定ファイルに追記
         # ここで、JQ_FILTERは必ず空か、有効なJSONオブジェクトに対して適用される。
         JQ_FILTER=".d1_databases = [{\"binding\": \"DB\", \"database_id\": \"${{ secrets.D1_DATABASE_ID }}\", \"database_name\": \"ci-database\"}]"
         jq "$JQ_FILTER" wrangler.jsonc > wrangler.tmp.jsonc && mv wrangler.tmp.jsonc wrangler.jsonc
@@ -71,11 +75,12 @@ jobs:
         WORKER_NAME=$(echo "$BRANCH_NAME" | tr '/' '-' | tr '[:upper:]' '[:lower:]')-ci-test
 
         # 3. デプロイを実行（D1バインディング情報も同時に適用される）
+        set +e
         DEPLOY_OUTPUT=$(npx wrangler deploy \
           --env ci \
           --name="$WORKER_NAME" 2>&1)
-          
         EXIT_CODE=$?
+        set -e
         
         # Wranglerの出力をデバッグ用に常に出力
         echo "--- Wrangler Output (Raw) ---"
