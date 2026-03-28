@@ -54,7 +54,13 @@ pnpm d1:time-travel:info
 pnpm d1:migrations:apply:remote
 ```
 
-4. 適用後確認（例）
+4. 再確認（未適用 migration が 0 件であることを確認）
+
+```bash
+pnpm d1:migrations:list:remote
+```
+
+5. 適用後確認（例）
 
 ```bash
 curl -fS https://<backend-production-url>/health
