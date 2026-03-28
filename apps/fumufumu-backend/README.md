@@ -80,12 +80,16 @@ pnpm d1:migrations:list:remote
 COOKIE_FILE="$(mktemp)"
 chmod 600 "$COOKIE_FILE"
 trap 'rm -f "$COOKIE_FILE"' EXIT
+SMOKE_USER_EMAIL="<smoke_user_email>"
+read -rsp "Smoke user password: " SMOKE_USER_PASSWORD
+echo
 
 # 認証（Cookie取得）
 curl -fS -c "$COOKIE_FILE" \
   -H 'content-type: application/json' \
-  -d '{"email":"<smoke_user_email>","password":"<smoke_user_password>"}' \
+  -d "{\"email\":\"${SMOKE_USER_EMAIL}\",\"password\":\"${SMOKE_USER_PASSWORD}\"}" \
   https://<backend-production-url>/api/auth/signin
+unset SMOKE_USER_PASSWORD
 
 # Read: ユーザー情報取得
 curl -fS -b "$COOKIE_FILE" \
