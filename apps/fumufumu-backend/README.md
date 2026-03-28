@@ -74,21 +74,25 @@ pnpm d1:migrations:list:remote
 
 5. DB read/write スモーク確認（例）
 
-前提: 恒常運用する専用 smoke ユーザーで実行し、Write で作成するデータには `[smoke]` プレフィックスを付ける。
+前提: 恒常運用する専用 smoke ユーザーで実行し、Write で作成するデータには `[smoke]` プレフィックスを付ける（`<smoke_user_id>` を控えておく）。
 
 ```bash
+COOKIE_FILE="$(mktemp)"
+chmod 600 "$COOKIE_FILE"
+trap 'rm -f "$COOKIE_FILE"' EXIT
+
 # 認証（Cookie取得）
-curl -fS -c /tmp/fumufumu-smoke.cookie \
+curl -fS -c "$COOKIE_FILE" \
   -H 'content-type: application/json' \
   -d '{"email":"<smoke_user_email>","password":"<smoke_user_password>"}' \
   https://<backend-production-url>/api/auth/signin
 
 # Read: ユーザー情報取得
-curl -fS -b /tmp/fumufumu-smoke.cookie \
+curl -fS -b "$COOKIE_FILE" \
   https://<backend-production-url>/api/users/me
 
 # Write: 下書き相談作成
-curl -fS -X POST -b /tmp/fumufumu-smoke.cookie \
+curl -fS -X POST -b "$COOKIE_FILE" \
   -H 'content-type: application/json' \
   -d '{"title":"[smoke] migration check","body":"this is migration smoke check body","draft":true}' \
   https://<backend-production-url>/api/consultations
@@ -108,5 +112,5 @@ curl -fS https://<backend-production-url>/health
 - `WRANGLER_DEPLOY_CONFIG` が未設定の場合、`pnpm deploy` は `wrangler.local.jsonc` を参照する。
 - ローカル適用は `pnpm local:migration` を使う。
 - smoke確認は専用ユーザーで実行し、`[smoke]` プレフィックスのデータを運用側で定期クリーンアップする。
-- smokeデータの削除例: `pnpm exec wrangler d1 execute DB --remote --command "DELETE FROM consultations WHERE title LIKE '[smoke]%';" --config "${WRANGLER_D1_CONFIG:-wrangler.local.jsonc}"`
+- smokeデータの削除例: `pnpm exec wrangler d1 execute DB --remote --command "DELETE FROM consultations WHERE author_id = <smoke_user_id> AND title LIKE '[smoke]%';" --config "${WRANGLER_D1_CONFIG:-wrangler.local.jsonc}"`
 - 将来、同一 config のまま複数 DB を切り替えて実行する要件が出た場合は、`D1_DATABASE_NAME` のような env 引数方式へ戻す。
