@@ -29,10 +29,21 @@ export interface Consultation {
   author: Author | null;
 }
 
+/**
+ * バックエンドの PaginationMeta と契約を統一
+ * src: apps/fumufumu-backend/src/types/consultation.types.ts
+ */
+export interface PaginationMeta {
+  current_page: number;
+  per_page: number;
+  total_items: number;
+  total_pages: number;
+  has_next: boolean;
+  has_prev: boolean;
+}
+
 export interface ConsultationListResponse {
-  meta: {
-    total: number;
-  };
+  pagination: PaginationMeta;
   data: Consultation[];
 }
 
