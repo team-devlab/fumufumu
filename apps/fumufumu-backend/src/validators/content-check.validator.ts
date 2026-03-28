@@ -57,7 +57,7 @@ export const adviceIdParamSchema = z.object({
   adviceId: positiveIntegerStringSchema,
 });
 
-export const decideConsultationContentCheckSchema = z
+export const decideContentCheckSchema = z
   .object({
     decision: z.enum(["approved", "rejected"]),
     reason: z.string().trim().min(1, "却下時は理由を入力してください").max(500, "理由は500文字以内で入力してください").optional(),
