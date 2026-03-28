@@ -57,7 +57,7 @@ export const adviceIdParamSchema = z.object({
   adviceId: positiveIntegerStringSchema,
 });
 
-export const decideContentCheckSchema = z
+export const decideConsultationContentCheckSchema = z
   .object({
     decision: z.enum(["approved", "rejected"]),
     reason: z.string().trim().min(1, "却下時は理由を入力してください").max(500, "理由は500文字以内で入力してください").optional(),
@@ -71,6 +71,9 @@ export const decideContentCheckSchema = z
       });
     }
   });
+
+// 互換エイリアス: 既存参照名を保ちながら共通スキーマとしても利用できる
+export const decideContentCheckSchema = decideConsultationContentCheckSchema;
 
 export type ListConsultationContentChecksQuery = z.infer<typeof listConsultationContentChecksQuerySchema>;
 export type ListAdviceContentChecksQuery = z.infer<typeof listAdviceContentChecksQuerySchema>;
