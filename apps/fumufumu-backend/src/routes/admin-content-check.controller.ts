@@ -8,6 +8,7 @@ import {
   listConsultationContentChecksQuerySchema,
   listAdviceContentChecksQuerySchema,
   consultationIdParamSchema,
+  adviceIdParamSchema,
   decideConsultationContentCheckSchema,
 } from "@/validators/content-check.validator";
 
@@ -71,9 +72,32 @@ const listAdviceContentChecksHandlers = factory.createHandlers(
   },
 );
 
+const decideAdviceContentCheckHandlers = factory.createHandlers(
+  zValidator("param", adviceIdParamSchema, (result) => {
+    if (!result.success) throw result.error;
+  }),
+  zValidator("json", decideConsultationContentCheckSchema, (result) => {
+    if (!result.success) throw result.error;
+  }),
+  async (c) => {
+    const { adviceId } = c.req.valid("param");
+    const body = c.req.valid("json");
+    const service = c.get("consultationContentCheckService");
+
+    const result = await service.decideAdviceContentCheck(
+      adviceId,
+      body.decision,
+      body.reason,
+    );
+
+    return c.json(result, 200);
+  },
+);
+
 export const adminContentCheckRoute = new Hono<AppBindings>();
 
 adminContentCheckRoute.use("/*", authGuard, injectConsultationContentCheckService);
 adminContentCheckRoute.get("/consultations", ...listConsultationContentChecksHandlers);
 adminContentCheckRoute.post("/consultations/:consultationId/decision", ...decideConsultationContentCheckHandlers);
 adminContentCheckRoute.get("/advices", ...listAdviceContentChecksHandlers);
+adminContentCheckRoute.post("/advices/:adviceId/decision", ...decideAdviceContentCheckHandlers);

@@ -138,4 +138,24 @@ export class ConsultationContentCheckService {
 			non_pending: classified.non_pending,
 		};
 	}
+
+	async decideAdviceContentCheck(
+		adviceId: number,
+		decision: "approved" | "rejected",
+		reason?: string,
+	) {
+		const updated = await this.repository.updateAdviceContentCheckDecision(
+			adviceId,
+			decision,
+			reason,
+		);
+
+		return {
+			advice_id: adviceId,
+			status: updated.status,
+			reason: updated.reason,
+			checked_at: updated.checkedAt?.toISOString() ?? null,
+			updated_at: updated.updatedAt.toISOString(),
+		};
+	}
 }

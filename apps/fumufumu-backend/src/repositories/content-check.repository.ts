@@ -142,4 +142,36 @@ export class ContentCheckRepository {
 			)
 			.where(inArray(contentChecks.targetId, ids));
 	}
+
+	/**
+	 * 運営判断でadviceのpendingをapproved/rejectedへ遷移させる
+	 */
+	async updateAdviceContentCheckDecision(
+		adviceId: number,
+		decision: "approved" | "rejected",
+		reason?: string,
+	) {
+		const [updated] = await this.db
+			.update(contentChecks)
+			.set({
+				status: decision,
+				reason: decision === "rejected" ? reason ?? null : null,
+				checkedAt: new Date(),
+				updatedAt: new Date(),
+			})
+			.where(
+				and(
+					eq(contentChecks.targetType, "advice"),
+					eq(contentChecks.targetId, adviceId),
+					eq(contentChecks.status, "pending"),
+				),
+			)
+			.returning();
+
+		if (!updated) {
+			throw new NotFoundError(`未処理の投稿チェックが見つかりません: adviceId=${adviceId}`);
+		}
+
+		return updated;
+	}
 }
