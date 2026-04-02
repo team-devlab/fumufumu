@@ -1,8 +1,23 @@
 export default function FumufumuLPWorldview() {
+  const worldviewPoints = [
+    {
+      title: "やさしく受け止める",
+      text: "強い言葉で切り捨てるのではなく、まず状況を受け止める。書き出しやすい空気から、判断の土台を整えます。",
+    },
+    {
+      title: "納得できる判断軸を返す",
+      text: "誰かの成功談を押しつけるのではなく、状況に合った視点を返す。だから、次に何を選ぶかを決めやすくなります。",
+    },
+    {
+      title: "安心して比較できる場を守る",
+      text: "投稿は公開前に運営が確認し、安心して読み比べられる状態を維持。落ち着いて判断できる環境を守ります。",
+    },
+  ];
+
   const scenes = [
-    "Xでキャリア相談をしたけれど、意見が多すぎてどれを信じればいいのかわからない",
-    "エンジニアの先輩に相談したいのに、身近に相談できる人がいない",
-    "相談したあとに否定されたらどうしようと思って、投稿する手が止まる",
+    "情報はあるのに、どれを選べばいいか決めきれない",
+    "相談したいのに、否定されるのが怖くて書き出せない",
+    "一人で考え続けて、次に取る行動だけが決まらない",
   ];
 
   const steps = [
@@ -41,20 +56,51 @@ export default function FumufumuLPWorldview() {
   return (
     <div className="relative min-h-screen overflow-x-clip bg-[#F1F3F4] text-slate-800">
       <div className="pointer-events-none absolute inset-0 z-0">
-        <div className="absolute inset-0 bg-[#F4F5F6]" />
+        <div className="absolute inset-0 bg-[#F4F6F7]" />
 
-        <div className="absolute left-[4%] top-[6%] h-16 w-16 rounded-full bg-[#9EDFE1]/75" />
-        <div className="absolute left-[35%] -top-16 h-64 w-64 rounded-full bg-[#D7E4A6]/70" />
-        <div className="absolute right-[3%] top-[8%] h-16 w-16 rounded-full bg-[#9EDFE1]/75" />
-        <div className="absolute left-[20%] top-[18%] h-24 w-24 rounded-full bg-[#BFAEEB]/68" />
-        <div className="absolute left-[28%] top-[16%] h-44 w-44 rounded-full bg-[#A7B4E9]/62" />
-        <div className="absolute left-[42%] top-[27%] h-8 w-8 rounded-full bg-[#CFE1A3]/75" />
-        <div className="absolute left-[2%] top-[29%] h-56 w-56 rounded-full bg-[#ABE4BE]/68" />
-        <div className="absolute right-[24%] top-[30%] h-52 w-52 rounded-full bg-[#ABE4BE]/68" />
-        <div className="absolute right-[-5%] top-[17%] h-20 w-20 rounded-full bg-[#BFAEEB]/66" />
-        <div className="absolute right-[13%] top-[42%] h-36 w-36 rounded-full bg-[#8FCFE5]/72" />
-        <div className="absolute left-[36%] bottom-[-11rem] h-72 w-72 rounded-full bg-[#D7E4A6]/68" />
-        <div className="absolute right-[-8%] bottom-[26%] h-24 w-24 rounded-full bg-[#9EDFE1]/74" />
+        <div className="absolute -left-16 -top-20 h-64 w-64 rounded-full bg-[repeating-linear-gradient(45deg,rgba(124,203,147,0.58)_0_14px,transparent_14px_28px)]" />
+        <div className="absolute left-[21%] -top-24 h-72 w-72 rounded-full bg-[repeating-linear-gradient(45deg,rgba(207,227,142,0.62)_0_15px,transparent_15px_30px)]" />
+        <div className="absolute left-[43%] -top-10 h-24 w-24 rounded-full border-4 border-[#7CCB93] bg-transparent" />
+        <div className="absolute left-[55%] -top-8 h-28 w-28 rounded-full bg-[#F2CD73]/78" />
+        <div className="absolute right-[28%] top-8 h-40 w-40 rounded-full bg-[radial-gradient(circle,#C9B8EE_2px,transparent_2px)] [background-size:13px_13px] opacity-72" />
+        <div className="absolute right-[13%] top-14 h-56 w-56 rounded-full bg-[repeating-linear-gradient(45deg,rgba(242,205,115,0.74)_0_14px,transparent_14px_28px)]" />
+        <div className="absolute -right-20 -top-16 h-64 w-64 rounded-full bg-[repeating-linear-gradient(45deg,rgba(246,198,217,0.60)_0_14px,transparent_14px_28px)]" />
+        <div className="absolute right-[6%] -top-9 h-32 w-32 rounded-full bg-[#F6C6D9]/82" />
+        <div className="absolute left-[9%] top-[19%] h-32 w-32 rounded-full bg-[#F2CD73]/64" />
+
+        <div className="absolute -left-24 top-[37%] h-64 w-64 rounded-full bg-[repeating-linear-gradient(45deg,rgba(201,184,238,0.62)_0_13px,transparent_13px_26px)]" />
+        <div className="absolute left-[14%] top-[29%] h-36 w-36 rounded-full bg-[radial-gradient(circle,#7CCB93_2px,transparent_2px)] [background-size:13px_13px] opacity-70" />
+        <div className="absolute right-[18%] top-[38%] h-32 w-32 rounded-full bg-[#C9B8EE]/78" />
+        <div className="absolute right-[-6%] top-[31%] h-40 w-40 rounded-full bg-[radial-gradient(circle,#CFE38E_2px,transparent_2px)] [background-size:13px_13px] opacity-65" />
+        <div className="absolute right-[8%] top-[52%] h-28 w-28 rounded-full border-4 border-[#7CCB93] bg-transparent" />
+        <div className="absolute left-[17%] top-[46%] h-24 w-24 rounded-full border-4 border-[#F2CD73]/85 bg-transparent" />
+
+        <div className="absolute -left-20 bottom-[7%] h-56 w-56 rounded-full bg-[repeating-linear-gradient(45deg,rgba(124,203,147,0.58)_0_14px,transparent_14px_28px)]" />
+        <div className="absolute left-[22%] bottom-[6%] h-[136px] w-[136px] rounded-full bg-[#7CCB93]/84" />
+        <div className="absolute left-[38%] bottom-[4%] h-32 w-32 rounded-full bg-[radial-gradient(circle,#F6C6D9_2px,transparent_2px)] [background-size:13px_13px] opacity-68" />
+        <div className="absolute right-[19%] bottom-[-8%] h-72 w-72 rounded-full bg-[repeating-linear-gradient(45deg,rgba(242,205,115,0.72)_0_14px,transparent_14px_28px)]" />
+        <div className="absolute -right-20 bottom-[7%] h-56 w-56 rounded-full bg-[repeating-linear-gradient(45deg,rgba(201,184,238,0.62)_0_14px,transparent_14px_28px)]" />
+        <div className="absolute right-[9%] bottom-[16%] h-32 w-32 rounded-full border-4 border-[#C9B8EE] bg-transparent" />
+        <div className="absolute right-[35%] bottom-[8%] h-[104px] w-[104px] rounded-full border-4 border-[#CFE38E]/85 bg-transparent" />
+
+        <div className="absolute left-[24%] top-[29%] text-3xl text-[#7CCB93]/85">
+          *
+        </div>
+        <div className="absolute left-[11%] top-[41%] text-2xl text-[#F2CD73]/85">
+          *
+        </div>
+        <div className="absolute right-[24%] top-[21%] text-3xl text-[#C9B8EE]/85">
+          *
+        </div>
+        <div className="absolute right-[31%] top-[44%] text-2xl text-[#F6C6D9]/85">
+          *
+        </div>
+        <div className="absolute right-[10%] bottom-[27%] text-3xl text-[#7CCB93]/85">
+          *
+        </div>
+        <div className="absolute left-[17%] bottom-[20%] text-2xl text-[#CFE38E]/85">
+          *
+        </div>
       </div>
 
       <main className="relative z-10">
@@ -88,31 +134,62 @@ export default function FumufumuLPWorldview() {
           </div>
         </section>
 
-        <section className="mx-auto max-w-7xl px-6 py-20 lg:px-8 lg:py-24">
-          <div className="mx-auto max-w-4xl text-center">
-            <div className="text-base font-bold uppercase tracking-[0.24em] text-teal-600">
+        <section className="mx-auto max-w-6xl px-6 py-20 lg:px-8 lg:py-24">
+          <div className="mx-auto max-w-3xl text-center">
+            <div className="text-sm font-bold uppercase tracking-[0.22em] text-teal-600">
               Scene
             </div>
-            <h2 className="mt-3 text-4xl font-black tracking-tight text-slate-900 md:text-5xl">
+            <h2 className="mt-3 text-3xl font-black tracking-tight text-slate-900 md:text-4xl">
               こういう迷いで、
               <br />
               止まっていませんか？
             </h2>
-            <p className="mt-5 text-lg leading-9 text-slate-600 lg:whitespace-nowrap">
-              焦って答えを出すより、判断材料を増やして決めるほうが前に進みやすい。ふむふむは、そのための相談の入口です。
+            <p className="mt-4 text-base leading-8 text-slate-600">
+              焦って答えを出すより、判断材料を増やして決めるほうが前に進みやすい。
+              ふむふむは、そのための相談の入口です。
             </p>
           </div>
 
-          <div className="mt-12 grid gap-6 md:grid-cols-3">
+          <div className="mt-10 grid gap-5 md:grid-cols-3">
             {scenes.map((scene) => (
               <div
                 key={scene}
-                className="min-h-[250px] rounded-3xl border border-slate-200 bg-white p-8 shadow-sm"
+                className="rounded-3xl border border-slate-200 bg-white p-7 shadow-sm"
               >
-                <div className="mb-6 h-14 w-14 rounded-2xl bg-amber-100" />
-                <p className="text-lg leading-9 text-slate-700">{scene}</p>
+                <div className="mb-5 h-11 w-11 rounded-2xl bg-amber-100" />
+                <p className="text-base leading-8 text-slate-700">{scene}</p>
               </div>
             ))}
+          </div>
+        </section>
+
+        <section className="bg-white py-20 lg:py-24">
+          <div className="mx-auto max-w-6xl px-6 lg:px-8">
+            <div className="mx-auto max-w-3xl text-center">
+              <div className="text-sm font-bold uppercase tracking-[0.22em] text-teal-600">
+                Worldview
+              </div>
+              <h2 className="mt-3 text-3xl font-black tracking-tight text-slate-900 md:text-4xl">
+                ふむふむが守る、3つの約束
+              </h2>
+            </div>
+
+            <div className="mt-12 grid gap-6 md:grid-cols-3">
+              {worldviewPoints.map((point) => (
+                <div
+                  key={point.title}
+                  className="rounded-[28px] bg-[#F8FBFA] p-7 ring-1 ring-slate-200"
+                >
+                  <div className="mb-5 h-12 w-12 rounded-2xl bg-teal-100" />
+                  <h3 className="text-xl font-bold text-slate-900">
+                    {point.title}
+                  </h3>
+                  <p className="mt-3 text-sm leading-7 text-slate-600">
+                    {point.text}
+                  </p>
+                </div>
+              ))}
+            </div>
           </div>
         </section>
 

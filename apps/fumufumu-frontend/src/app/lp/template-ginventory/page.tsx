@@ -39,7 +39,7 @@ export default function TemplateGinventoryPage() {
         </div>
       </section>
 
-      <section className="mx-auto max-w-6xl px-6 pb-24 lg:px-8 lg:pb-28">
+      <section className="mx-auto max-w-[1320px] px-6 pb-24 lg:px-6 lg:pb-28">
         <div className="relative">
           <p className="pointer-events-none absolute left-0 top-[42%] hidden select-none text-[clamp(96px,18vw,240px)] font-black tracking-[-0.06em] text-slate-300/70 lg:block">
             ふむふむ
@@ -75,7 +75,7 @@ export default function TemplateGinventoryPage() {
               </div>
             </article>
 
-            <article className="rounded-[30px] border border-[#EFDFA9] bg-[#FAE9B8] p-6 text-slate-900 shadow-[0_14px_34px_rgba(217,166,13,0.18)] lg:col-span-4">
+            <article className="rounded-[30px] border border-[#EFDFA9] bg-[#FAE9B8] p-6 text-slate-900 shadow-[0_14px_34px_rgba(217,166,13,0.18)] lg:-ml-8 lg:col-span-4 lg:col-start-1">
               <div className="flex h-52 w-full items-center justify-center rounded-[16px] border border-[#E4D19A] bg-[#FFF7DF] text-xs font-semibold tracking-[0.08em] text-slate-500 shadow-[0_8px_18px_rgba(15,23,42,0.08)]">
                 プロダクト画像 02（Web）
               </div>
