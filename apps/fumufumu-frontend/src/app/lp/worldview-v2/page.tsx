@@ -61,11 +61,11 @@ export default function FumufumuLPWorldview() {
         <section className="mx-auto max-w-6xl px-6 pb-20 pt-12 lg:px-8 lg:pb-28">
           <div className="mx-auto flex max-w-3xl flex-col items-center text-center justify-center">
             <h1 className="mt-8 text-4xl font-black leading-[1.4] tracking-[-0.01em] text-slate-900 md:text-5xl lg:text-6xl">
-              悩みを話す前から、
+              自分のもやもやを、
               <br />
-              <span className="text-teal-600">安心できる</span>
+              誰かに
               <br />
-              と感じられる場所へ。
+              <span className="text-teal-600">相談してみませんか？</span>
             </h1>
 
             <p className="mt-6 max-w-2xl text-lg leading-8 text-slate-600">
