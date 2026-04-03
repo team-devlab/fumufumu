@@ -1,23 +1,17 @@
 export default function FumufumuLPWorldview() {
-  const scenes = [
-    "Xでキャリア相談をしたけれど、意見が多すぎてどれを信じればいいのかわからない",
-    "エンジニアの先輩に相談したいのに、身近に相談できる人がいない",
-    "相談したあとに否定されたらどうしようと思って、投稿する手が止まる",
-  ];
-
   const steps = [
     {
-      no: "01",
+      no: "STEP 1",
       title: "迷いをそのまま書き出す",
       text: "頭の中で散らばった迷いを、匿名でそのまま言葉にする。整理されていなくても、悩みの骨格が見えてきます。",
     },
     {
-      no: "02",
+      no: "STEP 2",
       title: "経験と助言を読み比べる",
       text: "似た状況の投稿と回答を読み比べながら、ひとつの見方に偏らず判断材料を増やせます。",
     },
     {
-      no: "03",
+      no: "STEP 3",
       title: "次の判断をひとつ決める",
       text: "公開前の投稿確認で場の安心感を保ちながら、いまの自分に必要な行動をひとつ決められます。",
     },
@@ -58,7 +52,7 @@ export default function FumufumuLPWorldview() {
       </div>
 
       <main className="relative z-10">
-        <section className="mx-auto flex min-h-[100svh] max-w-6xl items-center px-6 py-16 lg:px-8 lg:py-20">
+        <section className="mx-auto flex min-h-[90svh] max-w-6xl items-center px-6 py-16 lg:min-h-[96svh] lg:px-8 lg:py-20">
           <div className="mx-auto flex max-w-5xl flex-col items-center justify-center text-center">
             <h1 className="text-5xl font-black leading-[1.16] tracking-[-0.02em] text-slate-900 md:text-7xl lg:text-[72px]">
               <span className="block lg:whitespace-nowrap">
@@ -69,76 +63,29 @@ export default function FumufumuLPWorldview() {
               </span>
             </h1>
 
-            <p className="mt-8 max-w-2xl text-lg leading-8 text-slate-600 md:text-[22px] md:leading-10">
-              ふむふむは、やさしさだけで終わらず、納得して次の判断に進むための相談サービスです。
-              不安を小さくしながら、判断材料を増やしていける場を目指しています。
-            </p>
-
-            <div className="mt-8 flex flex-col items-center gap-3 sm:flex-row">
+            <div className="mt-14 flex flex-col items-center gap-3 sm:mt-16 sm:flex-row">
               <button
                 type="button"
-                className="rounded-2xl bg-[#F5C94A] px-7 py-4 text-base font-bold text-slate-900 shadow-sm transition hover:-translate-y-0.5 hover:shadow-lg hover:bg-[#EAB308]"
+                className="rounded-2xl bg-[#F5C94A] px-10 py-5 text-lg font-bold text-slate-900 shadow-sm transition hover:-translate-y-0.5 hover:shadow-lg hover:bg-[#EAB308]"
               >
                 相談してみる
               </button>
             </div>
-            <p className="mt-2 text-sm text-slate-500">
+            <p className="mt-4 text-sm text-slate-500">
               匿名で投稿でき、公開前には運営が確認します
             </p>
           </div>
         </section>
 
-        <section className="mx-auto max-w-7xl px-6 py-20 lg:px-8 lg:py-24">
-          <div className="mx-auto max-w-4xl text-center">
-            <div className="text-base font-bold uppercase tracking-[0.24em] text-teal-600">
-              Scene
-            </div>
-            <h2 className="mt-3 text-4xl font-black tracking-tight text-slate-900 md:text-5xl">
-              こういう迷いで、
-              <br />
-              止まっていませんか？
-            </h2>
-            <p className="mt-5 text-lg leading-9 text-slate-600 lg:whitespace-nowrap">
-              焦って答えを出すより、判断材料を増やして決めるほうが前に進みやすい。ふむふむは、そのための相談の入口です。
-            </p>
-          </div>
-
-          <div className="mt-12 grid gap-6 md:grid-cols-3">
-            {scenes.map((scene) => (
-              <div
-                key={scene}
-                className="min-h-[250px] rounded-3xl border border-slate-200 bg-white p-8 shadow-sm"
-              >
-                <div className="mb-6 h-14 w-14 rounded-2xl bg-amber-100" />
-                <p className="text-lg leading-9 text-slate-700">{scene}</p>
-              </div>
-            ))}
-          </div>
-        </section>
-
-        <section className="mx-auto max-w-6xl px-6 py-20 lg:px-8 lg:py-24">
-          <div className="mx-auto max-w-3xl text-center">
-            <div className="text-sm font-bold uppercase tracking-[0.22em] text-teal-600">
-              Flow
-            </div>
-            <h2 className="mt-3 text-3xl font-black tracking-tight text-slate-900 md:text-4xl">
-              安心しながら、
-              <span className="text-teal-600">判断を前に進める</span>
-              3ステップ
-            </h2>
-            <p className="mt-4 text-base leading-8 text-slate-600">
-              気持ちを落ち着かせるだけでなく、次の行動を決めるところまで伴走します。
-            </p>
-          </div>
-
-          <div className="mx-auto mt-10 max-w-4xl space-y-4">
+        <section className="mx-auto max-w-6xl px-6 pb-20 pt-12 lg:px-8 lg:pb-24 lg:pt-14">
+          <div className="mx-auto max-w-4xl space-y-4">
             {steps.map((step) => (
               <div
                 key={step.no}
                 className="rounded-3xl border border-slate-200 bg-white p-6 shadow-sm"
               >
                 <div className="flex items-start gap-4">
-                  <div className="flex h-14 w-14 shrink-0 items-center justify-center rounded-2xl bg-teal-600 text-lg font-black text-white">
+                  <div className="flex h-11 min-w-[86px] shrink-0 items-center justify-center rounded-xl bg-teal-600 px-3 text-sm font-black tracking-[0.08em] text-white sm:h-12 sm:min-w-[94px]">
                     {step.no}
                   </div>
                   <div>
@@ -164,10 +111,6 @@ export default function FumufumuLPWorldview() {
                   <br />
                   ひとつだけ書いてみる。
                 </h2>
-                <p className="mt-4 text-base leading-8 text-teal-50/90">
-                  完璧に整理されていなくても大丈夫です。
-                  相談を言葉にすると、次の判断に必要な視点が見えやすくなります。
-                </p>
                 <div className="mt-7 flex flex-col items-center gap-3">
                   <button
                     type="button"

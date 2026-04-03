@@ -22,17 +22,17 @@ export default function FumufumuLPWorldview() {
 
   const steps = [
     {
-      no: "01",
+      no: "STEP 1",
       title: "迷いをそのまま書き出す",
       text: "頭の中で散らばった迷いを、匿名でそのまま言葉にする。整理されていなくても、悩みの骨格が見えてきます。",
     },
     {
-      no: "02",
+      no: "STEP 2",
       title: "経験と助言を読み比べる",
       text: "似た状況の投稿と回答を読み比べながら、ひとつの見方に偏らず判断材料を増やせます。",
     },
     {
-      no: "03",
+      no: "STEP 3",
       title: "次の判断をひとつ決める",
       text: "公開前の投稿確認で場の安心感を保ちながら、いまの自分に必要な行動をひとつ決められます。",
     },
@@ -215,7 +215,7 @@ export default function FumufumuLPWorldview() {
                 className="rounded-3xl border border-slate-200 bg-white p-6 shadow-sm"
               >
                 <div className="flex items-start gap-4">
-                  <div className="flex h-14 w-14 shrink-0 items-center justify-center rounded-2xl bg-teal-600 text-lg font-black text-white">
+                  <div className="flex h-11 min-w-[86px] shrink-0 items-center justify-center rounded-xl bg-teal-600 px-3 text-sm font-black tracking-[0.08em] text-white sm:h-12 sm:min-w-[94px]">
                     {step.no}
                   </div>
                   <div>
