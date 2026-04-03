@@ -1,17 +1,17 @@
 export default function FumufumuLPWorldview() {
   const steps = [
     {
-      no: "STEP 1",
+      no: "1",
       title: "迷いをそのまま書き出す",
       text: "頭の中で散らばった迷いを、匿名でそのまま言葉にする。整理されていなくても、悩みの骨格が見えてきます。",
     },
     {
-      no: "STEP 2",
+      no: "2",
       title: "経験と助言を読み比べる",
       text: "似た状況の投稿と回答を読み比べながら、ひとつの見方に偏らず判断材料を増やせます。",
     },
     {
-      no: "STEP 3",
+      no: "3",
       title: "次の判断をひとつ決める",
       text: "公開前の投稿確認で場の安心感を保ちながら、いまの自分に必要な行動をひとつ決められます。",
     },
@@ -87,21 +87,22 @@ export default function FumufumuLPWorldview() {
             </h2>
           </div>
 
-          <div className="mx-auto mt-10 max-w-4xl space-y-4">
+          <div className="mx-auto mt-11 max-w-4xl space-y-5">
             {steps.map((step) => (
               <div
                 key={step.no}
-                className="rounded-3xl border border-slate-200 bg-white px-6 py-7 shadow-sm sm:px-7 sm:py-8"
+                className="group relative overflow-hidden rounded-3xl border border-[#D7E3E7] bg-gradient-to-br from-white to-[#F7FAFB] px-6 py-7 shadow-[0_10px_24px_rgba(15,27,61,0.06)] transition hover:-translate-y-0.5 hover:shadow-[0_18px_38px_rgba(15,27,61,0.1)] sm:px-7 sm:py-8"
               >
-                <div className="flex items-start gap-5">
-                  <div className="flex h-12 min-w-[94px] shrink-0 items-center justify-center rounded-2xl bg-teal-600 px-3 text-sm font-black tracking-[0.08em] text-white sm:h-14 sm:min-w-[106px] sm:text-base">
-                    {step.no}
-                  </div>
+                <div className="absolute inset-x-0 top-0 h-[3px] bg-gradient-to-r from-teal-500/45 via-teal-400/20 to-transparent" />
+                <p className="pointer-events-none absolute right-4 top-[42%] hidden -translate-y-1/2 text-7xl font-black tracking-[-0.04em] text-teal-600/[0.2] md:block">
+                  {step.no}
+                </p>
+                <div className="relative z-10 flex items-start gap-5">
                   <div>
-                    <h3 className="text-2xl font-black tracking-[-0.01em] text-slate-900 sm:text-[34px] sm:leading-[1.15]">
+                    <h3 className="text-2xl font-black tracking-[-0.015em] text-slate-900 sm:text-[34px] sm:leading-[1.15]">
                       {step.title}
                     </h3>
-                    <p className="mt-3 text-sm leading-7 text-slate-600 sm:text-lg sm:leading-[1.6]">
+                    <p className="mt-3 pr-4 text-sm leading-7 text-slate-600 sm:pr-14 sm:text-lg sm:leading-[1.6]">
                       {step.text}
                     </p>
                   </div>
