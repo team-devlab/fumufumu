@@ -54,9 +54,12 @@ export default function FumufumuLPWorldview() {
       <main className="relative z-10">
         <section className="mx-auto flex min-h-[90svh] max-w-6xl items-center px-6 py-16 lg:min-h-[96svh] lg:px-8 lg:py-20">
           <div className="mx-auto flex max-w-5xl flex-col items-center justify-center text-center">
+            <p className="mb-5 text-xs font-bold tracking-[0.2em] text-teal-600 sm:text-sm">
+              エンジニアキャリア相談サービス ふむふむ
+            </p>
             <h1 className="text-5xl font-black leading-[1.16] tracking-[-0.02em] text-slate-900 md:text-7xl lg:text-[72px]">
               <span className="block lg:whitespace-nowrap">
-                エンジニアキャリアのもやもや
+                キャリアのもやもや
               </span>
               <span className="block text-teal-600 lg:whitespace-nowrap">
                 相談してみませんか？
@@ -78,21 +81,27 @@ export default function FumufumuLPWorldview() {
         </section>
 
         <section className="mx-auto max-w-6xl px-6 pb-20 pt-12 lg:px-8 lg:pb-24 lg:pt-14">
-          <div className="mx-auto max-w-4xl space-y-4">
+          <div className="mx-auto max-w-4xl text-center">
+            <h2 className="text-3xl font-black tracking-tight text-slate-900 md:text-4xl">
+              ふむふむまでの3ステップ
+            </h2>
+          </div>
+
+          <div className="mx-auto mt-10 max-w-4xl space-y-4">
             {steps.map((step) => (
               <div
                 key={step.no}
-                className="rounded-3xl border border-slate-200 bg-white p-6 shadow-sm"
+                className="rounded-3xl border border-slate-200 bg-white px-6 py-7 shadow-sm sm:px-7 sm:py-8"
               >
-                <div className="flex items-start gap-4">
-                  <div className="flex h-11 min-w-[86px] shrink-0 items-center justify-center rounded-xl bg-teal-600 px-3 text-sm font-black tracking-[0.08em] text-white sm:h-12 sm:min-w-[94px]">
+                <div className="flex items-start gap-5">
+                  <div className="flex h-12 min-w-[94px] shrink-0 items-center justify-center rounded-2xl bg-teal-600 px-3 text-sm font-black tracking-[0.08em] text-white sm:h-14 sm:min-w-[106px] sm:text-base">
                     {step.no}
                   </div>
                   <div>
-                    <h3 className="text-lg font-bold text-slate-900">
+                    <h3 className="text-2xl font-black tracking-[-0.01em] text-slate-900 sm:text-[34px] sm:leading-[1.15]">
                       {step.title}
                     </h3>
-                    <p className="mt-2 text-sm leading-7 text-slate-600">
+                    <p className="mt-3 text-sm leading-7 text-slate-600 sm:text-lg sm:leading-[1.6]">
                       {step.text}
                     </p>
                   </div>
@@ -107,7 +116,7 @@ export default function FumufumuLPWorldview() {
             <div className="rounded-[36px] bg-gradient-to-r from-teal-600 to-emerald-500 px-8 py-12 text-white shadow-[0_24px_80px_rgba(13,148,136,0.30)] lg:px-12 lg:py-14">
               <div className="mx-auto max-w-3xl text-center">
                 <h2 className="mt-5 text-3xl font-black tracking-tight md:text-4xl">
-                  まずは、いま気になっていることを
+                  ふむふむで、いま気になっていることを
                   <br />
                   ひとつだけ書いてみる。
                 </h2>
