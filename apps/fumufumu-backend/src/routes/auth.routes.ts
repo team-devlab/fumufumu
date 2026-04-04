@@ -1,5 +1,7 @@
 import { Hono } from 'hono';
 import { users, authMappings } from '../db/schema/user';
+import { authUsers } from '../db/schema/auth';
+import { eq } from 'drizzle-orm';
 
 import { type Env, type Variables } from '../index';
 
@@ -124,11 +126,24 @@ authRouter.post('/signup', async (c) => {
  */
 authRouter.post('/signin', async (c) => {
   const auth = c.get('auth');
+  const db = c.get('db');
   const body = await c.req.json();
   const { email, password } = body;
 
   if (!email || !password) {
     return c.json({ error: 'Email and password are required' }, 400);
+  }
+
+  // Better Authのエラー経路でUnhandled Rejectionが発生するケースを避けるため、
+  // 未登録メールは事前に401で返す（メッセージは汎用化して情報漏洩を避ける）。
+  const existingUser = await db
+    .select({ id: authUsers.id })
+    .from(authUsers)
+    .where(eq(authUsers.email, email))
+    .limit(1);
+
+  if (existingUser.length === 0) {
+    return c.json({ message: 'Invalid email or password' }, 401);
   }
 
   let authResponse: Response;
