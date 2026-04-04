@@ -30,7 +30,7 @@ export const LoginForm = ({ reason, returnTo }: LoginFormProps) => {
       className: "border-amber-300 bg-amber-50 text-amber-800",
     },
     signed_out: {
-       message: "サインアウトしました。\nご利用ありがとうございました。",
+      message: "サインアウトしました。\nご利用ありがとうございました。",
       className: "border-sky-200 bg-sky-50 text-sky-800",
     },
   };
