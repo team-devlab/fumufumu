@@ -87,5 +87,23 @@ describe('Integration Tests', () => {
 			const newCookie = signinRes.headers.get('set-cookie');
 			expect(newCookie).toBeTruthy();
 		});
+
+		it('should return a client auth error instead of 500 when the user does not exist', async () => {
+			const signinReq = createApiRequest('/api/auth/signin', 'POST', {
+				body: {
+					email: `missing-${Date.now()}@example.com`,
+					password: testUser.password,
+				},
+			});
+			const signinRes = await app.fetch(signinReq, env);
+
+			expect(signinRes.ok).toBe(false);
+			expect(signinRes.status).toBeGreaterThanOrEqual(400);
+			expect(signinRes.status).toBeLessThan(500);
+			expect(signinRes.headers.get('set-cookie')).toBeFalsy();
+
+			const signinBody = await signinRes.json() as any;
+			expect(signinBody.auth_user_id).toBeUndefined();
+		});
 	});
 });
