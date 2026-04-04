@@ -47,6 +47,19 @@ export default function FumufumuLPWorldview() {
         <div className="absolute right-[24%] top-[30%] h-52 w-52 rounded-full bg-[#ABE4BE]/68" />
         <div className="absolute right-[-5%] top-[17%] h-20 w-20 rounded-full bg-[#BFAEEB]/66" />
         <div className="absolute right-[13%] top-[42%] h-36 w-36 rounded-full bg-[#8FCFE5]/72" />
+        <div className="absolute -left-10 top-[54%] h-40 w-40 rounded-full border-[3px] border-[#7CCB93]/70 bg-transparent" />
+        <div className="absolute right-[-12%] top-[56%] h-48 w-48 rounded-full border-[3px] border-[#C9B8EE]/70 bg-transparent" />
+        <div className="absolute right-[8%] top-[12%] h-24 w-24 rounded-full border-[3px] border-[#BFAEEB]/75 bg-transparent" />
+        <div className="absolute left-[18%] top-[60%] h-12 w-12 rounded-full bg-[#D7E4A6]/72" />
+        <div className="absolute left-[8%] bottom-[19%] h-28 w-28 rounded-full bg-[#ABE4BE]/72" />
+        <div className="absolute right-[9%] bottom-[18%] h-56 w-56 rounded-full border-[4px] border-[#F2CD73]/72 bg-transparent" />
+        <div className="absolute right-[4%] top-[66%] h-20 w-20 rounded-full border-[3px] border-[#BFAEEB]/70 bg-transparent" />
+        <div className="absolute left-[10%] top-[11%] h-20 w-20 rounded-full border-[3px] border-[#9EDFE1]/72 bg-transparent" />
+        <div className="absolute left-[30%] top-[40%] h-16 w-16 rounded-full border-[3px] border-[#CFE1A3]/74 bg-transparent" />
+        <div className="absolute right-[18%] top-[23%] h-14 w-14 rounded-full border-[3px] border-[#9EDFE1]/74 bg-transparent" />
+        <div className="absolute left-[14%] bottom-[27%] h-24 w-24 rounded-full border-[3px] border-[#ABE4BE]/68 bg-transparent" />
+        <div className="absolute right-[24%] bottom-[9%] h-16 w-16 rounded-full border-[3px] border-[#BFAEEB]/66 bg-transparent" />
+        <div className="absolute left-[22%] bottom-[31%] h-10 w-10 rounded-full bg-[#9EDFE1]/70" />
         <div className="absolute left-[36%] bottom-[-11rem] h-72 w-72 rounded-full bg-[#D7E4A6]/68" />
         <div className="absolute right-[-8%] bottom-[26%] h-24 w-24 rounded-full bg-[#9EDFE1]/74" />
       </div>
