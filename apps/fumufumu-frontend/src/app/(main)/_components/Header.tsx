@@ -2,6 +2,7 @@
 
 import { usePathname, useRouter } from "next/navigation";
 import { ROUTES } from "@/config/routes";
+import { useAuth } from "@/features/auth/hooks/useAuth";
 import {
   useConsultationActions,
   useHasInput,
@@ -10,6 +11,7 @@ import {
 export const Header = () => {
   const router = useRouter();
   const pathname = usePathname();
+  const { signout, isLoading } = useAuth();
 
   const { reset } = useConsultationActions();
   const hasInput = useHasInput();
@@ -41,6 +43,10 @@ export const Header = () => {
 
     reset();
     router.push(ROUTES.CONSULTATION.NEW);
+  };
+
+  const handleSignout = () => {
+    signout();
   };
 
   return (
@@ -83,6 +89,14 @@ export const Header = () => {
           className="bg-blue-600 text-white p-2 rounded-lg hover:bg-blue-700 transition duration-150 flex items-center"
         >
           + 新規作成
+        </button>
+        <button
+          onClick={handleSignout}
+          type="button"
+          disabled={isLoading}
+          className="text-sm text-gray-600 hover:text-gray-800 transition duration-150 disabled:opacity-50"
+        >
+          サインアウト
         </button>
       </div>
     </header>

@@ -29,6 +29,10 @@ export const LoginForm = ({ reason, returnTo }: LoginFormProps) => {
       message: "セッションが終了しました。再度ログインお願いします🌿",
       className: "border-amber-300 bg-amber-50 text-amber-800",
     },
+    signed_out: {
+      message: "サインアウトしました。ご利用ありがとうございました。",
+      className: "border-sky-200 bg-sky-50 text-sky-800",
+    },
   };
 
   const reasonInfo = reason ? reasonConfig[reason] : null;
