@@ -1,5 +1,6 @@
 ## コマンド集
 - ローカル開発起動: `pnpm dev`
+- Drizzle Studio 起動: `pnpm studio`
 - curl http://127.0.0.1:8787/
 - ローカルタグ一覧: `pnpm tags:list`
 - ローカルタグ追加: `pnpm tags:add キャリア 人間関係 技術`
@@ -7,6 +8,7 @@
 
 `pnpm dev` はデフォルトで `wrangler.local.jsonc` を使う。
 必要なら `WRANGLER_DEV_CONFIG` で dev 用 config を上書きできる。
+`pnpm studio` も同じ優先順（`WRANGLER_DEV_CONFIG` → `WRANGLER_D1_CONFIG` → `wrangler.local.jsonc`）でローカルD1を解決する。
 
 ## D1 migration runbook (production)
 
