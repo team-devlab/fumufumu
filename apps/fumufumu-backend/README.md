@@ -1,8 +1,12 @@
 ## コマンド集
+- ローカル開発起動: `pnpm dev`
 - curl http://127.0.0.1:8787/
 - ローカルタグ一覧: `pnpm tags:list`
 - ローカルタグ追加: `pnpm tags:add キャリア 人間関係 技術`
 - 手動デプロイ: `DEPLOY_APPROVED=1 WRANGLER_DEPLOY_CONFIG=wrangler.local.jsonc pnpm deploy`
+
+`pnpm dev` はデフォルトで `wrangler.local.jsonc` を使う。
+必要なら `WRANGLER_DEV_CONFIG` で dev 用 config を上書きできる。
 
 ## D1 migration runbook (production)
 

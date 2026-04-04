@@ -6,6 +6,25 @@ import { type Env, type Variables } from '../index';
 // 認証ルーターのHonoインスタンスを定義
 export const authRouter = new Hono<{ Bindings: Env, Variables: Variables }>();
 
+async function parseAuthResponse(response: Response) {
+  const contentType = response.headers.get('content-type') || '';
+
+  if (contentType.includes('application/json')) {
+    return response.clone().json();
+  }
+
+  const text = await response.clone().text();
+  return text ? { message: text } : {};
+}
+
+function copySetCookieHeader(source: Response, target: Response) {
+  const setCookieHeader = source.headers.get('Set-Cookie');
+
+  if (setCookieHeader) {
+    target.headers.set('Set-Cookie', setCookieHeader);
+  }
+}
+
 /**
  * サインアップ API (POST /api/signup)
  */
@@ -35,7 +54,7 @@ authRouter.post('/signup', async (c) => {
     });
 
     authResponse = betterAuthResponse;
-    authResult = await betterAuthResponse.json();
+    authResult = await parseAuthResponse(betterAuthResponse);
 
   } catch (e) {
     console.error('Sign-up failed:', e);
@@ -44,6 +63,12 @@ authRouter.post('/signup', async (c) => {
       return e;
     }
     return c.json({ error: 'Sign-up failed', details: (e as Error).message }, 400);
+  }
+
+  if (!authResponse.ok) {
+    const errorResponse = c.json(authResult ?? { error: 'Sign-up failed' }, authResponse.status as any);
+    copySetCookieHeader(authResponse, errorResponse);
+    return errorResponse;
   }
 
   const authUserId = authResult.user?.id;
@@ -84,11 +109,9 @@ authRouter.post('/signup', async (c) => {
     app_user_id: appUserId,
   };
   const honoResponse = c.json(responseBody, 200);
-  
-  const setCookieHeader = authResponse.headers.get('Set-Cookie');
-  if (setCookieHeader) {
-    honoResponse.headers.set('Set-Cookie', setCookieHeader);
-  } else {
+
+  copySetCookieHeader(authResponse, honoResponse);
+  if (!authResponse.headers.get('Set-Cookie')) {
     console.warn("WARNING: Set-Cookie header missing from Better Auth response during signup.");
   }
 
@@ -122,7 +145,7 @@ authRouter.post('/signin', async (c) => {
     });
 
     authResponse = betterAuthResponse;
-    authResult = await betterAuthResponse.json();
+    authResult = await parseAuthResponse(betterAuthResponse);
 
   } catch (e) {
     console.error('Sign-in failed:', e);
@@ -130,6 +153,12 @@ authRouter.post('/signin', async (c) => {
       return e;
     }
     return c.json({ error: 'Sign-in failed', details: (e as Error).message }, 401);
+  }
+
+  if (!authResponse.ok) {
+    const errorResponse = c.json(authResult ?? { error: 'Sign-in failed' }, authResponse.status as any);
+    copySetCookieHeader(authResponse, errorResponse);
+    return errorResponse;
   }
 
   const authUserId = authResult.user?.id;
@@ -144,13 +173,8 @@ authRouter.post('/signin', async (c) => {
     auth_user_id: authUserId,
   }, 200);
 
-  // Better AuthのレスポンスからSet-Cookieヘッダーを取得（クッキーをクライアントに設定させる）
-  const setCookieHeader = authResponse.headers.get('Set-Cookie');
-
-  // Set-CookieヘッダーをBetter Authのレスポンスからコピー
-  if (setCookieHeader) {
-    honoResponse.headers.set('Set-Cookie', setCookieHeader);
-  } else {
+  copySetCookieHeader(authResponse, honoResponse);
+  if (!authResponse.headers.get('Set-Cookie')) {
     console.warn("WARNING: Set-Cookie header missing from Better Auth response during signin.");
   }
 
