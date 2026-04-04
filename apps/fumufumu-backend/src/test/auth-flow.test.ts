@@ -88,6 +88,31 @@ describe('Integration Tests', () => {
 			expect(newCookie).toBeTruthy();
 		});
 
+		it('should sign out and reject old session cookie', async () => {
+			const user = await createAndLoginUser({
+				name: `Signout Test User ${Date.now()}`,
+				email: `signout-test-${Date.now()}@example.com`,
+			});
+
+			const signoutReq = createApiRequest('/api/auth/signout', 'POST', {
+				cookie: user.cookie,
+			});
+			const signoutRes = await app.fetch(signoutReq, env);
+
+			expect(signoutRes.status).toBe(200);
+			const setCookie = signoutRes.headers.get('set-cookie');
+			expect(setCookie).toBeTruthy();
+
+			const protectedReq = createApiRequest('/api/protected', 'GET', {
+				cookie: user.cookie,
+			});
+			const protectedRes = await app.fetch(protectedReq, env);
+
+			expect(protectedRes.status).toBe(401);
+			const body = await protectedRes.json() as any;
+			assertUnauthorizedError(body);
+		});
+
 		it('should return a client auth error instead of 500 when the user does not exist', async () => {
 			const signinReq = createApiRequest('/api/auth/signin', 'POST', {
 				body: {

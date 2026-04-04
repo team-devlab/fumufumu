@@ -195,3 +195,42 @@ authRouter.post('/signin', async (c) => {
 
   return honoResponse;
 });
+
+/**
+ * サインアウト API (POST /api/signout)
+ */
+authRouter.post('/signout', async (c) => {
+  const auth = c.get('auth');
+
+  let authResponse: Response;
+
+  try {
+    authResponse = await auth.api.signOut({
+      headers: c.req.raw.headers,
+      // クッキーを含むResponseを取得
+      asResponse: true,
+    });
+  } catch (e) {
+    console.error('Sign-out failed:', e);
+    if (e instanceof Response) {
+      return e;
+    }
+    return c.json({ error: 'Sign-out failed', details: (e as Error).message }, 400);
+  }
+
+  const honoResponse = c.json({
+    message: 'Sign out successful.',
+  }, 200);
+
+  // Better AuthのレスポンスからSet-Cookieヘッダーを取得（クッキーをクライアント側で削除させる）
+  const setCookieHeader = authResponse.headers.get('Set-Cookie');
+
+  // Set-CookieヘッダーをBetter Authのレスポンスからコピー
+  if (setCookieHeader) {
+    honoResponse.headers.set('Set-Cookie', setCookieHeader);
+  } else {
+    console.warn("WARNING: Set-Cookie header missing from Better Auth response during signout.");
+  }
+
+  return honoResponse;
+});

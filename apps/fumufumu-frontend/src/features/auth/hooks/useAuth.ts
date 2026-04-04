@@ -60,9 +60,23 @@ export const useAuth = () => {
     }
   };
 
+  const signout = async () => {
+    setIsLoading(true);
+    setError(null);
+    try {
+      await authApi.signout();
+      router.push("/login?reason=signed_out");
+    } catch (_err) {
+      setError("サインアウトに失敗しました。時間をおいて再度お試しください。");
+    } finally {
+      setIsLoading(false);
+    }
+  };
+
   return {
     signin,
     signup,
+    signout,
     isLoading,
     error,
   };
