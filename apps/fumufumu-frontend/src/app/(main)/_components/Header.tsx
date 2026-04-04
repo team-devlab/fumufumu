@@ -1,7 +1,8 @@
 "use client";
 
 import { usePathname, useRouter } from "next/navigation";
-import { useEffect, useRef, useState } from "react";
+import type { FocusEvent, KeyboardEvent } from "react";
+import { useRef, useState } from "react";
 import { ROUTES } from "@/config/routes";
 import { useAuth } from "@/features/auth/hooks/useAuth";
 import {
@@ -14,35 +15,30 @@ export const Header = () => {
   const pathname = usePathname();
   const { signout, isLoading } = useAuth();
   const [isUserMenuOpen, setIsUserMenuOpen] = useState(false);
-  const userMenuRef = useRef<HTMLDivElement | null>(null);
+  const menuButtonRef = useRef<HTMLButtonElement | null>(null);
+  const menuPanelRef = useRef<HTMLDivElement | null>(null);
 
   const { reset } = useConsultationActions();
   const hasInput = useHasInput();
 
-  useEffect(() => {
-    const handleClickOutside = (event: MouseEvent) => {
-      if (
-        userMenuRef.current &&
-        !userMenuRef.current.contains(event.target as Node)
-      ) {
-        setIsUserMenuOpen(false);
-      }
-    };
+  const handleMenuButtonBlur = (event: FocusEvent<HTMLButtonElement>) => {
+    const nextFocused = event.relatedTarget as Node | null;
+    if (menuPanelRef.current?.contains(nextFocused)) return;
+    setIsUserMenuOpen(false);
+  };
 
-    const handleEsc = (event: KeyboardEvent) => {
-      if (event.key === "Escape") {
-        setIsUserMenuOpen(false);
-      }
-    };
+  const handleMenuPanelBlur = (event: FocusEvent<HTMLDivElement>) => {
+    const nextFocused = event.relatedTarget as Node | null;
+    if (!event.currentTarget.contains(nextFocused)) {
+      setIsUserMenuOpen(false);
+    }
+  };
 
-    document.addEventListener("mousedown", handleClickOutside);
-    document.addEventListener("keydown", handleEsc);
-
-    return () => {
-      document.removeEventListener("mousedown", handleClickOutside);
-      document.removeEventListener("keydown", handleEsc);
-    };
-  }, []);
+  const handleUserMenuKeyDown = (event: KeyboardEvent<HTMLElement>) => {
+    if (event.key !== "Escape") return;
+    setIsUserMenuOpen(false);
+    menuButtonRef.current?.focus();
+  };
 
   // ロゴクリック時のハンドラ
   const handleLogoClick = () => {
@@ -102,10 +98,13 @@ export const Header = () => {
         >
           + 新規作成
         </button>
-        <div className="relative" ref={userMenuRef}>
+        <div className="relative">
           <button
+            ref={menuButtonRef}
             type="button"
             onClick={() => setIsUserMenuOpen((prev) => !prev)}
+            onBlur={handleMenuButtonBlur}
+            onKeyDown={handleUserMenuKeyDown}
             className="w-10 h-10 rounded-full bg-teal-100 flex items-center justify-center text-teal-600 hover:bg-teal-200 transition duration-150"
             aria-label="ユーザーメニュー"
             aria-expanded={isUserMenuOpen}
@@ -130,8 +129,11 @@ export const Header = () => {
 
           {isUserMenuOpen && (
             <div
+              ref={menuPanelRef}
               role="menu"
               aria-label="ユーザーメニュー項目"
+              onBlur={handleMenuPanelBlur}
+              onKeyDown={handleUserMenuKeyDown}
               className="absolute right-0 mt-2 w-44 rounded-lg border border-gray-200 bg-white shadow-lg py-1 z-20"
             >
               <button
