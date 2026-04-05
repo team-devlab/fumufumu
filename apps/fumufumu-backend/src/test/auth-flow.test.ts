@@ -87,5 +87,48 @@ describe('Integration Tests', () => {
 			const newCookie = signinRes.headers.get('set-cookie');
 			expect(newCookie).toBeTruthy();
 		});
+
+		it('should sign out and reject old session cookie', async () => {
+			const user = await createAndLoginUser({
+				name: `Signout Test User ${Date.now()}`,
+				email: `signout-test-${Date.now()}@example.com`,
+			});
+
+			const signoutReq = createApiRequest('/api/auth/signout', 'POST', {
+				cookie: user.cookie,
+			});
+			const signoutRes = await app.fetch(signoutReq, env);
+
+			expect(signoutRes.status).toBe(200);
+			const setCookie = signoutRes.headers.get('set-cookie');
+			expect(setCookie).toBeTruthy();
+
+			const protectedReq = createApiRequest('/api/protected', 'GET', {
+				cookie: user.cookie,
+			});
+			const protectedRes = await app.fetch(protectedReq, env);
+
+			expect(protectedRes.status).toBe(401);
+			const body = await protectedRes.json() as any;
+			assertUnauthorizedError(body);
+		});
+
+		it('should return a client auth error instead of 500 when the user does not exist', async () => {
+			const signinReq = createApiRequest('/api/auth/signin', 'POST', {
+				body: {
+					email: `missing-${Date.now()}@example.com`,
+					password: testUser.password,
+				},
+			});
+			const signinRes = await app.fetch(signinReq, env);
+
+			expect(signinRes.ok).toBe(false);
+			expect(signinRes.status).toBeGreaterThanOrEqual(400);
+			expect(signinRes.status).toBeLessThan(500);
+			expect(signinRes.headers.get('set-cookie')).toBeFalsy();
+
+			const signinBody = await signinRes.json() as any;
+			expect(signinBody.auth_user_id).toBeUndefined();
+		});
 	});
 });

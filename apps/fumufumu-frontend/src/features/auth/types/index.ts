@@ -15,3 +15,7 @@ export interface AuthResponse {
   auth_user_id: string;
   app_user_id?: number;
 }
+
+export interface SignoutResponse {
+  message: string;
+}

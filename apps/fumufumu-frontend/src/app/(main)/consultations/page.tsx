@@ -1,5 +1,6 @@
 import { fetchConsultations } from "@/features/consultation/api";
 import { ConsultationList } from "@/features/consultation/components/ConsultationList";
+import { CONSULTATION_PAGINATION } from "@/features/consultation/config/constants";
 
 /**
  * 「相談」機能のルーティング エントリーポイント
@@ -8,12 +9,14 @@ import { ConsultationList } from "@/features/consultation/components/Consultatio
  * このファイルは、どの機能コンポーネントをレンダリングするかを定義するだけ。
  */
 export default async function ConsultationListPage() {
-  const response = await fetchConsultations();
-  const consultations = response.data;
+  const initialData = await fetchConsultations(
+    CONSULTATION_PAGINATION.INITIAL_PAGE,
+    CONSULTATION_PAGINATION.DEFAULT_PER_PAGE,
+  );
 
   return (
     <div className="max-w-4xl mx-auto w-full">
-      <ConsultationList consultations={consultations} />
+      <ConsultationList initialData={initialData} />
     </div>
   );
 }

@@ -2,7 +2,8 @@
   "name": "@fumufumu/backend",
   "type": "module",
   "scripts": {
-    "dev": "wrangler dev",
+    "dev:require-config": "test -f \"${WRANGLER_DEV_CONFIG:-${WRANGLER_D1_CONFIG:-wrangler.local.jsonc}}\" || (echo \"Wrangler dev config not found: ${WRANGLER_DEV_CONFIG:-${WRANGLER_D1_CONFIG:-wrangler.local.jsonc}}\" && exit 1)",
+    "dev": "pnpm dev:require-config && wrangler dev --config \"${WRANGLER_DEV_CONFIG:-${WRANGLER_D1_CONFIG:-wrangler.local.jsonc}}\"",
     "deploy:require-approved": "test \"${DEPLOY_APPROVED:-}\" = \"1\" || (echo \"Set DEPLOY_APPROVED=1 to allow deploy\" && exit 1)",
     "deploy:require-config": "test -f \"${WRANGLER_DEPLOY_CONFIG:-wrangler.local.jsonc}\" || (echo \"Wrangler deploy config not found: ${WRANGLER_DEPLOY_CONFIG:-wrangler.local.jsonc}\" && exit 1)",
     "deploy": "pnpm deploy:require-approved && pnpm deploy:require-config && wrangler deploy --minify --config \"${WRANGLER_DEPLOY_CONFIG:-wrangler.local.jsonc}\"",
