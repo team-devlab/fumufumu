@@ -190,168 +190,134 @@ flowchart LR
   - MVP段階では実装速度と変更範囲を優先し、テーブル分割よりも既存テーブル拡張のほうが導入しやすい。
   - ただし、通知履歴の複数保持や監査要件が強くなった場合は `email_outbox` / `notification_deliveries` などの別テーブル分離を検討する。
 
-## 5. Decision
+## 5. Mail Library Selection (Draft)
 
+### 5.1 この項目で決めること
 
-## 6. Trade-offs
+- 送信方式: HTTP API / SMTP のどちらを採用するか
+- 採用候補: Resend / SendGrid / AWS SES のうちMVPで採用するもの
+- 実装責務: `MailClient` インターフェースでプロバイダ依存を分離するか
+- 必須機能: タイムアウト、エラー分類（`temporary/config`）、ログ連携
+- テンプレート: `approved/rejected` 固定文面の管理方法
+- 設定管理: APIキー/送信元/環境別設定の管理方法
+- コスト評価: MVP時点で「ランニング費」と「導入/運用工数」のどちらを重視するか
 
+### 5.2 送信方式比較（HTTP API vs SMTP）
 
-## 7. Migration / Rollout Plan
+- HTTP API:
+  - 利点: Workers環境で `fetch` 実装しやすい、エラー分類しやすい、ログ連携しやすい
+  - 懸念: プロバイダごとのAPI差分を吸収する設計が必要
+- SMTP:
+  - 利点: 汎用方式で、環境によっては移行しやすい
+  - 懸念: Workers環境での運用制約確認が必要、エラー分類が複雑化しやすい
+  - 補足（公式制約）: Workersのoutbound TCPはport 25接続が禁止されているため、SMTP直送構成に制約がある
+    - 参考: https://developers.cloudflare.com/workers/runtime-apis/tcp-sockets/
+  - 補足（理由）: port 25はスパム送信の悪用経路になりやすく、多くの環境で制限対象となる
+    - 参考: https://www.cloudflare.com/learning/email-security/smtp-port-25-587/
+  - MVPでの扱い:
+    - SMTPの代表ポート（25/587/465）は存在するが、今回はSMTP方式自体を採用しない。
+    - port 25はWorkers制約で利用不可。
+    - port 587/465は技術的には候補だが、SMTP接続/暗号化/エラー処理の運用設計が追加で必要になり、MVPの実装・運用コストが増える。
+    - そのためMVPではHTTP API方式を採用。
+- 現時点の暫定判断:
+  - Workers実行環境との相性から HTTP API を第一候補とする
 
+### 5.3 候補比較（5.1の観点に基づく）
 
-## 8. Open Questions
+### 5.3.1 Resend
 
-## 9. Implementation Patterns (MVP Draft)
+- 技術的特徴:
+  - HTTP APIベースで完結（SMTP不要）
+  - Cloudflare Workers / Edge環境と相性が良い
+  - TypeScriptファースト（SDKがシンプル）
+  - React Emailなどテンプレートとの親和性が高い
+  - Webhookでイベント駆動（delivery / open / click）
+  - 構成がシンプルで学習コストが低い
+  - `MailClient` 抽象化に組み込みやすい
+  - エラーハンドリングが比較的単純（APIレスポンス中心）
+  - ドメイン認証（SPF/DKIM）は必要だが比較的シンプル
+- 既存スタックとの親和性:
+  - Cloudflare Workers + C案（手動コマンド）と組み合わせやすい
+  - `fetch` ベースで実装でき、既存のHono/Workers構成に馴染みやすい
+- 障害リスク:
+  - プロバイダ障害時は送信失敗が発生しうる（他候補と同様）
+  - MVPでは単純構成のため、アプリ側の実装由来障害は相対的に抑えやすい
+- 障害調査:
+  - APIレスポンス中心で失敗判定しやすく、`temporary/config` 分類へ落とし込みやすい
+  - Webhookやログとの突合で調査導線を作りやすい
+- コスト観点:
+  - 無料枠あり（Free: `3,000通/月`、`100通/日`）。
+  - 有料例（Pro）: `\$20/月で50,000通`、超過 `\$0.90 / 1,000通`。
+  - 従量課金で見積もりしやすく、MVP段階では開発工数込みでコスト最適になりやすい。
+  - SendGridと同等〜やや安価レンジ想定、SESよりは高い想定。
+  - 参考: https://resend.com/pricing
+- 現時点の位置づけ:
+  - 優先候補
 
-### 9.1 パターンA: Outboxテーブル + Scheduled Worker（DBポーリング）
+### 5.3.2 SendGrid
 
-- 判定APIで `content_checks` 更新後、`email_outbox` に送信予定レコードを追加
-- レコードに `target_type / target_id / decision / to_email / template_type / status(pending)` を保存
-- Scheduled Worker（Cron）が `pending` を定期取得して送信
-- 成功時は `status=sent`、失敗時は `status=failed` と `error_type/error_message` を更新
-- 手動再送コマンドで `failed` を再送し、成功時に `sent` へ更新
+- 技術的特徴:
+  - HTTP API + SMTP両対応
+  - トランザクションメール + マーケティングメール対応
+  - 分析機能（開封率・クリック率）
+  - Webhookでイベント処理可能
+  - エラーコード体系が整っている（分類しやすい）
+  - 専用IPやIPウォームアップなどの運用機能がある
+  - ダッシュボードは多機能（機能学習コストは上がりやすい）
+- 既存スタックとの親和性:
+  - HTTP APIで実装可能なため、Workers構成との接続は可能
+  - ただし機能が多く、MVPでは使わない設定項目が増えやすい
+- 障害リスク:
+  - 機能/設定が豊富な分、初期設定ミスの余地が増える
+  - 高機能ゆえに運用フローが複雑化し、運用ミスリスクが上がる可能性
+- 障害調査:
+  - イベント/ログ機能が豊富で調査可能性は高い
+  - 反面、調査ポイントが多く運用に慣れるまで時間がかかる
+- コスト観点:
+  - Free trialは `100通/日`（60日）。
+  - 有料例: Essentials `\$19.95〜`、Pro `\$89.95〜`（プラン/条件で変動）。
+  - overageは発生し得るが、実額は契約条件依存で確認が必要。
+  - Resendよりやや高め、SESよりは高い想定。
+  - 機能込みの総合コスパは高いが、MVPではオーバースペックになりやすい。
+  - 参考:
+    - https://sendgrid.com/en-us/pricing
+    - https://www.twilio.com/en-us/pricing/current-rates
+    - https://support.sendgrid.com/hc/en-us/articles/40779261694875-Twilio-SendGrid-Overage-Rates
+- 現時点の位置づけ:
+  - 優先候補
 
-```mermaid
-sequenceDiagram
-    participant Admin as "運営"
-    participant API as "判定API"
-    participant DB as "D1(DB)"
-    participant Cron as "Scheduled Worker"
-    participant Mail as "メールProvider"
+### 5.3.3 AWS SES
 
-    Admin->>API: decision(approved/rejected)
-    API->>DB: content_checks 更新
-    API->>DB: email_outbox に pending 追加
-    API-->>Admin: 200 OK
-
-    Cron->>DB: pending を取得
-    DB-->>Cron: 送信対象
-    Cron->>Mail: send email
-    alt 成功
-        Cron->>DB: outbox status=sent
-    else 失敗
-        Cron->>DB: outbox status=failed + error
-    end
-```
-
-### 9.2 パターンB: Queue Producer/Consumer
-
-- 判定APIで `content_checks` 更新後、メールイベントをQueueへ投入
-- イベントに `target_type / target_id / decision / to_email / template_type` を含める
-- Consumer Workerがイベント受信してメール送信
-- 成功時はACK、失敗時はリトライ（上限超過時は失敗扱い）
-- 手動再送コマンドは失敗イベントを再投入
-
-```mermaid
-sequenceDiagram
-    participant Admin as "運営"
-    participant API as "判定API"
-    participant Queue as "Queue"
-    participant Consumer as "Consumer Worker"
-    participant DB as "D1(DB)"
-    participant Mail as "メールProvider"
-
-    Admin->>API: decision(approved/rejected)
-    API->>DB: content_checks 更新
-    API->>Queue: メールイベント投入
-    API-->>Admin: 200 OK
-
-    Queue->>Consumer: イベント配信
-    Consumer->>Mail: send email
-    alt 成功
-        Consumer->>DB: 送信成功ログ記録
-    else 失敗
-        Consumer->>Queue: retry / dead-letter
-        Consumer->>DB: 失敗ログ記録
-    end
-```
-
-### 9.3 パターンC: 実行コマンド方式（手動バッチ送信）
-
-- 判定APIでは `approved/rejected` 更新のみ行う（通知処理は実行しない）
-  - 運営コマンド（例: `pnpm notifications:send-pending --limit 100`）で未通知対象を取得して送信
-- 失敗対象は `pnpm notifications:resend ...` で再送
-- 送信結果はログ（または失敗管理テーブル）に記録する
-
-```mermaid
-sequenceDiagram
-    participant Admin as "運営"
-    participant API as "判定API"
-    participant DB as "D1(DB)"
-    participant Ops as "運営CLI"
-    participant Job as "送信コマンド"
-    participant Mail as "メールProvider"
-
-    Admin->>API: decision(approved/rejected)
-    API->>DB: content_checks 更新
-    API->>DB: 未通知対象として保持
-    API-->>Admin: 200 OK
-
-    Ops->>Job: notifications:send-pending
-    Job->>DB: 未通知対象を取得
-    Job->>Mail: send email
-    alt 成功
-        Job->>DB: sent / notified_at 更新
-    else 失敗
-        Job->>DB: failed / error 更新
-        Ops->>Job: notifications:resend
-        Job->>Mail: resend
-    end
-```
-
-### 9.4 参考案: ログ駆動バッチ方式
-
-- 判定API後に送信対象情報を構造化ログへ出力
-- 定期バッチがログを読み、未送信対象を抽出して送信
-- 送信結果を別ログ（成功/失敗）で記録
-- 手動再送コマンドは `target_type/target_id` 指定で個別再送
-
-```mermaid
-sequenceDiagram
-    participant Admin as "運営"
-    participant API as "判定API"
-    participant Log as "構造化ログ"
-    participant Batch as "ログ収集バッチ"
-    participant Mail as "メールProvider"
-
-    Admin->>API: decision(approved/rejected)
-    API->>API: 判定更新処理
-    API->>Log: send_target ログ出力
-    API-->>Admin: 200 OK
-
-    Batch->>Log: 未処理ログ取得
-    Log-->>Batch: 送信対象
-    Batch->>Mail: send email
-    Batch->>Log: success/failure ログ出力
-```
-
-### 9.5 参考案: CDC/変更検知連携
-
-- `content_checks` の `approved/rejected` 更新を変更イベントとして検知
-- 変更イベントから通知対象（投稿者メール、テンプレ種別）を解決
-- 別プロセスがメール送信を実行
-- 成功/失敗をイベント処理ログに記録
-- 手動再送コマンドは失敗イベントID指定で再処理
-
-```mermaid
-sequenceDiagram
-    participant Admin as "運営"
-    participant API as "判定API"
-    participant DB as "D1(DB)"
-    participant CDC as "変更検知プロセス"
-    participant Worker as "通知Worker"
-    participant Mail as "メールProvider"
-
-    Admin->>API: decision(approved/rejected)
-    API->>DB: content_checks 更新
-    API-->>Admin: 200 OK
-
-    DB-->>CDC: 状態変更イベント
-    CDC->>Worker: approved/rejected イベント連携
-    Worker->>Mail: send email
-    alt 成功
-        Worker->>DB: 成功ログ記録
-    else 失敗
-        Worker->>DB: 失敗ログ記録
-    end
-```
+- 技術的特徴:
+  - HTTP API + SMTP両対応
+  - AWS SDKで操作可能
+  - 高いスケーラビリティ
+  - SQS / Lambda / SNS 連携が可能（イベント駆動設計に向く）
+  - Deliverabilityは設定次第で高水準を狙える
+  - ドメイン認証（SPF/DKIM/DMARC）が必要
+  - Sandbox制限があり、本番利用前に解除手続きが必要
+  - ログ・再送・監視などは自前設計の比重が高い
+  - GUIやマーケ機能は比較的少なく、インフラ寄り
+- 既存スタックとの親和性:
+  - 技術的には連携可能だが、現行でAWS主軸運用でない点は不利
+  - 導入時にAWS側の設定/運用知識が必要になりやすい
+- 障害リスク:
+  - Sandbox/認証/設定周りの初期運用でつまずくリスクがある
+  - 本番運用までの導線設計を誤ると配信遅延・未送信リスクが増える
+- 障害調査:
+  - 調査は可能だが、AWSサービス横断の観点が必要になりやすい
+  - AWS未主軸チームでは、初期の調査コストが相対的に高くなる可能性
+- コスト観点:
+  - 従量課金の単価は業界内で低め
+  - 目安として `$0.10 / 1,000通` クラス
+  - Free Tier（条件付き）で `3,000 message charges/月` の記載あり
+  - 大量送信時のコスト優位性が高い
+  - 初期構築・運用の人的コストは相対的に高い
+  - AWS前提でない場合、学習/運用コスト込みで割高になりやすい
+  - 参考: https://aws.amazon.com/ses/pricing/
+- 現時点の位置づけ:
+  - 優先度を下げる候補
+- 再検討トリガー:
+  - 送信件数増加
+  - 配信要件の厳格化
+  - C案からA/B案へ移行するタイミング
