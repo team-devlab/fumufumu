@@ -14,6 +14,8 @@
     安全性を維持しながら最短でリリースブロックを外す。
 - メールプロバイダ（MVP採用）: **Resend（HTTP API）**
   - 理由: Cloudflare Workers との相性、実装の単純さ、エラー分類のしやすさを優先。
+- 受信窓口（MVP採用）: **Cloudflare Email Routing**
+  - 理由: 独自ドメインメール（例: `support@...`）をユーザーに案内しつつ、実際の受信は既存メールボックスへ転送できるため。
 
 ## 1. Background
 
@@ -37,6 +39,7 @@
   - `approved` / `rejected` の両方で投稿者へメール通知する。
   - 承認API内非同期送信（`ctx.waitUntil`）/ 分離送信（Outbox・Queue・手動コマンド）を比較可能にする。
   - 送信失敗時に手動再送できる。
+  - ユーザー向け問い合わせ窓口として独自ドメインメールアドレスを提供できること（Cloudflare Email Routingで転送）。
 - Non-functional requirements:
   - `fail-open`（判定結果の更新は通知失敗に影響させない。D案では通知は後続コマンドで回復する前提）。
   - 承認APIの遅延・タイムアウトを最小化する。
@@ -276,6 +279,14 @@ flowchart LR
 - テンプレート: `approved/rejected` 固定文面の管理方法
 - 設定管理: APIキー/送信元/環境別設定の管理方法
 - コスト評価: MVP時点で「ランニング費」と「導入/運用工数」のどちらを重視するか
+
+### 5.1.1 送信と受信窓口の責務分離（MVP）
+
+- 送信（システム通知）: Resend（HTTP API）
+- 受信（問い合わせ窓口）: Cloudflare Email Routing（独自ドメイン -> 既存受信箱への転送）
+- 補足:
+  - Cloudflare Email Routingは受信転送基盤であり、通知メール送信基盤の代替ではない。
+  - これにより「通知送信」と「窓口受信」を分離し、運用責務を明確化する。
 
 ### 5.2 送信方式比較（HTTP API vs SMTP）
 
