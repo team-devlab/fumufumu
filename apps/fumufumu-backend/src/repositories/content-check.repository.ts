@@ -23,6 +23,11 @@ type ResendCandidate =
 		checkedAt: Date | null;
 	};
 
+type NotificationUpdateResult = {
+	targetType: "consultation" | "advice";
+	targetId: number;
+};
+
 export class ContentCheckRepository {
 	constructor(private db: DbInstance) {}
 
@@ -318,5 +323,75 @@ export class ContentCheckRepository {
 			consultationId: row.consultationId,
 			checkedAt: row.checkedAt,
 		};
+	}
+
+	/**
+	 * 送信成功時に notified_at を確定し、直近エラーをクリアする
+	 */
+	async markNotificationSent(
+		targetType: "consultation" | "advice",
+		targetId: number,
+	): Promise<NotificationUpdateResult | null> {
+		if (targetId <= 0) {
+			return null;
+		}
+
+		const [updated] = await this.db
+			.update(contentChecks)
+			.set({
+				notifiedAt: new Date(),
+				notifyLastError: null,
+				updatedAt: new Date(),
+			})
+			.where(
+				and(
+					eq(contentChecks.targetType, targetType),
+					eq(contentChecks.targetId, targetId),
+					eq(contentChecks.status, "approved"),
+					isNull(contentChecks.notifiedAt),
+				),
+			)
+			.returning({
+				targetType: contentChecks.targetType,
+				targetId: contentChecks.targetId,
+			});
+
+		return updated ?? null;
+	}
+
+	/**
+	 * 送信失敗時に直近エラーを保存する（未通知の approved のみ）
+	 */
+	async markNotificationFailed(
+		targetType: "consultation" | "advice",
+		targetId: number,
+		errorMessage: string,
+	): Promise<NotificationUpdateResult | null> {
+		if (targetId <= 0) {
+			return null;
+		}
+
+		const normalizedError = errorMessage.trim() || "unknown notification error";
+
+		const [updated] = await this.db
+			.update(contentChecks)
+			.set({
+				notifyLastError: normalizedError,
+				updatedAt: new Date(),
+			})
+			.where(
+				and(
+					eq(contentChecks.targetType, targetType),
+					eq(contentChecks.targetId, targetId),
+					eq(contentChecks.status, "approved"),
+					isNull(contentChecks.notifiedAt),
+				),
+			)
+			.returning({
+				targetType: contentChecks.targetType,
+				targetId: contentChecks.targetId,
+			});
+
+		return updated ?? null;
 	}
 }
