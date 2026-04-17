@@ -17,6 +17,22 @@
 
 ---
 
+## 1.5 進捗チェック（2026-04-17時点）
+
+- [x] Step 1. 送信状態管理カラム追加（`notified_at`, `notify_last_error`）
+- [ ] Step 2. Repository追加・拡張
+  - [x] 未通知対象のlimit取得（`listPendingApprovedForNotification`）
+  - [x] 再送対象の単件取得（`target_type` + `target_id`）
+  - [ ] 送信成功時更新（`notified_at` 更新 + `notify_last_error` クリア）
+  - [ ] 送信失敗時更新（`notify_last_error` 更新）
+- [ ] Step 3. MailClient実装
+- [ ] Step 4. NotificationService実装
+- [ ] Step 5. CLIエントリ実装
+- [ ] Step 6. package.jsonスクリプト登録
+- [ ] Step 7. 実行結果・運用ルール整備
+
+---
+
 ## 2. 実装ステップ
 
 ### Step 1. 送信状態管理カラムを追加する

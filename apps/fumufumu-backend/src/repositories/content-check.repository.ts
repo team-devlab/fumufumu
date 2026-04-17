@@ -5,6 +5,24 @@ import { contentChecks } from "@/db/schema/content-checks";
 import { and, asc, eq, inArray, isNull } from "drizzle-orm";
 import { NotFoundError } from "@/errors/AppError";
 
+type ResendCandidate =
+	| {
+		targetType: "consultation";
+		targetId: number;
+		status: "approved";
+		authorId: number | null;
+		title: string;
+		checkedAt: Date | null;
+	}
+	| {
+		targetType: "advice";
+		targetId: number;
+		status: "approved";
+		authorId: number | null;
+		consultationId: number;
+		checkedAt: Date | null;
+	};
+
 export class ContentCheckRepository {
 	constructor(private db: DbInstance) {}
 
@@ -210,5 +228,95 @@ export class ContentCheckRepository {
 				asc(contentChecks.id),
 			)
 			.limit(limit);
+	}
+
+	/**
+	 * 再送対象の approved レコードを target_type + target_id で単件取得する
+	 */
+	async findApprovedForResend(
+		targetType: "consultation" | "advice",
+		targetId: number,
+	): Promise<ResendCandidate | null> {
+		if (targetId <= 0) {
+			return null;
+		}
+
+		if (targetType === "consultation") {
+			const [row] = await this.db
+				.select({
+					targetId: contentChecks.targetId,
+					authorId: consultations.authorId,
+					title: consultations.title,
+					checkedAt: contentChecks.checkedAt,
+				})
+				.from(contentChecks)
+				.innerJoin(
+					consultations,
+					and(
+						eq(contentChecks.targetType, "consultation"),
+						eq(contentChecks.targetId, consultations.id),
+					),
+				)
+				.where(
+					and(
+						eq(contentChecks.targetType, "consultation"),
+						eq(contentChecks.targetId, targetId),
+						eq(contentChecks.status, "approved"),
+						isNull(contentChecks.notifiedAt),
+					),
+				)
+				.limit(1);
+
+			if (!row) {
+				return null;
+			}
+
+			return {
+				targetType: "consultation",
+				targetId: row.targetId,
+				status: "approved",
+				authorId: row.authorId,
+				title: row.title,
+				checkedAt: row.checkedAt,
+			};
+		}
+
+		const [row] = await this.db
+			.select({
+				targetId: contentChecks.targetId,
+				authorId: advices.authorId,
+				consultationId: advices.consultationId,
+				checkedAt: contentChecks.checkedAt,
+			})
+			.from(contentChecks)
+			.innerJoin(
+				advices,
+				and(
+					eq(contentChecks.targetType, "advice"),
+					eq(contentChecks.targetId, advices.id),
+				),
+			)
+			.where(
+				and(
+					eq(contentChecks.targetType, "advice"),
+					eq(contentChecks.targetId, targetId),
+					eq(contentChecks.status, "approved"),
+					isNull(contentChecks.notifiedAt),
+				),
+			)
+			.limit(1);
+
+		if (!row) {
+			return null;
+		}
+
+		return {
+			targetType: "advice",
+			targetId: row.targetId,
+			status: "approved",
+			authorId: row.authorId,
+			consultationId: row.consultationId,
+			checkedAt: row.checkedAt,
+		};
 	}
 }
