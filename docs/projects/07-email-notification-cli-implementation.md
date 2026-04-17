@@ -25,7 +25,7 @@
   - [x] 再送対象の単件取得（`target_type` + `target_id`）
   - [x] 送信成功時更新（`notified_at` 更新 + `notify_last_error` クリア）
   - [x] 送信失敗時更新（`notify_last_error` 更新）
-- [ ] Step 3. MailClient実装
+- [x] Step 3. MailClient実装
 - [ ] Step 4. NotificationService実装
 - [ ] Step 5. CLIエントリ実装
 - [ ] Step 6. package.jsonスクリプト登録
