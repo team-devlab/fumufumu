@@ -12,6 +12,7 @@ const MAX_ERROR_MESSAGE_LENGTH = 400;
 type ResendMailClientOptions = {
 	apiKey: string;
 	from: string;
+	appBaseUrl?: string;
 	endpoint?: string;
 	timeoutMs?: number;
 	fetchImpl?: typeof fetch;
@@ -27,6 +28,7 @@ type ResendSendEmailPayload = {
 export class ResendMailClient implements MailClient {
 	private readonly apiKey: string;
 	private readonly from: string;
+	private readonly appBaseUrl?: string;
 	private readonly endpoint: string;
 	private readonly timeoutMs: number;
 	private readonly fetchImpl: typeof fetch;
@@ -44,6 +46,7 @@ export class ResendMailClient implements MailClient {
 
 		this.apiKey = apiKey;
 		this.from = from;
+		this.appBaseUrl = this.normalizeBaseUrl(options.appBaseUrl);
 		this.endpoint = options.endpoint ?? DEFAULT_RESEND_ENDPOINT;
 		this.timeoutMs = options.timeoutMs ?? DEFAULT_TIMEOUT_MS;
 		this.fetchImpl = options.fetchImpl ?? fetch;
@@ -131,18 +134,21 @@ export class ResendMailClient implements MailClient {
 	private buildConsultationApprovedText(input: Extract<SendApprovedMailInput, { targetType: "consultation" }>): string {
 		const recipient = input.recipientName?.trim();
 		const greeting = recipient ? `${recipient}さん` : "ユーザー様";
+		const actionUrl = this.buildActionUrl(input);
 		return [
 			`${greeting}`,
 			"",
 			"投稿いただいた相談が承認されました。",
 			`相談ID: ${input.targetId}`,
 			`タイトル: ${input.consultationTitle}`,
+			...(actionUrl ? ["", `相談詳細: ${actionUrl}`] : []),
 		].join("\n");
 	}
 
 	private buildAdviceApprovedText(input: Extract<SendApprovedMailInput, { targetType: "advice" }>): string {
 		const recipient = input.recipientName?.trim();
 		const greeting = recipient ? `${recipient}さん` : "ユーザー様";
+		const actionUrl = this.buildActionUrl(input);
 		return [
 			`${greeting}`,
 			"",
@@ -150,7 +156,20 @@ export class ResendMailClient implements MailClient {
 			`アドバイスID: ${input.targetId}`,
 			`相談ID: ${input.consultationId}`,
 			...(input.consultationTitle ? [`相談タイトル: ${input.consultationTitle}`] : []),
+			...(actionUrl ? ["", `相談詳細: ${actionUrl}`] : []),
 		].join("\n");
+	}
+
+	private buildActionUrl(input: SendApprovedMailInput): string | null {
+		if (!this.appBaseUrl) {
+			return null;
+		}
+
+		if (input.targetType === "consultation") {
+			return `${this.appBaseUrl}/consultations/${input.targetId}`;
+		}
+
+		return `${this.appBaseUrl}/consultations/${input.consultationId}`;
 	}
 
 	private classifyByStatus(statusCode: number): MailSendErrorKind {
@@ -168,6 +187,14 @@ export class ResendMailClient implements MailClient {
 			return error.name === "AbortError";
 		}
 		return false;
+	}
+
+	private normalizeBaseUrl(value?: string): string | undefined {
+		if (!value) {
+			return undefined;
+		}
+		const normalized = value.trim().replace(/\/+$/, "");
+		return normalized || undefined;
 	}
 
 	private isNetworkError(error: unknown): boolean {
