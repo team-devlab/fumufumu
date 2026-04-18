@@ -31,7 +31,11 @@ export class NotificationService {
 		private readonly userRepository: UserRepository,
 		private readonly mailClient: MailClient,
 	) {}
-	
+
+	/**
+	 * 承認済みかつ未通知の対象を取得し、メール送信を順次実行する。
+	 * 送信成否を集計して summary を返す。
+	 */
 	async sendPending(limit = 100): Promise<SendPendingSummary> {
 		const approvedList =
 			await this.contentCheckRepository.listPendingApprovedForNotification(limit);
@@ -71,6 +75,10 @@ export class NotificationService {
 		return summary;
 	}
 
+	/**
+	 * 指定対象を1件だけ再送する。
+	 * 条件に合致しない場合は送信せず、その理由を返す。
+	 */
 	async resend(
 		targetType: ApprovedMailTargetType,
 		targetId: number,
@@ -117,6 +125,9 @@ export class NotificationService {
 		}
 	}
 
+	/**
+	 * Repository が返す再送対象を、送信処理用の共通型へ変換する。
+	 */
 	private toDispatchTarget(target: ResendTarget): DispatchTarget {
 		if (target.targetType === "consultation") {
 			return {
@@ -135,6 +146,9 @@ export class NotificationService {
 		};
 	}
 
+	/**
+	 * 投稿者を特定し、対象種別に応じたメール送信を実行する。
+	 */
 	private async dispatchApprovedMail(target: DispatchTarget): Promise<void> {
 		if (target.authorId === null) {
 			throw new Error(
@@ -166,6 +180,9 @@ export class NotificationService {
 		});
 	}
 
+	/**
+	 * 任意の例外を通知エラーログに保存可能な文字列へ正規化する。
+	 */
 	private toErrorMessage(error: unknown): string {
 		if (error instanceof Error) {
 			return error.message;

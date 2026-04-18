@@ -19,3 +19,11 @@ FRONTEND_URL=http://localhost:3000
 
 # ...その他の設定...
 VERCEL_TEAM_SLUG=your-team-slug
+
+# Notification (internal API / CLI 互換)
+NOTIFICATION_INTERNAL_TOKEN=
+RESEND_API_KEY=
+RESEND_FROM_EMAIL="Fumufumu <no-reply@mail.fumufumu.jp>"
+# APP_BASE_URL=http://localhost:3000
+# RESEND_ENDPOINT=https://api.resend.com/emails
+# RESEND_TIMEOUT_MS=8000

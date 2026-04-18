@@ -18,6 +18,7 @@ import { protectedRouter } from '@/routes/protected.routes';
 import { userRoute } from '@/routes/user.controller';
 import { tagsRoute } from '@/routes/tags.controller';
 import { adminContentCheckRoute } from '@/routes/admin-content-check.controller';
+import { internalNotificationsRoute } from '@/routes/internal-notifications.controller';
 import type { ConsultationService } from '@/services/consultation.service';
 import type { ConsultationContentCheckService } from '@/services/consultation-content-check.service';
 import type { UserService } from '@/services/user.service';
@@ -42,6 +43,12 @@ export interface Env {
   FRONTEND_URL: string;
   COOKIE_DOMAIN?: string;
   VERCEL_TEAM_SLUG?: string;
+  NOTIFICATION_INTERNAL_TOKEN?: string;
+  RESEND_API_KEY?: string;
+  RESEND_FROM_EMAIL?: string;
+  APP_BASE_URL?: string;
+  RESEND_ENDPOINT?: string;
+  RESEND_TIMEOUT_MS?: string;
 }
 
 // Hono Context (Variables) の拡張
@@ -206,6 +213,9 @@ api.route('/tags', tagsRoute);
 
 // 投稿チェック運営API（/api/admin/content-check）
 api.route('/admin/content-check', adminContentCheckRoute);
+
+// 通知内部API（/api/internal/notifications）
+api.route('/internal/notifications', internalNotificationsRoute);
 
 // メインアプリにAPIルーターをマウント
 app.route('/api', api);

@@ -6,6 +6,7 @@
 - ローカルタグ追加: `pnpm tags:add キャリア 人間関係 技術`
 - 通知CLI（承認済み未通知を送信）: `pnpm notifications:send-approved-unnotified -- --limit 100`
 - 通知CLI（単体再送）: `pnpm notifications:resend -- --target-type consultation --target-id 123`
+- 通知内部API（単体再送）: `POST /api/internal/notifications/resend`（Bearer認証）
 - 手動デプロイ: `DEPLOY_APPROVED=1 WRANGLER_DEPLOY_CONFIG=wrangler.local.jsonc pnpm deploy`
 
 `pnpm dev` はデフォルトで `wrangler.local.jsonc` を使う。
@@ -32,6 +33,29 @@ cp .env.notifications.example .env.notifications
 - `APP_BASE_URL`
 - `RESEND_ENDPOINT`
 - `RESEND_TIMEOUT_MS`
+
+## Notification 内部API の環境変数
+
+内部API (`POST /api/internal/notifications/resend`) は Worker 環境変数を使用する。
+
+必須:
+- `NOTIFICATION_INTERNAL_TOKEN`
+- `RESEND_API_KEY`
+- `RESEND_FROM_EMAIL`
+
+任意:
+- `APP_BASE_URL`
+- `RESEND_ENDPOINT`
+- `RESEND_TIMEOUT_MS`
+
+呼び出し例:
+
+```bash
+curl -X POST "https://<backend>/api/internal/notifications/resend" \
+  -H "Authorization: Bearer ${NOTIFICATION_INTERNAL_TOKEN}" \
+  -H "Content-Type: application/json" \
+  -d '{"targetType":"consultation","targetId":123}'
+```
 
 ## Notification CLI の Secrets 運用
 

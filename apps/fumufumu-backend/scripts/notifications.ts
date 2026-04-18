@@ -36,6 +36,9 @@ const schema = {
 	...contentChecksSchema,
 };
 
+/**
+ * CLIの使い方と必要な環境変数を表示する。
+ */
 function printUsage() {
 	console.log(`Usage:
   pnpm exec tsx scripts/notifications.ts send-approved-unnotified [--limit <number>]
@@ -55,6 +58,9 @@ Optional env:
 `);
 }
 
+/**
+ * クォート付きの環境変数値をプレーン文字列へ変換する。
+ */
 function unquoteEnvValue(value: string): string {
 	if (
 		(value.startsWith('"') && value.endsWith('"')) ||
@@ -65,6 +71,9 @@ function unquoteEnvValue(value: string): string {
 	return value;
 }
 
+/**
+ * `.env.notifications` を読み込み、未設定の process.env に反映する。
+ */
 function loadNotificationsEnvFile() {
 	const envPath = resolve(process.cwd(), NOTIFICATIONS_ENV_FILE);
 	if (!existsSync(envPath)) {
@@ -96,6 +105,9 @@ function loadNotificationsEnvFile() {
 	}
 }
 
+/**
+ * 正の整数オプションを検証し、数値として返す。
+ */
 function parsePositiveInt(raw: string, optionName: string): number {
 	const value = Number(raw);
 	if (!Number.isInteger(value) || value <= 0) {
@@ -104,6 +116,9 @@ function parsePositiveInt(raw: string, optionName: string): number {
 	return value;
 }
 
+/**
+ * `--option value` 形式の値を引数配列から取得する。
+ */
 function parseOptionValue(args: string[], optionName: string): string | undefined {
 	const index = args.indexOf(optionName);
 	if (index === -1) {
@@ -116,6 +131,9 @@ function parseOptionValue(args: string[], optionName: string): string | undefine
 	return value;
 }
 
+/**
+ * CLI引数を NotificationCommand 型へ解釈する。
+ */
 function parseCommand(argv: string[]): NotificationCommand {
 	const [command, ...args] = argv;
 
@@ -154,6 +172,9 @@ function parseCommand(argv: string[]): NotificationCommand {
 	throw new Error(`未知のコマンドです: ${command}`);
 }
 
+/**
+ * ローカルD1の最新SQLiteファイルのパスを解決する。
+ */
 function resolveLocalDbPath() {
 	const dbDir = resolve(process.cwd(), D1_LOCAL_DB_DIR);
 	if (!existsSync(dbDir)) {
@@ -181,6 +202,9 @@ function resolveLocalDbPath() {
 	return sqliteFiles[0].fullPath;
 }
 
+/**
+ * 必須環境変数を取得し、未設定時はエラーにする。
+ */
 function readRequiredEnv(name: string): string {
 	const value = process.env[name]?.trim();
 	if (!value) {
@@ -189,6 +213,9 @@ function readRequiredEnv(name: string): string {
 	return value;
 }
 
+/**
+ * 送信タイムアウト値を環境変数から取得する。
+ */
 function readOptionalTimeoutMs() {
 	const raw = process.env.RESEND_TIMEOUT_MS?.trim();
 	if (!raw) {
@@ -197,6 +224,9 @@ function readOptionalTimeoutMs() {
 	return parsePositiveInt(raw, "RESEND_TIMEOUT_MS");
 }
 
+/**
+ * コマンド種別に応じて通知処理を実行し、結果を標準出力へ表示する。
+ */
 async function runCommand(command: NotificationCommand) {
 	const localDbPath = resolveLocalDbPath();
 	const sqlite = new Database(localDbPath);
@@ -239,6 +269,9 @@ async function runCommand(command: NotificationCommand) {
 	}
 }
 
+/**
+ * エントリーポイント。環境読込・引数解析・実行を順に行う。
+ */
 async function main() {
 	try {
 		loadNotificationsEnvFile();

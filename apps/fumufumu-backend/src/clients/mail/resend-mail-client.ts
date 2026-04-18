@@ -33,6 +33,9 @@ export class ResendMailClient implements MailClient {
 	private readonly timeoutMs: number;
 	private readonly fetchImpl: typeof fetch;
 
+	/**
+	 * Resendクライアントの実行オプションを初期化する。
+	 */
 	constructor(options: ResendMailClientOptions) {
 		const apiKey = options.apiKey.trim();
 		const from = options.from.trim();
@@ -52,6 +55,10 @@ export class ResendMailClient implements MailClient {
 		this.fetchImpl = options.fetchImpl ?? fetch;
 	}
 
+	/**
+	 * 承認通知メールを Resend API へ送信する。
+	 * HTTP失敗・ネットワーク失敗を MailSendError へ分類して投げる。
+	 */
 	async sendApproved(input: SendApprovedMailInput): Promise<void> {
 		const payload = this.buildPayload(input);
 		const controller = new AbortController();
@@ -114,6 +121,9 @@ export class ResendMailClient implements MailClient {
 		}
 	}
 
+	/**
+	 * 送信入力を Resend API 用の payload へ変換する。
+	 */
 	private buildPayload(input: SendApprovedMailInput): ResendSendEmailPayload {
 		const subject = input.targetType === "consultation"
 			? "【ふむふむ】相談が承認されました"
@@ -131,6 +141,9 @@ export class ResendMailClient implements MailClient {
 		};
 	}
 
+	/**
+	 * 相談承認メール本文（text）を組み立てる。
+	 */
 	private buildConsultationApprovedText(input: Extract<SendApprovedMailInput, { targetType: "consultation" }>): string {
 		const recipient = input.recipientName?.trim();
 		const greeting = recipient ? `${recipient}さん` : "ユーザー様";
@@ -146,6 +159,9 @@ export class ResendMailClient implements MailClient {
 		].join("\n");
 	}
 
+	/**
+	 * アドバイス承認メール本文（text）を組み立てる。
+	 */
 	private buildAdviceApprovedText(input: Extract<SendApprovedMailInput, { targetType: "advice" }>): string {
 		const recipient = input.recipientName?.trim();
 		const greeting = recipient ? `${recipient}さん` : "ユーザー様";
@@ -161,6 +177,9 @@ export class ResendMailClient implements MailClient {
 		].join("\n");
 	}
 
+	/**
+	 * メール本文に載せる遷移先URLを生成する。
+	 */
 	private buildActionUrl(input: SendApprovedMailInput): string | null {
 		if (!this.appBaseUrl) {
 			return null;
@@ -173,6 +192,9 @@ export class ResendMailClient implements MailClient {
 		return `${this.appBaseUrl}/consultations/${input.consultationId}`;
 	}
 
+	/**
+	 * HTTPステータスから送信エラー種別を判定する。
+	 */
 	private classifyByStatus(statusCode: number): MailSendErrorKind {
 		if (statusCode === 408 || statusCode === 429 || statusCode >= 500) {
 			return "temporary";
@@ -183,6 +205,9 @@ export class ResendMailClient implements MailClient {
 		return "unknown";
 	}
 
+	/**
+	 * 中断エラー（AbortError）かどうかを判定する。
+	 */
 	private isAbortError(error: unknown): boolean {
 		if (error instanceof DOMException) {
 			return error.name === "AbortError";
@@ -190,6 +215,9 @@ export class ResendMailClient implements MailClient {
 		return false;
 	}
 
+	/**
+	 * URL文字列をトリムし、末尾スラッシュを除去して正規化する。
+	 */
 	private normalizeBaseUrl(value?: string): string | undefined {
 		if (!value) {
 			return undefined;
@@ -198,6 +226,9 @@ export class ResendMailClient implements MailClient {
 		return normalized || undefined;
 	}
 
+	/**
+	 * ネットワーク層の例外かどうかを判定する。
+	 */
 	private isNetworkError(error: unknown): boolean {
 		if (error instanceof TypeError) {
 			return true;
@@ -205,6 +236,9 @@ export class ResendMailClient implements MailClient {
 		return false;
 	}
 
+	/**
+	 * 未知の例外をメッセージ文字列へ変換する。
+	 */
 	private errorToMessage(error: unknown): string {
 		if (error instanceof Error) {
 			return error.message;
@@ -212,6 +246,9 @@ export class ResendMailClient implements MailClient {
 		return String(error);
 	}
 
+	/**
+	 * ログ保存向けに文字列長を上限内へ切り詰める。
+	 */
 	private truncate(value: string): string {
 		if (value.length <= MAX_ERROR_MESSAGE_LENGTH) {
 			return value;
