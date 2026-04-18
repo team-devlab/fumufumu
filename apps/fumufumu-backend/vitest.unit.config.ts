@@ -10,7 +10,8 @@ export default defineConfig({
   test: {
     globals: true,
     environment: 'node',
-    // unit テストは `.unit.test.ts` のみ実行する
-    include: ['src/test/**/*.unit.test.ts'],
+    include: ['src/test/**/*.test.ts'],
+    exclude: ['src/test/index.test.ts'], // 統合テストを除外
   },
 });
+
