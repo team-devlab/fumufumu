@@ -41,6 +41,7 @@ export class NotificationService {
 			attemptedCount: 0,
 			sentCount: 0,
 			failedCount: 0,
+			failedTargetIds: [],
 		};
 
 		for (const row of approvedList) {
@@ -63,6 +64,7 @@ export class NotificationService {
 					this.toErrorMessage(error),
 				);
 				summary.failedCount += 1;
+				summary.failedTargetIds.push(row.id);
 			}
 		}
 

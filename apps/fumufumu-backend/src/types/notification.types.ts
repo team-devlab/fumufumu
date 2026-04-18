@@ -5,6 +5,7 @@ export type SendPendingSummary = {
 	attemptedCount: number;
 	sentCount: number;
 	failedCount: number;
+	failedTargetIds: number[];
 };
 
 export type ResendSummary =

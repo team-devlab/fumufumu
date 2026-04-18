@@ -214,7 +214,7 @@ async function runCommand(command: NotificationCommand) {
 		if (command.kind === "send-approved-unnotified") {
 			const summary = await service.sendPending(command.limit);
 			console.log(
-				`send-approved-unnotified completed: target=${summary.targetCount}, attempted=${summary.attemptedCount}, sent=${summary.sentCount}, failed=${summary.failedCount}`,
+				`send-approved-unnotified completed: target=${summary.targetCount}, attempted=${summary.attemptedCount}, sent=${summary.sentCount}, failed=${summary.failedCount}, failedTargetIds=[${summary.failedTargetIds.join(",")}]`,
 			);
 			if (summary.failedCount > 0) {
 				process.exitCode = 1;
