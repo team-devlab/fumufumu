@@ -25,7 +25,7 @@
     "seed": "tsx scripts/seed.ts",
     "tags:list": "tsx scripts/tags.ts list",
     "tags:add": "tsx scripts/tags.ts add",
-    "notifications:send-pending": "tsx scripts/notifications.ts send-pending",
+    "notifications:send-approved-unnotified": "tsx scripts/notifications.ts send-approved-unnotified",
     "notifications:resend": "tsx scripts/notifications.ts resend"
   },
   "dependencies": {

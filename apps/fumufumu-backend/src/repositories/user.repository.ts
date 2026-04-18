@@ -35,6 +35,39 @@ export class UserRepository {
 	}
 
 	/**
+	 * 通知送信に必要な宛先情報（メールアドレス・表示名）を取得する
+	 *
+	 * @param appUserId - 業務DBのユーザーID (users.id)
+	 * @returns 宛先情報
+	 * @throws {NotFoundError} 宛先情報が見つからない場合
+	 */
+	async findNotificationRecipientByAppUserId(
+		appUserId: number,
+	): Promise<{ email: string; name: string }> {
+		const [row] = await this.db
+			.select({
+				email: authUsers.email,
+				name: users.name,
+			})
+			.from(authMappings)
+			.innerJoin(authUsers, eq(authMappings.authUserId, authUsers.id))
+			.innerJoin(users, eq(authMappings.appUserId, users.id))
+			.where(eq(authMappings.appUserId, appUserId))
+			.limit(1);
+
+		if (!row?.email || !row?.name) {
+			throw new NotFoundError(
+				`通知先情報の取得に失敗しました: appUserId=${appUserId}`,
+			);
+		}
+
+		return {
+			email: row.email,
+			name: row.name,
+		};
+	}
+
+	/**
 	 * アプリユーザーIDから通知先メールアドレスを取得する
 	 *
 	 * @param appUserId - 業務DBのユーザーID (users.id)
@@ -42,19 +75,7 @@ export class UserRepository {
 	 * @throws {NotFoundError} メールアドレスが見つからない場合
 	 */
 	async findEmailByAppUserId(appUserId: number): Promise<string> {
-		const [row] = await this.db
-			.select({ email: authUsers.email })
-			.from(authMappings)
-			.innerJoin(authUsers, eq(authMappings.authUserId, authUsers.id))
-			.where(eq(authMappings.appUserId, appUserId))
-			.limit(1);
-
-		if (!row?.email) {
-			throw new NotFoundError(
-				`メールアドレスの取得に失敗しました: appUserId=${appUserId}`,
-			);
-		}
-
-		return row.email;
+		const recipient = await this.findNotificationRecipientByAppUserId(appUserId);
+		return recipient.email;
 	}
 }

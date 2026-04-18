@@ -140,14 +140,16 @@ export class NotificationService {
 			);
 		}
 
-		const to = await this.userRepository.findEmailByAppUserId(target.authorId);
+		const recipient =
+			await this.userRepository.findNotificationRecipientByAppUserId(target.authorId);
 
 		if (target.targetType === "consultation") {
 			await this.mailClient.sendApproved({
 				targetType: "consultation",
 				targetId: target.targetId,
-				to,
+				to: recipient.email,
 				consultationTitle: target.title,
+				recipientName: recipient.name,
 			});
 			return;
 		}
@@ -155,9 +157,10 @@ export class NotificationService {
 		await this.mailClient.sendApproved({
 			targetType: "advice",
 			targetId: target.targetId,
-			to,
+			to: recipient.email,
 			consultationId: target.consultationId,
 			consultationTitle: target.consultationTitle ?? null,
+			recipientName: recipient.name,
 		});
 	}
 

@@ -116,8 +116,8 @@ export class ResendMailClient implements MailClient {
 
 	private buildPayload(input: SendApprovedMailInput): ResendSendEmailPayload {
 		const subject = input.targetType === "consultation"
-			? "相談が承認されました"
-			: "アドバイスが承認されました";
+			? "【ふむふむ】相談が承認されました"
+			: "【ふむふむ】アドバイスが承認されました";
 
 		const text = input.targetType === "consultation"
 			? this.buildConsultationApprovedText(input)
@@ -138,10 +138,11 @@ export class ResendMailClient implements MailClient {
 		return [
 			`${greeting}`,
 			"",
+			"ふむふむからのお知らせです。",
 			"投稿いただいた相談が承認されました。",
-			`相談ID: ${input.targetId}`,
 			`タイトル: ${input.consultationTitle}`,
-			...(actionUrl ? ["", `相談詳細: ${actionUrl}`] : []),
+			"",
+			`相談詳細: ${actionUrl ?? "現在リンクを表示できません。アプリからご確認ください。"}`,
 		].join("\n");
 	}
 
@@ -152,11 +153,11 @@ export class ResendMailClient implements MailClient {
 		return [
 			`${greeting}`,
 			"",
+			"ふむふむからのお知らせです。",
 			"投稿いただいたアドバイスが承認されました。",
-			`アドバイスID: ${input.targetId}`,
-			`相談ID: ${input.consultationId}`,
 			...(input.consultationTitle ? [`相談タイトル: ${input.consultationTitle}`] : []),
-			...(actionUrl ? ["", `相談詳細: ${actionUrl}`] : []),
+			"",
+			`相談詳細: ${actionUrl ?? "現在リンクを表示できません。アプリからご確認ください。"}`,
 		].join("\n");
 	}
 

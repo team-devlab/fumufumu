@@ -1,4 +1,4 @@
-import { existsSync, readdirSync, statSync } from "node:fs";
+import { existsSync, readFileSync, readdirSync, statSync } from "node:fs";
 import { join, resolve } from "node:path";
 import Database from "better-sqlite3";
 import { drizzle } from "drizzle-orm/better-sqlite3";
@@ -13,7 +13,7 @@ import * as contentChecksSchema from "@/db/schema/content-checks";
 
 type NotificationCommand =
 	| {
-		kind: "send-pending";
+		kind: "send-approved-unnotified";
 		limit: number;
 	}
 	| {
@@ -25,6 +25,7 @@ type NotificationCommand =
 const DEFAULT_LIMIT = 100;
 const D1_LOCAL_DB_DIR = ".wrangler/state/v3/d1/miniflare-D1DatabaseObject";
 const DEFAULT_RESEND_TIMEOUT_MS = 8000;
+const NOTIFICATIONS_ENV_FILE = ".env.notifications";
 
 const schema = {
 	...authSchema,
@@ -37,8 +38,11 @@ const schema = {
 
 function printUsage() {
 	console.log(`Usage:
-  pnpm exec tsx scripts/notifications.ts send-pending [--limit <number>]
+  pnpm exec tsx scripts/notifications.ts send-approved-unnotified [--limit <number>]
   pnpm exec tsx scripts/notifications.ts resend --target-type <consultation|advice> --target-id <number>
+
+Local env file (optional):
+  ./${NOTIFICATIONS_ENV_FILE} (auto loaded when exists)
 
 Required env:
   RESEND_API_KEY
@@ -49,6 +53,47 @@ Optional env:
   RESEND_ENDPOINT
   RESEND_TIMEOUT_MS
 `);
+}
+
+function unquoteEnvValue(value: string): string {
+	if (
+		(value.startsWith('"') && value.endsWith('"')) ||
+		(value.startsWith("'") && value.endsWith("'"))
+	) {
+		return value.slice(1, -1);
+	}
+	return value;
+}
+
+function loadNotificationsEnvFile() {
+	const envPath = resolve(process.cwd(), NOTIFICATIONS_ENV_FILE);
+	if (!existsSync(envPath)) {
+		return;
+	}
+
+	const content = readFileSync(envPath, "utf8");
+	for (const rawLine of content.split(/\r?\n/)) {
+		const line = rawLine.trim();
+		if (!line || line.startsWith("#")) {
+			continue;
+		}
+
+		const normalizedLine = line.startsWith("export ")
+			? line.slice("export ".length).trim()
+			: line;
+		const equalIndex = normalizedLine.indexOf("=");
+		if (equalIndex <= 0) {
+			continue;
+		}
+
+		const key = normalizedLine.slice(0, equalIndex).trim();
+		if (!key || process.env[key]?.trim()) {
+			continue;
+		}
+
+		const rawValue = normalizedLine.slice(equalIndex + 1).trim();
+		process.env[key] = unquoteEnvValue(rawValue);
+	}
 }
 
 function parsePositiveInt(raw: string, optionName: string): number {
@@ -79,10 +124,10 @@ function parseCommand(argv: string[]): NotificationCommand {
 		process.exit(0);
 	}
 
-	if (command === "send-pending") {
+	if (command === "send-approved-unnotified") {
 		const rawLimit = parseOptionValue(args, "--limit");
 		const limit = rawLimit ? parsePositiveInt(rawLimit, "--limit") : DEFAULT_LIMIT;
-		return { kind: "send-pending", limit };
+		return { kind: "send-approved-unnotified", limit };
 	}
 
 	if (command === "resend") {
@@ -166,10 +211,10 @@ async function runCommand(command: NotificationCommand) {
 			timeoutMs: readOptionalTimeoutMs(),
 		});
 
-		if (command.kind === "send-pending") {
+		if (command.kind === "send-approved-unnotified") {
 			const summary = await service.sendPending(command.limit);
 			console.log(
-				`send-pending completed: target=${summary.targetCount}, attempted=${summary.attemptedCount}, sent=${summary.sentCount}, failed=${summary.failedCount}`,
+				`send-approved-unnotified completed: target=${summary.targetCount}, attempted=${summary.attemptedCount}, sent=${summary.sentCount}, failed=${summary.failedCount}`,
 			);
 			if (summary.failedCount > 0) {
 				process.exitCode = 1;
@@ -196,6 +241,7 @@ async function runCommand(command: NotificationCommand) {
 
 async function main() {
 	try {
+		loadNotificationsEnvFile();
 		const command = parseCommand(process.argv.slice(2));
 		await runCommand(command);
 	} catch (error) {
