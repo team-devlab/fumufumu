@@ -52,7 +52,7 @@ export class ResendMailClient implements MailClient {
 		this.appBaseUrl = this.normalizeBaseUrl(options.appBaseUrl);
 		this.endpoint = options.endpoint ?? DEFAULT_RESEND_ENDPOINT;
 		this.timeoutMs = options.timeoutMs ?? DEFAULT_TIMEOUT_MS;
-		this.fetchImpl = options.fetchImpl ?? fetch;
+		this.fetchImpl = options.fetchImpl ?? ((input, init) => fetch(input, init));
 	}
 
 	/**
@@ -101,11 +101,12 @@ export class ResendMailClient implements MailClient {
 			}
 
 			if (this.isNetworkError(error)) {
+				const detail = this.truncate(this.errorToMessage(error));
 				throw new MailSendError(
-					"mail send failed due to network error",
+					`mail send failed due to network error: ${detail}`,
 					"temporary",
 					{
-						rawMessage: this.truncate(this.errorToMessage(error)),
+						rawMessage: detail,
 						cause: error,
 					},
 				);

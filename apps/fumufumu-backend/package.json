@@ -25,8 +25,7 @@
     "seed": "tsx scripts/seed.ts",
     "tags:list": "tsx scripts/tags.ts list",
     "tags:add": "tsx scripts/tags.ts add",
-    "notifications:send-approved-unnotified": "tsx scripts/notifications.ts send-approved-unnotified",
-    "notifications:resend": "tsx scripts/notifications.ts resend"
+    "notifications:resend-api": "tsx scripts/notifications-api.ts resend"
   },
   "dependencies": {
     "@hono/zod-validator": "^0.4.3",

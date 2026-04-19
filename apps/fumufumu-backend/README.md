@@ -4,35 +4,13 @@
 - curl http://127.0.0.1:8787/
 - ローカルタグ一覧: `pnpm tags:list`
 - ローカルタグ追加: `pnpm tags:add キャリア 人間関係 技術`
-- 通知CLI（承認済み未通知を送信）: `pnpm notifications:send-approved-unnotified -- --limit 100`
-- 通知CLI（単体再送）: `pnpm notifications:resend -- --target-type consultation --target-id 123`
 - 通知内部API（単体再送）: `POST /api/internal/notifications/resend`（Bearer認証）
+- 通知APIラッパー（単体再送）: `pnpm notifications:resend-api -- --target-type consultation --target-id 123`
 - 手動デプロイ: `DEPLOY_APPROVED=1 WRANGLER_DEPLOY_CONFIG=wrangler.local.jsonc pnpm deploy`
 
 `pnpm dev` はデフォルトで `wrangler.local.jsonc` を使う。
 必要なら `WRANGLER_DEV_CONFIG` で dev 用 config を上書きできる。
 `pnpm studio` も同じ優先順（`WRANGLER_DEV_CONFIG` → `WRANGLER_D1_CONFIG` → `wrangler.local.jsonc`）でローカルD1を解決する。
-
-## Notification CLI の環境変数
-
-通知CLIは `process.env` からResend設定を読み込む。
-`apps/fumufumu-backend/.env.notifications` がある場合は、CLI起動時に自動で読み込む。
-（同名の環境変数がすでに設定済みなら、そちらを優先）
-チーム共通で使うため、以下の手順で `.env.notifications` を作成する。
-
-```bash
-cd apps/fumufumu-backend
-cp .env.notifications.example .env.notifications
-```
-
-必須:
-- `RESEND_API_KEY`
-- `RESEND_FROM_EMAIL`
-
-任意:
-- `APP_BASE_URL`
-- `RESEND_ENDPOINT`
-- `RESEND_TIMEOUT_MS`
 
 ## Notification 内部API の環境変数
 
@@ -57,11 +35,22 @@ curl -X POST "https://<backend>/api/internal/notifications/resend" \
   -d '{"targetType":"consultation","targetId":123}'
 ```
 
-## Notification CLI の Secrets 運用
+### APIラッパー実行例
 
-### ローカル
-- `.env.notifications` を利用（`.gitignore` 済み）
-- 実値はコミットしない
+`notifications:resend-api` は `apps/fumufumu-backend/.dev.vars` を自動読込する。
+
+```bash
+pnpm notifications:resend-api -- --target-type consultation --target-id 123
+```
+
+本番APIを叩く場合は、`.dev.vars` に以下を設定する。
+
+```bash
+NOTIFICATION_API_BASE_URL=https://<backend>
+NOTIFICATION_INTERNAL_TOKEN=<token>
+```
+
+## Notification 内部API の Secrets 運用
 
 ### GitHub Actions / 本番実行環境
 - 以下を Secrets に登録する
