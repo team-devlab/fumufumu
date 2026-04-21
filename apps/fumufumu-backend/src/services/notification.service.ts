@@ -1,7 +1,13 @@
-import type { ApprovedMailTargetType, MailClient } from "@/clients/mail";
+import {
+	MailSendError,
+	type ApprovedMailTargetType,
+	type MailClient,
+} from "@/clients/mail";
+import { NotFoundError } from "@/errors/AppError";
 import type { ContentCheckRepository } from "@/repositories/content-check.repository";
 import type { UserRepository } from "@/repositories/user.repository";
 import type {
+	ResendFailureKind,
 	ResendSummary,
 	SendPendingSummary,
 } from "@/types/notification.types";
@@ -93,6 +99,7 @@ export class NotificationService {
 				sent: false,
 				targetType,
 				targetId,
+				kind: "not_found",
 				reason: "approved かつ未通知の対象が見つかりませんでした",
 			};
 		}
@@ -110,17 +117,19 @@ export class NotificationService {
 				targetId: target.targetId,
 			};
 		} catch (error) {
+			const failure = this.toResendFailure(error);
 			await this.contentCheckRepository.markNotificationFailed(
 				target.targetType,
 				target.targetId,
-				this.toErrorMessage(error),
+				failure.reason,
 			);
 
 			return {
 				sent: false,
 				targetType: target.targetType,
 				targetId: target.targetId,
-				reason: this.toErrorMessage(error),
+				kind: failure.kind,
+				reason: failure.reason,
 			};
 		}
 	}
@@ -189,5 +198,35 @@ export class NotificationService {
 			return error.message;
 		}
 		return "unknown notification error";
+	}
+
+	/**
+	 * resend の失敗理由を、呼び出し側で判定しやすい kind 付きへ正規化する。
+	 */
+	private toResendFailure(error: unknown): {
+		kind: ResendFailureKind;
+		reason: string;
+	} {
+		if (error instanceof MailSendError) {
+			return {
+				kind: error.kind,
+				reason: error.message,
+			};
+		}
+
+		if (
+			error instanceof NotFoundError ||
+			(error instanceof Error && error.message.includes("通知対象の投稿者が存在しません"))
+		) {
+			return {
+				kind: "recipient_missing",
+				reason: this.toErrorMessage(error),
+			};
+		}
+
+		return {
+			kind: "unknown",
+			reason: this.toErrorMessage(error),
+		};
 	}
 }

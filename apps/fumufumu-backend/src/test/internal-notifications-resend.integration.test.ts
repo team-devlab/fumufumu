@@ -133,11 +133,13 @@ describe("Internal Notifications API", () => {
 			sent: boolean;
 			targetType: string;
 			targetId: number;
+			kind?: string;
 			reason?: string;
 		};
 		expect(json.sent).toBe(false);
 		expect(json.targetType).toBe("consultation");
 		expect(json.targetId).toBe(999_999_999);
+		expect(json.kind).toBe("not_found");
 		expect(json.reason).toBeDefined();
 	});
 });
