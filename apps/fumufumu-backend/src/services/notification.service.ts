@@ -22,7 +22,7 @@ type DispatchTarget =
 		targetId: number;
 		authorId: number | null;
 		consultationId: number;
-		consultationTitle?: string | null;
+		consultationTitle: string;
 	};
 
 export class NotificationService {
@@ -143,6 +143,7 @@ export class NotificationService {
 			targetId: target.targetId,
 			authorId: target.authorId,
 			consultationId: target.consultationId,
+			consultationTitle: target.consultationTitle,
 		};
 	}
 
@@ -175,7 +176,7 @@ export class NotificationService {
 			targetId: target.targetId,
 			to: recipient.email,
 			consultationId: target.consultationId,
-			consultationTitle: target.consultationTitle ?? null,
+			consultationTitle: target.consultationTitle,
 			recipientName: recipient.name,
 		});
 	}

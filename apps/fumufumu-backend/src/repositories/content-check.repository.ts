@@ -20,6 +20,7 @@ type ResendCandidate =
 		status: "approved";
 		authorId: number | null;
 		consultationId: number;
+		consultationTitle: string;
 		checkedAt: Date | null;
 	};
 
@@ -291,6 +292,7 @@ export class ContentCheckRepository {
 				targetId: contentChecks.targetId,
 				authorId: advices.authorId,
 				consultationId: advices.consultationId,
+				consultationTitle: consultations.title,
 				checkedAt: contentChecks.checkedAt,
 			})
 			.from(contentChecks)
@@ -301,6 +303,7 @@ export class ContentCheckRepository {
 					eq(contentChecks.targetId, advices.id),
 				),
 			)
+			.innerJoin(consultations, eq(advices.consultationId, consultations.id))
 			.where(
 				and(
 					eq(contentChecks.targetType, "advice"),
@@ -321,6 +324,7 @@ export class ContentCheckRepository {
 			status: "approved",
 			authorId: row.authorId,
 			consultationId: row.consultationId,
+			consultationTitle: row.consultationTitle,
 			checkedAt: row.checkedAt,
 		};
 	}
