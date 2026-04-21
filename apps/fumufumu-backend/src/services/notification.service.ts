@@ -150,10 +150,13 @@ export class NotificationService {
 	 * 任意の例外を通知エラーログに保存可能な文字列へ正規化する。
 	 */
 	private toErrorMessage(error: unknown): string {
-		if (error instanceof Error) {
-			return error.message;
+		if (error instanceof MailSendError) {
+			return `[${error.kind}] ${error.message}`;
 		}
-		return "unknown notification error";
+		if (error instanceof Error) {
+			return `[unknown] ${error.message}`;
+		}
+		return "[unknown] unknown notification error";
 	}
 
 	/**
@@ -166,7 +169,7 @@ export class NotificationService {
 		if (error instanceof MailSendError) {
 			return {
 				kind: error.kind,
-				reason: error.message,
+				reason: this.toErrorMessage(error),
 			};
 		}
 
