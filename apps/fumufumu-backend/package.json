@@ -24,8 +24,7 @@
     "remote:migration": "pnpm d1:migrations:apply:remote",
     "seed": "tsx scripts/seed.ts",
     "tags:list": "tsx scripts/tags.ts list",
-    "tags:add": "tsx scripts/tags.ts add",
-    "notifications:resend-api": "tsx scripts/notifications-api.ts resend"
+    "tags:add": "tsx scripts/tags.ts add"
   },
   "dependencies": {
     "@hono/zod-validator": "^0.4.3",

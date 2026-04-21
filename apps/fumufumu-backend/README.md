@@ -5,7 +5,6 @@
 - ローカルタグ一覧: `pnpm tags:list`
 - ローカルタグ追加: `pnpm tags:add キャリア 人間関係 技術`
 - 通知内部API（単体再送）: `POST /api/internal/notifications/resend`（Bearer認証）
-- 通知APIラッパー（単体再送）: `pnpm notifications:resend-api -- --target-type consultation --target-id 123`
 - 手動デプロイ: `DEPLOY_APPROVED=1 WRANGLER_DEPLOY_CONFIG=wrangler.local.jsonc pnpm deploy`
 
 `pnpm dev` はデフォルトで `wrangler.local.jsonc` を使う。
@@ -33,21 +32,6 @@ curl -X POST "https://<backend>/api/internal/notifications/resend" \
   -H "Authorization: Bearer ${NOTIFICATION_INTERNAL_TOKEN}" \
   -H "Content-Type: application/json" \
   -d '{"targetType":"consultation","targetId":123}'
-```
-
-### APIラッパー実行例
-
-`notifications:resend-api` は `apps/fumufumu-backend/.dev.vars` を自動読込する。
-
-```bash
-pnpm notifications:resend-api -- --target-type consultation --target-id 123
-```
-
-本番APIを叩く場合は、`.dev.vars` に以下を設定する。
-
-```bash
-NOTIFICATION_API_BASE_URL=https://<backend>
-NOTIFICATION_INTERNAL_TOKEN=<token>
 ```
 
 ## Notification 内部API の Secrets 運用
