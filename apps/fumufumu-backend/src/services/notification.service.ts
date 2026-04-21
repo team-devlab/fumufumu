@@ -9,7 +9,6 @@ import type { UserRepository } from "@/repositories/user.repository";
 import type {
 	ResendFailureKind,
 	ResendSummary,
-	SendPendingSummary,
 } from "@/types/notification.types";
 
 type ResendTarget = NonNullable<
@@ -37,49 +36,6 @@ export class NotificationService {
 		private readonly userRepository: UserRepository,
 		private readonly mailClient: MailClient,
 	) {}
-
-	/**
-	 * 承認済みかつ未通知の対象を取得し、メール送信を順次実行する。
-	 * 送信成否を集計して summary を返す。
-	 */
-	async sendPending(limit = 100): Promise<SendPendingSummary> {
-		const approvedList =
-			await this.contentCheckRepository.listPendingApprovedForNotification(limit);
-
-		const summary: SendPendingSummary = {
-			targetCount: approvedList.length,
-			attemptedCount: 0,
-			sentCount: 0,
-			failedCount: 0,
-			failedTargetIds: [],
-		};
-
-		for (const row of approvedList) {
-			summary.attemptedCount += 1;
-
-			try {
-				await this.dispatchApprovedMail({
-					targetType: "consultation",
-					targetId: row.id,
-					authorId: row.authorId,
-					title: row.title,
-				});
-
-				await this.contentCheckRepository.markNotificationSent("consultation", row.id);
-				summary.sentCount += 1;
-			} catch (error) {
-				await this.contentCheckRepository.markNotificationFailed(
-					"consultation",
-					row.id,
-					this.toErrorMessage(error),
-				);
-				summary.failedCount += 1;
-				summary.failedTargetIds.push(row.id);
-			}
-		}
-
-		return summary;
-	}
 
 	/**
 	 * 指定対象を1件だけ再送する。

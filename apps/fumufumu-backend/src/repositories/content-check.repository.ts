@@ -2,7 +2,7 @@ import type { DbInstance } from "@/index";
 import { consultations } from "@/db/schema/consultations";
 import { advices } from "@/db/schema/advices";
 import { contentChecks } from "@/db/schema/content-checks";
-import { and, asc, eq, inArray, isNull } from "drizzle-orm";
+import { and, eq, inArray, isNull } from "drizzle-orm";
 import { NotFoundError } from "@/errors/AppError";
 
 type ResendCandidate =
@@ -197,43 +197,6 @@ export class ContentCheckRepository {
 		}
 
 		return updated;
-	}
-
-	/**
-	 * 通知未送信の approved 相談を送信順で取得する
-	 */
-	async listPendingApprovedForNotification(limit: number) {
-		if (limit <= 0) {
-			return [];
-		}
-
-		return await this.db
-			.select({
-				id: consultations.id,
-				status: contentChecks.status,
-				authorId: consultations.authorId,
-				title: consultations.title,
-				checkedAt: contentChecks.checkedAt,
-			})
-			.from(contentChecks)
-			.innerJoin(
-				consultations,
-				and(
-					eq(contentChecks.targetType, "consultation"),
-					eq(contentChecks.targetId, consultations.id),
-				),
-			)
-			.where(
-				and(
-					eq(contentChecks.status, "approved"),
-					isNull(contentChecks.notifiedAt),
-				),
-			)
-			.orderBy(
-				asc(contentChecks.checkedAt),
-				asc(contentChecks.id),
-			)
-			.limit(limit);
 	}
 
 	/**

@@ -1,13 +1,5 @@
 import type { ApprovedMailTargetType, MailSendErrorKind } from "@/clients/mail";
 
-export type SendPendingSummary = {
-	targetCount: number;
-	attemptedCount: number;
-	sentCount: number;
-	failedCount: number;
-	failedTargetIds: number[];
-};
-
 export type ResendFailureKind =
 	| "not_found"
 	| "recipient_missing"
