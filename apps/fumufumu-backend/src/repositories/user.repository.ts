@@ -67,15 +67,4 @@ export class UserRepository {
 		};
 	}
 
-	/**
-	 * アプリユーザーIDから通知先メールアドレスを取得する
-	 *
-	 * @param appUserId - 業務DBのユーザーID (users.id)
-	 * @returns メールアドレス
-	 * @throws {NotFoundError} メールアドレスが見つからない場合
-	 */
-	async findEmailByAppUserId(appUserId: number): Promise<string> {
-		const recipient = await this.findNotificationRecipientByAppUserId(appUserId);
-		return recipient.email;
-	}
 }
