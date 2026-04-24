@@ -14,7 +14,7 @@ export default function RootLayout({
 }>) {
   return (
     <html lang="en">
-      <body className={``}>
+      <body className="min-h-screen bg-[#F7FFF8]">
         {/* ここに配置することで、アプリ内のどこからでも通知を出せます */}
         <Toaster position="top-center" />
         {children}
