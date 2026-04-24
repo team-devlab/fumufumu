@@ -1,4 +1,6 @@
-export default function FumufumuLPWorldview() {
+import Link from "next/link";
+
+export default function LpWorldviewPage() {
   const steps = [
     {
       no: "1",
@@ -98,12 +100,12 @@ export default function FumufumuLPWorldview() {
             </h1>
 
             <div className="mt-14 flex flex-col items-center gap-3 sm:mt-16 sm:flex-row">
-              <button
-                type="button"
+              <Link
+                href="/login"
                 className="rounded-2xl bg-[#F5C94A] px-10 py-5 text-lg font-bold text-slate-900 shadow-sm transition hover:-translate-y-0.5 hover:shadow-lg hover:bg-[#EAB308]"
               >
                 相談してみる
-              </button>
+              </Link>
             </div>
             <p className="mt-4 text-sm text-slate-500">
               匿名で投稿でき、公開前には運営が確認します
@@ -153,12 +155,12 @@ export default function FumufumuLPWorldview() {
                   ひとつだけ書いてみる。
                 </h2>
                 <div className="mt-7 flex flex-col items-center gap-3">
-                  <button
-                    type="button"
+                  <Link
+                    href="/login"
                     className="inline-flex items-center justify-center rounded-2xl bg-[#F5C94A] px-8 py-4 text-base font-bold text-slate-900 shadow-sm transition hover:-translate-y-0.5 hover:shadow-lg hover:bg-[#EAB308]"
                   >
                     相談してみる
-                  </button>
+                  </Link>
                   <p className="text-sm text-teal-50/80">
                     登録は1分。匿名で投稿でき、公開前には運営が確認します。
                   </p>
