@@ -12,6 +12,8 @@ export type ConsultationFilters = {
 	userId?: number;
 	draft?: boolean;
 	solved?: boolean;
+	// サービス層でのみ使う内部フラグ（本人の一覧取得時のみ未承認を含める）
+	includeUnapprovedForOwn?: boolean;
 };
 
 export type ConsultationListVisibilityScope = "public" | "own";

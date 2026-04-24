@@ -15,6 +15,9 @@
     ],
     "jsx": "react-jsx",
     "jsxImportSource": "hono/jsx",
+    // NOTE: `baseUrl` は TS6 で非推奨。TS7 移行までの暫定対応として警告を抑制する。
+    // 移行時は `baseUrl` 依存を外し、`paths` / import 解決方式を見直す。
+    "ignoreDeprecations": "6.0",
     "baseUrl": ".",
     "paths": {
       "@/*": ["src/*"]

@@ -12,6 +12,11 @@
   "compatibility_flags": [
     "nodejs_compat"
   ],
+  "vars": {
+    "APP_BASE_URL": "http://localhost:3000",
+    "RESEND_ENDPOINT": "https://api.resend.com/emails",
+    "RESEND_TIMEOUT_MS": "8000"
+  },
   "d1_databases": [
     {
       "binding": "DB",
