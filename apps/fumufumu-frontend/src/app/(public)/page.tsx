@@ -1,11 +1,5 @@
+import LpWorldviewPage from "../lp/worldview-v2-popdots/page";
+
 export default function Top() {
-  return (
-    <div className="">
-      Topぺージ
-      <br />
-      ・そのうちLPとかになることを一旦想定。
-      <br />
-      ・α版としてはここから遷移させることを想定。
-    </div>
-  );
+  return <LpWorldviewPage />;
 }
