@@ -7,6 +7,10 @@ BETTER_AUTH_SECRET=
 # Better Auth のベースURL。ローカル開発URLを設定してください。
 BETTER_AUTH_URL=
 
+# Google OAuth (ログイン/登録) 用
+GOOGLE_CLIENT_ID=
+GOOGLE_CLIENT_SECRET=
+
 # 許可するフロントエンドのURL（複数ある場合はカンマ区切り）
 # ローカル開発環境の例:
 FRONTEND_URL=http://localhost:3000

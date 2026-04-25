@@ -1,18 +1,63 @@
 import { Hono } from 'hono';
-import { users, authMappings } from '../db/schema/user';
-import { authUsers } from '../db/schema/auth';
 import { eq } from 'drizzle-orm';
+import type { ContentfulStatusCode } from 'hono/utils/http-status';
+
+import { authUsers } from '../db/schema/auth';
+import { authMappings } from '../db/schema/user';
 
 import { type Env, type Variables } from '../index';
 
 // 認証ルーターのHonoインスタンスを定義
 export const authRouter = new Hono<{ Bindings: Env, Variables: Variables }>();
 
-async function parseAuthResponse(response: Response) {
+type AuthRequestBody = {
+  email?: string;
+  password?: string;
+  name?: string;
+};
+
+type AuthApiResponse = Record<string, unknown> & {
+  user?: {
+    id?: unknown;
+  };
+};
+
+type HeadersWithCookieAccessors = Headers & {
+  getSetCookie?: () => string[];
+  getAll?: (name: string) => string[];
+};
+
+const isRecord = (value: unknown): value is Record<string, unknown> =>
+  typeof value === 'object' && value !== null;
+
+const getAuthUserId = (result: unknown): string | null => {
+  if (!isRecord(result)) return null;
+
+  const user = (result as AuthApiResponse).user;
+  if (!isRecord(user)) return null;
+
+  const userId = user.id;
+  return typeof userId === 'string' && userId.length > 0 ? userId : null;
+};
+
+const toJsonErrorPayload = (payload: unknown, fallbackMessage: string): Record<string, unknown> =>
+  isRecord(payload) ? payload : { error: fallbackMessage };
+
+const toContentfulStatusCode = (status: number): ContentfulStatusCode => {
+  if (status < 200 || status > 599) {
+    return 500;
+  }
+  if (status === 204 || status === 205 || status === 304) {
+    return 500;
+  }
+  return status as ContentfulStatusCode;
+};
+
+async function parseAuthResponse(response: Response): Promise<unknown> {
   const contentType = response.headers.get('content-type') || '';
 
   if (contentType.includes('application/json')) {
-    return response.clone().json();
+    return response.clone().json() as unknown;
   }
 
   const text = await response.clone().text();
@@ -20,47 +65,54 @@ async function parseAuthResponse(response: Response) {
 }
 
 function copySetCookieHeader(source: Response, target: Response) {
-  const setCookieHeader = source.headers.get('Set-Cookie');
+  // Better Auth は cookieCache 有効時などに複数の Set-Cookie を返すため、
+  // getSetCookie() で配列として取得して個別に append する。
+  // （.get() + .set() だと複数 Cookie が1つにマージされてブラウザでパース不能になる）
+  const headers = source.headers as HeadersWithCookieAccessors;
+  const setCookies = headers.getSetCookie?.()
+    ?? headers.getAll?.('Set-Cookie')
+    ?? headers.getAll?.('set-cookie');
 
+  if (setCookies && setCookies.length > 0) {
+    for (const cookie of setCookies) {
+      target.headers.append('Set-Cookie', cookie);
+    }
+    return;
+  }
+
+  const setCookieHeader = source.headers.get('Set-Cookie');
   if (setCookieHeader) {
-    target.headers.set('Set-Cookie', setCookieHeader);
+    target.headers.append('Set-Cookie', setCookieHeader);
   }
 }
 
 /**
- * サインアップ API (POST /api/signup)
+ * サインアップ API (POST /api/auth/signup)
+ *
+ * Better Auth の signUpEmail を呼ぶ薄いラッパ。
+ * 業務層 (users / authMappings) の作成は auth.ts の
+ * databaseHooks.user.create.after で実施される。
  */
 authRouter.post('/signup', async (c) => {
   const auth = c.get('auth');
-  const db = c.get('db');
-  const body = await c.req.json();
+  const body = await c.req.json<AuthRequestBody>();
   const { email, password, name } = body;
 
   if (!email || !password) {
     return c.json({ error: 'Email and password are required' }, 400);
   }
 
-  // Better Authでサインアップを実行
   let authResponse: Response;
-  let authResult: any;
+  let authResult: unknown;
 
   try {
-    const betterAuthResponse = await auth.api.signUpEmail({
-      body: {
-        email,
-        password,
-        name,
-      },
-      // クッキーを含むResponseを取得
+    authResponse = await auth.api.signUpEmail({
+      body: { email, password, name: name ?? '' },
       asResponse: true,
     });
-
-    authResponse = betterAuthResponse;
-    authResult = await parseAuthResponse(betterAuthResponse);
-
+    authResult = await parseAuthResponse(authResponse);
   } catch (e) {
     console.error('Sign-up failed:', e);
-    // Better Authからのエラーレスポンスをそのまま返す
     if (e instanceof Response) {
       return e;
     }
@@ -68,74 +120,60 @@ authRouter.post('/signup', async (c) => {
   }
 
   if (!authResponse.ok) {
-    const errorResponse = c.json(authResult ?? { error: 'Sign-up failed' }, authResponse.status as any);
+    const errorResponse = c.json(
+      toJsonErrorPayload(authResult, 'Sign-up failed'),
+      toContentfulStatusCode(authResponse.status),
+    );
     copySetCookieHeader(authResponse, errorResponse);
     return errorResponse;
   }
 
-  const authUserId = authResult.user?.id;
+  const authUserId = getAuthUserId(authResult);
 
   if (!authUserId) {
-    console.error("Sign-up succeeded, but user ID was not returned by Better Auth response.");
+    console.error('Sign-up succeeded, but user ID was not returned by Better Auth response.');
     return c.json({ error: 'Internal server error: Auth User ID missing.' }, 500);
   }
 
-  let appUserId: number;
+  // 業務層マッピングは auth.ts の databaseHooks.user.create.after で作られている想定。
+  // レスポンスに appUserId を載せるために引き直す。
+  const db = c.get('db');
+  const mapping = await db.query.authMappings.findFirst({
+    where: eq(authMappings.authUserId, authUserId),
+  });
 
-  // 業務DB (users, authMappings) の更新とIDマッピング
-  try {
-    const userInsertResult = await db.insert(users).values({
-      name: name,
-    }).returning({ id: users.id });
-
-    if (!userInsertResult || userInsertResult.length === 0) {
-      throw new Error("Failed to insert user into 'users' table.");
-    }
-
-    appUserId = userInsertResult[0].id;
-
-    await db.insert(authMappings).values({
-      appUserId: appUserId,
-      authUserId: authUserId,
-    });
-
-  } catch (e) {
-    console.error('DB transaction failed:', e);
-    return c.json({ error: 'Failed to complete user setup on business DB.', details: (e as Error).message }, 500);
+  if (!mapping) {
+    console.error('Sign-up succeeded, but auth mapping was not created for auth user:', authUserId);
+    return c.json({ error: 'Failed to complete user setup on business DB.' }, 500);
   }
 
-  // 業務ユーザーIDをResponse Bodyに追加し、クッキーヘッダーをコピー
-  const responseBody = {
+  const honoResponse = c.json({
     message: 'User created and signed in successfully.',
     auth_user_id: authUserId,
-    app_user_id: appUserId,
-  };
-  const honoResponse = c.json(responseBody, 200);
+    app_user_id: mapping.appUserId,
+  }, 200);
 
   copySetCookieHeader(authResponse, honoResponse);
-  if (!authResponse.headers.get('Set-Cookie')) {
-    console.warn("WARNING: Set-Cookie header missing from Better Auth response during signup.");
-  }
-
   return honoResponse;
 });
 
-
 /**
- * サインイン API (POST /api/signin)
+ * サインイン API (POST /api/auth/signin)
+ *
+ * Better Auth の signInEmail を呼ぶ薄いラッパ。
  */
 authRouter.post('/signin', async (c) => {
   const auth = c.get('auth');
   const db = c.get('db');
-  const body = await c.req.json();
+  const body = await c.req.json<AuthRequestBody>();
   const { email, password } = body;
 
   if (!email || !password) {
     return c.json({ error: 'Email and password are required' }, 400);
   }
 
-  // Better Authのエラー経路でUnhandled Rejectionが発生するケースを避けるため、
-  // 未登録メールは事前に401で返す（メッセージは汎用化して情報漏洩を避ける）。
+  // Better Auth のエラー経路での Unhandled Rejection を避けるため、未登録メールは
+  // 事前に 401 で返す（メッセージは情報漏洩を避けるため汎用化）。
   const existingUser = await db
     .select({ id: authUsers.id })
     .from(authUsers)
@@ -147,21 +185,14 @@ authRouter.post('/signin', async (c) => {
   }
 
   let authResponse: Response;
-  let authResult: any;
+  let authResult: unknown;
 
   try {
-    const betterAuthResponse = await auth.api.signInEmail({
-      body: {
-        email,
-        password,
-      },
-      // クッキーを含むResponseを取得
+    authResponse = await auth.api.signInEmail({
+      body: { email, password },
       asResponse: true,
     });
-
-    authResponse = betterAuthResponse;
-    authResult = await parseAuthResponse(betterAuthResponse);
-
+    authResult = await parseAuthResponse(authResponse);
   } catch (e) {
     console.error('Sign-in failed:', e);
     if (e instanceof Response) {
@@ -171,15 +202,18 @@ authRouter.post('/signin', async (c) => {
   }
 
   if (!authResponse.ok) {
-    const errorResponse = c.json(authResult ?? { error: 'Sign-in failed' }, authResponse.status as any);
+    const errorResponse = c.json(
+      toJsonErrorPayload(authResult, 'Sign-in failed'),
+      toContentfulStatusCode(authResponse.status),
+    );
     copySetCookieHeader(authResponse, errorResponse);
     return errorResponse;
   }
 
-  const authUserId = authResult.user?.id;
+  const authUserId = getAuthUserId(authResult);
 
   if (!authUserId) {
-    console.error("Sign-in succeeded, but user ID was not returned by Better Auth response.");
+    console.error('Sign-in succeeded, but user ID was not returned by Better Auth response.');
     return c.json({ error: 'Internal server error: Auth User ID missing.' }, 500);
   }
 
@@ -189,15 +223,11 @@ authRouter.post('/signin', async (c) => {
   }, 200);
 
   copySetCookieHeader(authResponse, honoResponse);
-  if (!authResponse.headers.get('Set-Cookie')) {
-    console.warn("WARNING: Set-Cookie header missing from Better Auth response during signin.");
-  }
-
   return honoResponse;
 });
 
 /**
- * サインアウト API (POST /api/signout)
+ * サインアウト API (POST /api/auth/signout)
  */
 authRouter.post('/signout', async (c) => {
   const auth = c.get('auth');
@@ -207,7 +237,6 @@ authRouter.post('/signout', async (c) => {
   try {
     authResponse = await auth.api.signOut({
       headers: c.req.raw.headers,
-      // クッキーを含むResponseを取得
       asResponse: true,
     });
   } catch (e) {
@@ -218,19 +247,15 @@ authRouter.post('/signout', async (c) => {
     return c.json({ error: 'Sign-out failed', details: (e as Error).message }, 400);
   }
 
-  const honoResponse = c.json({
-    message: 'Sign out successful.',
-  }, 200);
-
-  // Better AuthのレスポンスからSet-Cookieヘッダーを取得（クッキーをクライアント側で削除させる）
-  const setCookieHeader = authResponse.headers.get('Set-Cookie');
-
-  // Set-CookieヘッダーをBetter Authのレスポンスからコピー
-  if (setCookieHeader) {
-    honoResponse.headers.set('Set-Cookie', setCookieHeader);
-  } else {
-    console.warn("WARNING: Set-Cookie header missing from Better Auth response during signout.");
-  }
-
+  const honoResponse = c.json({ message: 'Sign out successful.' }, 200);
+  copySetCookieHeader(authResponse, honoResponse);
   return honoResponse;
 });
+
+/**
+ * Better Auth 組み込みエンドポイントへの委譲 (catch-all)
+ *
+ * 上記のカスタムエンドポイント以外の `/api/auth/*` (例: `/sign-in/social`,
+ * `/callback/:provider`, `/get-session` 等) は Better Auth に直接処理させる。
+ */
+authRouter.all('/*', (c) => c.get('auth').handler(c.req.raw));

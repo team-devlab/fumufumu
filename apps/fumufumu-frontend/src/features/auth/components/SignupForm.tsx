@@ -5,8 +5,15 @@ import { useState } from "react";
 import { Button } from "@/components/ui/Button";
 import { useAuth } from "../hooks/useAuth";
 
-export const SignupForm = () => {
-  const { signup, isLoading, error } = useAuth();
+type SignupFormProps = {
+  returnTo?: string | null;
+};
+
+export const SignupForm = ({ returnTo }: SignupFormProps) => {
+  const { signup, startGoogleAuth, isLoading, error } = useAuth();
+  const loginHref = returnTo
+    ? `/login?returnTo=${encodeURIComponent(returnTo)}`
+    : "/login";
 
   // 入力ステート
   const [name, setName] = useState("");
@@ -16,7 +23,7 @@ export const SignupForm = () => {
   const handleSubmit = (e: React.FormEvent) => {
     e.preventDefault();
     // フック経由でAPIをコール
-    signup({ name, email, password });
+    signup({ name, email, password }, returnTo);
   };
 
   return (
@@ -80,10 +87,31 @@ export const SignupForm = () => {
         </Button>
       </form>
 
+      <div className="my-5 flex items-center gap-3 text-gray-400 text-sm">
+        <span className="h-px flex-1 bg-gray-200" />
+        <span>または</span>
+        <span className="h-px flex-1 bg-gray-200" />
+      </div>
+
+      <button
+        type="button"
+        disabled={isLoading}
+        onClick={() => startGoogleAuth(returnTo)}
+        className="inline-flex w-full items-center justify-center gap-2 rounded-lg border border-gray-300 bg-white px-4 py-3 text-sm font-semibold text-gray-800 shadow-sm transition duration-150 hover:bg-gray-50 disabled:cursor-not-allowed disabled:opacity-50"
+      >
+        <span
+          aria-hidden="true"
+          className="inline-flex h-5 w-5 items-center justify-center rounded-full border border-gray-300 text-[11px] font-bold"
+        >
+          G
+        </span>
+        <span>Googleで登録</span>
+      </button>
+
       <p className="mt-6 text-sm text-gray-500">
         すでにアカウントをお持ちですか？{" "}
         <Link
-          href="/login"
+          href={loginHref}
           className="text-blue-600 hover:text-blue-700 font-medium"
         >
           ログイン

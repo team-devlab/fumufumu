@@ -6,6 +6,19 @@ export const metadata: Metadata = {
   description: "新しいアカウントを作成します",
 };
 
-export default function SignupPage() {
-  return <SignupForm />;
+type PageProps = {
+  searchParams: Promise<{
+    returnTo?: string | string[];
+  }>;
+};
+
+const pickFirst = (value?: string | string[]) => {
+  if (Array.isArray(value)) return value[0] ?? null;
+  return value ?? null;
+};
+
+export default async function SignupPage({ searchParams }: PageProps) {
+  const resolvedSearchParams = await searchParams;
+
+  return <SignupForm returnTo={pickFirst(resolvedSearchParams.returnTo)} />;
 }
