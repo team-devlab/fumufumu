@@ -1,5 +1,5 @@
 import { sql } from "drizzle-orm";
-import { sqliteTable, text, integer } from "drizzle-orm/sqlite-core";
+import { sqliteTable, text, integer, unique } from "drizzle-orm/sqlite-core";
 import { authUsers } from "./auth";
 
 // 業務ロジックの主軸となる users テーブル
@@ -29,4 +29,6 @@ export const authMappings = sqliteTable("auth_mappings", {
 		.notNull()
 		// auth_userテーブルはBetter Authが生成したスキーマを参照
 		.references(() => authUsers.id, { onDelete: "cascade" }),
-});
+}, (table) => ({
+	authUserIdUnique: unique("auth_mappings_auth_user_id_unique").on(table.authUserId),
+}));

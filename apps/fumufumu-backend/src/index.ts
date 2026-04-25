@@ -40,6 +40,8 @@ export interface Env {
   BETTER_AUTH_SECRET: string;
   BETTER_AUTH_URL: string;
   FRONTEND_URL: string;
+  GOOGLE_CLIENT_ID?: string;
+  GOOGLE_CLIENT_SECRET?: string;
   COOKIE_DOMAIN?: string;
   VERCEL_TEAM_SLUG?: string;
 }

@@ -1,5 +1,5 @@
 import { sql } from "drizzle-orm";
-import { sqliteTable, text, integer } from "drizzle-orm/sqlite-core";
+import { sqliteTable, text, integer, unique } from "drizzle-orm/sqlite-core";
 
 export const authUsers = sqliteTable("auth_users", {
   id: text("id").primaryKey(),
@@ -59,7 +59,16 @@ export const authAccounts = sqliteTable("auth_accounts", {
   updatedAt: integer("updated_at", { mode: "timestamp_ms" })
     .$onUpdate(() => /* @__PURE__ */ new Date())
     .notNull(),
-});
+}, (table) => ({
+  providerAccountUnique: unique("auth_accounts_provider_account_unique").on(
+    table.providerId,
+    table.accountId,
+  ),
+  userProviderUnique: unique("auth_accounts_user_provider_unique").on(
+    table.userId,
+    table.providerId,
+  ),
+}));
 
 export const authVerifications = sqliteTable("auth_verifications", {
   id: text("id").primaryKey(),
