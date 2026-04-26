@@ -4,11 +4,50 @@
 - curl http://127.0.0.1:8787/
 - ローカルタグ一覧: `pnpm tags:list`
 - ローカルタグ追加: `pnpm tags:add キャリア 人間関係 技術`
+- 通知内部API（単体再送）: `POST /api/internal/notifications/resend`（Bearer認証）
 - 手動デプロイ: `DEPLOY_APPROVED=1 WRANGLER_DEPLOY_CONFIG=wrangler.local.jsonc pnpm deploy`
 
 `pnpm dev` はデフォルトで `wrangler.local.jsonc` を使う。
 必要なら `WRANGLER_DEV_CONFIG` で dev 用 config を上書きできる。
 `pnpm studio` も同じ優先順（`WRANGLER_DEV_CONFIG` → `WRANGLER_D1_CONFIG` → `wrangler.local.jsonc`）でローカルD1を解決する。
+
+## Notification 内部API の環境変数
+
+内部API (`POST /api/internal/notifications/resend`) は Worker 環境変数を使用する。
+
+必須:
+- `NOTIFICATION_INTERNAL_TOKEN`
+- `RESEND_API_KEY`
+- `RESEND_FROM_EMAIL`
+
+任意:
+- `APP_BASE_URL`
+- `RESEND_ENDPOINT`
+- `RESEND_TIMEOUT_MS`
+
+呼び出し例:
+
+```bash
+curl -X POST "https://<backend>/api/internal/notifications/resend" \
+  -H "Authorization: Bearer ${NOTIFICATION_INTERNAL_TOKEN}" \
+  -H "Content-Type: application/json" \
+  -d '{"targetType":"consultation","targetId":123}'
+```
+
+## Notification 内部API の Secrets 運用
+
+### GitHub Actions / 本番実行環境
+- 以下を Secrets に登録する
+  - `RESEND_API_KEY`
+  - `RESEND_FROM_EMAIL`
+- 必要に応じて Variables または Secrets に登録する
+  - `APP_BASE_URL`
+  - `RESEND_ENDPOINT`
+  - `RESEND_TIMEOUT_MS`
+
+注意:
+- APIキー文字列をリポジトリに直接書かない
+- コマンド実行時は環境変数経由で注入する
 
 ## D1 migration runbook (production)
 
