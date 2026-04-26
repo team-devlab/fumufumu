@@ -35,9 +35,9 @@ export default function LpWorldviewPage() {
   ];
 
   return (
-    <div className="relative min-h-screen overflow-x-clip bg-[#F1F3F4] text-slate-800">
+    <div className="relative min-h-screen overflow-x-clip bg-[linear-gradient(135deg,#E9FBF8_0%,#F7FFF8_52%,#FFFBEA_100%)] text-slate-800">
       <div className="pointer-events-none absolute inset-0 z-0">
-        <div className="absolute inset-0 bg-[#F4F6F7]" />
+        <div className="absolute inset-0 bg-[linear-gradient(135deg,#E9FBF8_0%,#F7FFF8_52%,#FFFBEA_100%)]" />
 
         <div className="absolute -left-16 -top-20 h-64 w-64 rounded-full bg-[repeating-linear-gradient(45deg,rgba(124,203,147,0.58)_0_14px,transparent_14px_28px)]" />
         <div className="absolute left-[21%] -top-24 h-72 w-72 rounded-full bg-[repeating-linear-gradient(45deg,rgba(207,227,142,0.62)_0_15px,transparent_15px_30px)]" />
@@ -124,7 +124,7 @@ export default function LpWorldviewPage() {
             {steps.map((step) => (
               <div
                 key={step.no}
-                className="group relative overflow-hidden rounded-3xl border border-[#D7E3E7] bg-gradient-to-br from-white to-[#F7FAFB] px-6 py-7 shadow-[0_10px_24px_rgba(15,27,61,0.06)] transition hover:-translate-y-0.5 hover:shadow-[0_18px_38px_rgba(15,27,61,0.1)] sm:px-7 sm:py-8"
+                className="group relative overflow-hidden rounded-3xl border border-[#D7E3E7] bg-gradient-to-br from-white to-[#F7FAFB] px-6 py-7 shadow-[0_10px_24px_rgba(15,27,61,0.06)] sm:px-7 sm:py-8"
               >
                 <div className="absolute inset-x-0 top-0 h-[3px] bg-gradient-to-r from-teal-500/45 via-teal-400/20 to-transparent" />
                 <p className="pointer-events-none absolute right-4 top-[42%] hidden -translate-y-1/2 text-7xl font-black tracking-[-0.04em] text-teal-600/[0.2] md:block">
