@@ -28,7 +28,7 @@ export const ConsultationConfirm = ({
         <span className="block text-lg font-bold text-gray-600">
           {CONSULTATION_LABELS.TITLE}
         </span>
-        <div className="p-4 bg-gray-50 border border-gray-200 rounded-lg text-gray-900 font-bold">
+        <div className="text-3xl font-black tracking-tight text-gray-900">
           {title}
         </div>
       </div>
