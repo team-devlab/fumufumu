@@ -1,0 +1,46 @@
+<svg
+  xmlns="http://www.w3.org/2000/svg"
+  width="1100"
+  height="420"
+  viewBox="0 0 1100 420"
+  fill="none"
+>
+  <path
+    d="M139 259C130 233 128 214 132 195C138 162 158 136 188 122C201 85 235 56 274 50C316 44 358 64 381 99C419 95 456 115 477 146C503 186 499 239 468 275C457 308 431 333 397 342C368 349 337 344 312 328C290 337 266 341 243 336C195 324 158 295 139 259Z"
+    stroke="#0F9F92"
+    stroke-width="18"
+    stroke-linecap="round"
+    stroke-linejoin="round"
+  />
+  <path
+    d="M244 233C253 248 274 251 286 238C289 235 291 232 293 229"
+    stroke="#0F9F92"
+    stroke-width="16"
+    stroke-linecap="round"
+    stroke-linejoin="round"
+  />
+  <path
+    d="M330 233C339 248 360 251 372 238C375 235 377 232 379 229"
+    stroke="#0F9F92"
+    stroke-width="16"
+    stroke-linecap="round"
+    stroke-linejoin="round"
+  />
+  <circle cx="132" cy="296" r="16" fill="#0F9F92" />
+  <circle cx="97" cy="318" r="14" fill="#0F9F92" />
+  <circle cx="62" cy="340" r="12" fill="#0F9F92" />
+  <path d="M466 78L468 58" stroke="#F2B21F" stroke-width="14" stroke-linecap="round" />
+  <path d="M497 88L510 70" stroke="#F2B21F" stroke-width="14" stroke-linecap="round" />
+  <path d="M521 113L543 107" stroke="#F2B21F" stroke-width="14" stroke-linecap="round" />
+  <text
+    x="590"
+    y="250"
+    fill="#0F9F92"
+    font-size="112"
+    font-weight="700"
+    letter-spacing="8"
+    font-family="Hiragino Sans, Hiragino Kaku Gothic ProN, Yu Gothic, Noto Sans JP, sans-serif"
+  >
+    ふむふむ
+  </text>
+</svg>
