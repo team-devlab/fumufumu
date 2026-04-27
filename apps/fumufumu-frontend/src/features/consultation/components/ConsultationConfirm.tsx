@@ -23,11 +23,6 @@ export const ConsultationConfirm = ({
 }: Props) => {
   return (
     <div className="space-y-8 bg-white p-8 rounded-xl shadow-sm border border-gray-100">
-      {/* ヘッダー */}
-      <h1 className="text-xl font-bold text-gray-800 bg-gray-100 inline-block px-3 py-1 rounded-md">
-        投稿内容確認
-      </h1>
-
       {/* タイトル確認 */}
       <div className="space-y-2">
         <span className="block text-lg font-bold text-gray-600">
@@ -70,13 +65,14 @@ export const ConsultationConfirm = ({
       </div>
 
       {/* アクションボタン */}
-      <div className="flex items-center justify-between mt-8 pt-6 border-t border-gray-100">
+      <div className="flex items-center justify-between mt-8 pt-6">
         <button
           type="button"
           onClick={onBack}
           disabled={isProcessing}
-          className="px-6 py-2 text-gray-500 border border-gray-300 rounded-lg hover:bg-gray-50 transition-colors disabled:opacity-50"
+          className="inline-flex items-center px-6 py-2 text-gray-500 border border-gray-300 rounded-lg hover:bg-gray-50 transition-colors disabled:opacity-50"
         >
+          <span className="mr-2">←</span>
           戻る
         </button>
 

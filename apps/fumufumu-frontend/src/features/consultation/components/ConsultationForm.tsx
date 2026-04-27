@@ -1,3 +1,4 @@
+import { Button } from "@/components/ui/Button";
 import {
   CONSULTATION_LABELS,
   CONSULTATION_RULES,
@@ -14,6 +15,10 @@ type Props = {
   onToggleTag: (tag: Tag) => void;
   titleCharCount: number;
   bodyCharCount: number;
+  onBack: () => void;
+  onSaveDraft: () => void;
+  onConfirm: () => void;
+  isProcessing: boolean;
 };
 
 export const ConsultationForm = ({
@@ -26,13 +31,13 @@ export const ConsultationForm = ({
   onToggleTag,
   titleCharCount,
   bodyCharCount,
+  onBack,
+  onSaveDraft,
+  onConfirm,
+  isProcessing,
 }: Props) => {
   return (
-    <div className="space-y-8 bg-white p-8 rounded-xl shadow-sm border border-gray-100">
-      <h1 className="text-xl font-bold text-gray-800 bg-gray-100 inline-block px-3 py-1 rounded-md">
-        相談投稿
-      </h1>
-
+    <div className="space-y-8 rounded-2xl border border-gray-200 bg-white p-8 shadow-sm">
       {/* タイトル入力 */}
       <div className="space-y-2">
         <div className="flex justify-between items-center">
@@ -53,7 +58,7 @@ export const ConsultationForm = ({
           onChange={(e) => onChangeTitle(e.target.value)}
           // ★修正: 定数利用
           placeholder={CONSULTATION_LABELS.PLACEHOLDER_TITLE}
-          className="w-full p-4 bg-gray-50 border border-gray-200 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent outline-none transition-all"
+          className="w-full rounded-lg border border-gray-200 bg-gray-50 p-4 outline-none transition-all focus:border-transparent focus:ring-2 focus:ring-[#0F9F92]"
           maxLength={CONSULTATION_RULES.TITLE_MAX_LENGTH}
         />
       </div>
@@ -77,7 +82,7 @@ export const ConsultationForm = ({
           onChange={(e) => onChangeBody(e.target.value)}
           placeholder={CONSULTATION_LABELS.PLACEHOLDER_BODY}
           rows={12}
-          className="w-full p-4 bg-gray-50 border border-gray-200 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent outline-none transition-all resize-y"
+          className="w-full resize-y rounded-lg border border-gray-200 bg-gray-50 p-4 outline-none transition-all focus:border-transparent focus:ring-2 focus:ring-[#0F9F92]"
           maxLength={CONSULTATION_RULES.BODY_MAX_LENGTH}
         />
       </div>
@@ -126,6 +131,36 @@ export const ConsultationForm = ({
               })}
             </div>
           )}
+        </div>
+      </div>
+
+      <div className="flex items-center justify-between pt-6">
+        <button
+          type="button"
+          onClick={onBack}
+          className="inline-flex items-center justify-center rounded-xl border border-slate-200 px-4 py-2 text-slate-500 transition-colors hover:bg-slate-50 hover:text-slate-700"
+          disabled={isProcessing}
+        >
+          <span className="mr-2">←</span>
+          相談一覧に戻る
+        </button>
+
+        <div className="flex items-center gap-4">
+          <button
+            type="button"
+            onClick={onSaveDraft}
+            disabled={isProcessing}
+            className="rounded-xl border border-amber-200 bg-amber-50 px-6 py-3 font-bold text-amber-600 transition-colors hover:bg-amber-100 disabled:cursor-not-allowed disabled:opacity-50"
+          >
+            下書き保存
+          </button>
+          <Button
+            onClick={onConfirm}
+            disabled={isProcessing}
+            className="rounded-xl bg-teal-600 px-8 py-3 font-bold text-white shadow-md hover:bg-teal-700"
+          >
+            確認画面へ
+          </Button>
         </div>
       </div>
     </div>
