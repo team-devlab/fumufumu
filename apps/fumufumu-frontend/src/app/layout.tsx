@@ -6,10 +6,7 @@ export const metadata: Metadata = {
   title: "Fumufumu App",
   description: "エンジニア向けキャリア相談プラットフォーム",
   icons: {
-    icon: [
-      { url: "/fumufumu-favicon.svg", type: "image/svg+xml" },
-      { url: "/fumufumu-favicon.png", type: "image/png" },
-    ],
+    icon: "/fumufumu-favicon.png",
     apple: "/fumufumu-apple-icon.png",
   },
 };
