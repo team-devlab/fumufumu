@@ -43,7 +43,7 @@ export const ConsultationForm = ({
         <div className="flex justify-between items-center">
           <label
             htmlFor="title"
-            className="block text-lg font-bold text-gray-800"
+            className="block text-base font-semibold text-gray-600"
           >
             {CONSULTATION_LABELS.TITLE}
           </label>
@@ -68,7 +68,7 @@ export const ConsultationForm = ({
         <div className="flex justify-between items-center">
           <label
             htmlFor="body"
-            className="block text-lg font-bold text-gray-800"
+            className="block text-base font-semibold text-gray-600"
           >
             {CONSULTATION_LABELS.BODY}
           </label>
@@ -91,7 +91,7 @@ export const ConsultationForm = ({
         <div className="flex justify-between items-center">
           <label
             htmlFor="tags"
-            className="block text-md font-bold text-gray-800"
+            className="block text-base font-semibold text-gray-600"
           >
             {CONSULTATION_LABELS.TAGS_INPUT}
           </label>

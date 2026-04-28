@@ -25,25 +25,25 @@ export const ConsultationConfirm = ({
     <div className="space-y-8 bg-white p-8 rounded-xl shadow-sm border border-gray-100">
       {/* タイトル確認 */}
       <div className="space-y-2">
-        <span className="block text-lg font-bold text-gray-600">
+        <span className="block text-base font-semibold text-gray-600">
           {CONSULTATION_LABELS.TITLE}
         </span>
-        <div className="text-3xl font-black tracking-tight text-gray-900">
+        <div className="text-xl font-semibold tracking-tight text-gray-800">
           {title}
         </div>
       </div>
 
       {/* 相談内容確認 */}
       <div className="space-y-2">
-        <span className="block text-lg font-bold text-gray-600">
+        <span className="block text-base font-semibold text-gray-600">
           {CONSULTATION_LABELS.BODY}
         </span>
-        <div className="text-xl font-bold text-gray-800 "> {body} </div>
+        <div className="text-base font-medium text-gray-700"> {body} </div>
       </div>
 
       {/* タグ確認 */}
       <div className="space-y-2">
-        <span className="block text-md font-bold text-gray-600">
+        <span className="block text-base font-semibold text-gray-600">
           {CONSULTATION_LABELS.TAGS_CONFIRM}
         </span>
         <div className="flex flex-wrap gap-2">
