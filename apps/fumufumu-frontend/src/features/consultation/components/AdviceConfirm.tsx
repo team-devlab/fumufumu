@@ -16,18 +16,23 @@ export const AdviceConfirm = ({ consultation }: Props) => {
   return (
     <div className="bg-white p-8 rounded-xl shadow-sm border border-gray-100 space-y-8">
       {/* --- 親相談のコンテキスト表示 --- */}
-      <div className="bg-gray-50 p-6 rounded-lg border border-gray-200 space-y-2">
-        <p className="text-xs text-gray-500">
+      <div className="space-y-2">
+        <span className="block text-xs text-gray-400">
           以下の相談に対するアドバイスを投稿します
-        </p>
-        <h2 className="text-lg font-bold text-gray-800">
-          {consultation.title}
-        </h2>
+        </span>
+        <div className="bg-gray-50 p-6 rounded-lg border border-gray-200 space-y-4">
+          <h2 className="text-base font-semibold text-gray-700">
+            {consultation.title}
+          </h2>
+          <div className="text-sm text-gray-600 line-clamp-3">
+            {consultation.body}
+          </div>
+        </div>
       </div>
 
       {/* --- アドバイス本文 --- */}
       <div className="space-y-2">
-        <span className="block text-lg font-bold text-gray-800">
+        <span className="block text-base font-semibold text-gray-700">
           アドバイス内容
         </span>
         <div className="text-xl font-bold text-gray-800 whitespace-pre-wrap leading-relaxed">
@@ -36,7 +41,7 @@ export const AdviceConfirm = ({ consultation }: Props) => {
       </div>
 
       {/* --- アクションボタン --- */}
-      <div className="flex items-center justify-between pt-6 border-t border-gray-100">
+      <div className="flex items-center justify-between pt-6">
         <button
           type="button"
           onClick={handleBack}
