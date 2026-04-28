@@ -1,5 +1,6 @@
 "use client";
 
+import Image from "next/image";
 import { useState } from "react";
 import { Button } from "@/components/ui/Button";
 import { useAuth } from "../hooks/useAuth";
@@ -40,10 +41,15 @@ export const LoginForm = ({ reason, returnTo }: LoginFormProps) => {
   return (
     <div className="mx-auto w-[calc(100%-32px)] max-w-[424px]">
       <div className="text-center">
-        <div className="mx-auto inline-flex h-[74px] min-w-[218px] items-center justify-center rounded-2xl bg-[#0F9F92] px-8 shadow-[0_8px_20px_rgba(15,159,146,0.24)]">
-          <span className="text-[48px] font-black leading-none tracking-[-0.02em] text-white">
-            ふむふむ
-          </span>
+        <div className="mx-auto w-full max-w-[424px]">
+          <Image
+            src="/fumufumu-login-logo-lockup.svg"
+            alt="ふむふむ"
+            width={1100}
+            height={420}
+            priority
+            className="h-auto w-full"
+          />
         </div>
         <p className="mt-5 text-[18px] font-semibold tracking-tight text-[#0F9F92] sm:text-[19px]">
           エンジニアのお悩み相談プラットフォーム
