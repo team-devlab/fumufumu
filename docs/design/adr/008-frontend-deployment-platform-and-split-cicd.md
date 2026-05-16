@@ -50,6 +50,7 @@
 
 - `apps/fumufumu-frontend` の本番配備先は Cloudflare Workers を採用する
 - フロントエンドの Cloudflare 配備には `@opennextjs/cloudflare` を前提とする
+- Cloudflare 内では Workers + OpenNext を選び、Pages (static) / Pages + Functions / R2 + Workers 自前配信は採らない
 - `D1 migration` / `apps/fumufumu-backend` / `apps/fumufumu-frontend` は GitHub Actions を分離し、独立した適用単位として扱う
 - Preview Deploy は初期段階では必須にしない。まずは PR 品質チェック + manual production deploy を優先する
 - Vercel は本番の第一候補から外す。必要なら移行期間の一時的な退避先としてのみ残す
@@ -71,6 +72,12 @@
   - 却下理由: いま必要な差分より運用責務の増加が大きい
 - AWS Amplify を本番の第一候補にする案
   - 却下理由: `next@15` へ下げれば成立するが、Cloudflare 集約と大きめのトラフィック時コスト優位を捨てる決定打がない
+- Cloudflare Pages (static) を採用する案
+  - 却下理由: SSG 化のコスト（`server-only` 6 本 / `next/headers` 5 本 / SSR ページ群の再設計）が、配備先選定のためだけに払う変更として重い
+- Cloudflare Pages + Functions を採用する案
+  - 却下理由: 機能的には Workers + OpenNext と同等を実現できるが、Cloudflare 自身の開発リソースと公式 Next.js ガイドが Workers + Static Assets 側へ集約されており、新機能追従と doc の充実度で劣る
+- Cloudflare R2 + Workers 自前配信を採用する案
+  - 却下理由: Next.js の routing / metadata / asset handling を自前実装する話になり、完全 SPA 化と同等以上のコスト。R2 の egress 無料の利点は、Workers Static Assets でも static asset 無料・無制限を享受できるため A の優位を覆さない
 - DB migration を backend deploy に内包する案
   - 却下理由: schema 変更の失敗と Worker deploy の失敗が混ざり、切り戻し判断が難しくなる
 
@@ -106,7 +113,7 @@
   - `proxy.ts` の matcher は `/consultations/:path*` と `/user/:path*` に限定されている
 
 つまり、今回の検討対象は「静的フロントの配備先」ではなく、「SSR / App Router / Proxy / Cookie 認証を含む Next.js アプリの配備先」である。
-加えて、現行 ADR では `DB migration` の production apply を実質扱えておらず、ここが deployment design の抜けになっていた。
+加えて、これまでのリポジトリ運用では `DB migration` の production apply を実質扱えておらず、ここが deployment design の抜けになっていた。
 
 ---
 
@@ -114,8 +121,21 @@
 
 ### 1.1 静的エクスポート前提には寄せられない
 
-Next.js の Self-Hosting ガイドでは、`Proxy` は静的エクスポートではサポートされないとされている。  
-現行フロントエンドは `src/proxy.ts` を使って認証制御しているため、`output: "export"` に寄せる前提は合わない。
+`output: "export"` は、Next.js の枠組みは残したままサーバー実行を行わず、ビルド時に各ページの HTML を事前生成して配信する出力モードを指す（配信の見え方は SPA に近いが、Next.js のルーターと metadata 生成は残せる）。
+
+これに寄せる場合、`proxy.ts` を撤去するだけでは足りない。  
+現行コードは SSR / `cookies()` / `next/headers` / Cookie ベース認証に依存しており、static export 化には認証導線とデータ取得方式の全面再設計が必要になる（詳細は 1.4 と 3.3）。
+
+したがって、本 ADR では SSR を維持する前提で配備先を比較する。  
+この前提によって、サーバー実行を持たない static-only hosting は比較対象から外れる。具体的には:
+
+- Cloudflare Pages (static)
+- AWS S3 + CloudFront
+- GitHub Pages
+- Firebase Hosting
+- Netlify Starter の static 構成
+
+比較対象は「SSR を安定運用できる配備先」に限る（Section 2 へ続く）。
 
 ### 1.2 本質的な論点は SSR + Cookie 認証の運用先
 
@@ -258,6 +278,34 @@ Amplify の公式ドキュメントでは、Amplify Hosting compute SSR provider
 - 将来 Next.js 16+ へ上げたい時に、Amplify 側サポート待ちになる
 
 したがって、Amplify は「条件付き候補」までは昇格するが、「第一候補」にはしない。
+
+### 2.3 Cloudflare 内の選択肢比較
+
+Cloudflare を採る前提でも、内側には複数の配信モデルがある。Section 1.1 で SSR 維持を前提に固定したため、static-only である Cloudflare Pages (static) はここでは候補から除外済み。残る選択肢を比較する。
+
+| 構成 | 仕組み | このリポでの適合性 | 主な懸念 | 判定 |
+|---|---|---|---|---|
+| A. Workers + OpenNext | Worker 上で Next.js SSR を実行。static asset は Workers Static Assets で配信 | SSR / Cookie 認証 / `proxy.ts` をほぼそのまま使える | Worker 実行課金、OpenNext 依存、bundle 10 MB 制限 | 採用 |
+| B. Pages + Functions | static 部分は Pages、サーバー処理は Pages Functions（実体は Worker）でハイブリッド | SSR を残せる。OpenNext for Pages も存在 | Cloudflare の開発リソースが Workers + Static Assets に集約され、Pages Functions は新機能の追従が遅れがち | 不採用 |
+| C. R2 + Workers 自前配信 | static 成果物を R2 (object storage) に置き、Worker で routing / 配信を自前実装 | Next.js の routing / metadata / SSR を捨てる前提になる | OSS adapter なし、開発体験 / 保守 / deploy 自動化すべて自作。R2 は本来 object storage 用途 | 不採用 |
+
+#### A を採る理由
+
+- Cloudflare 公式の Next.js 案内が `@opennextjs/cloudflare` に集約されている（2.2 #Cloudflare Workers 参照）
+- 現行コード（SSR / `proxy.ts` / `cookies()` / `next/headers`）をそのまま乗せられる
+- static asset は無料・無制限なので、Pages との配信コスト差は事実上ない
+
+#### B を採らない理由
+
+- Pages + Functions でも機能的には A と同等を実現できるが、Cloudflare 自身の最近の方針は Workers + Static Assets への集約
+- 公式 Next.js ガイドが Workers 経由を案内している
+- 同じ機能なら公式推奨レーンに乗る方が、長期メンテと doc 追従で楽
+
+#### C を採らない理由
+
+- Next.js を残す前提では、routing / metadata / static asset の handling を自前で書く話になり、コストが「完全 SPA 化」と同等以上
+- R2 の egress 無料の利点は、Workers Static Assets でも static asset 無料・無制限を享受できるため、A の優位を覆さない
+- R2 は object storage として（画像 / バイナリ / バックアップ等）に使うのが本来の用途
 
 ---
 
@@ -707,7 +755,7 @@ Cloudflare では OpenNext の対応状況が重要になる。
 2. backend Worker deploy
 3. frontend deploy
 
-特に D1 migration は、現行 ADR で抜けていた論点であり、backend deploy に内包しない形へ改めて整理した。
+特に D1 migration は、これまでのリポジトリ運用で抜けていた論点であり、backend deploy に内包しない形へ改めて整理した。
 
 ただし、これは「Cloudflare が Next.js の絶対的最適解」という意味ではない。  
 今回の repo ではコスト・運用集約・現行機能セットの3条件で最もバランスが良い、という判断である。
@@ -785,555 +833,7 @@ Cloudflare では OpenNext の対応状況が重要になる。
 
 ---
 
-## 付録A. CI/CD実装ロードマップ（スモールステップ前提）
+## 付録A. 実装ロードマップ
 
-### A.1 このロードマップの前提
-
-一度に多くのコードを変更せず、各ステップで「意味のある最小単位」の変更だけを入れる。  
-この ADR では、次の原則で進める。
-
-- 1コミットで責務を増やしすぎない
-- deploy 設定とアプリ本体の修正を、できるだけ同じコミットに混ぜない
-- まず `CIで落とせる状態` を作ってから、自動 deploy を有効化する
-- 無料枠を優先する間は、常設 staging を持たず `manual production deploy` を基本にする
-- 自動化は `PR checks` と `manual deploy` を先に整え、`main -> production` 自動化は後回しにする
-- `D1 migration` / `backend deploy` / `frontend deploy` は別レーンで扱う
-- backend と frontend は独立 deploy にするが、同時に切り替えない
-
-### A.2 実装前に先に決めること
-
-ここが曖昧だと workflow を書いても結局止まるので、先に決める。
-
-補足:
-
-- `workflow_dispatch` は GitHub Actions の「手動実行」トリガーを指す
-- GitHub の Actions 画面からボタンで workflow を起動する運用
-- つまり「push で自動 deploy はしないが、必要なタイミングで deploy はできる」状態
-
-1. 初期の本番 URL をどうするか
-   - 推奨: 当面は `workers.dev`
-2. 常設 staging を作るか
-   - 推奨: 作らない
-3. GitHub Environments を分けるか
-   - 推奨: `backend-production`, `frontend-production`
-4. Cloudflare API Token を frontend/backend で分けるか
-   - 推奨: 分ける
-5. D1 migration の production apply 条件
-   - 推奨: 当面は `workflow_dispatch`
-6. backend の production deploy 条件
-   - 推奨: 当面は `workflow_dispatch`
-7. frontend の production deploy 条件
-   - 推奨: 当面は `workflow_dispatch`
-
-### A.3 手動セットアップ項目（commit しない作業）
-
-リポジトリ外の作業なので commit には含めないが、早めに揃える。
-
-- GitHub Environments の作成
-- GitHub Secrets / Variables の作成
-- Cloudflare 側の production Worker の作成
-- Cloudflare 側の secrets / vars の投入
-- 必要なら DNS 設定（custom domain を追加する段階で実施）
-
-想定される主な値:
-
-- GitHub Secrets
-  - `CLOUDFLARE_ACCOUNT_ID`
-  - `CLOUDFLARE_API_TOKEN_BACKEND`
-  - `CLOUDFLARE_API_TOKEN_FRONTEND`
-- backend 用 variables / secrets
-  - `BETTER_AUTH_SECRET`
-  - `BETTER_AUTH_URL`
-  - `CORS_ALLOWED_ORIGINS`
-  - `COOKIE_DOMAIN`
-  - `D1_DATABASE_NAME`
-  - 必要なら `D1_DATABASE_ID`
-- frontend 用 variables / secrets
-  - `NEXT_PUBLIC_API_URL`
-  - Cloudflare deploy 対象名
-
-### A.4 実装ステップ一覧
-
-以下の順番を推奨する。  
-各ステップは、それ単体でレビュー・動作確認・ロールバックがしやすい粒度にしている。
-
-#### Step 1. frontend の PR チェックに build を追加し、`webpack` 本線 + `Turbopack` 監視に分ける
-
-目的:
-
-- deploy 前に build 崩れを PR で検知できるようにする
-- Cloudflare へ寄せる前に、現行 frontend CI の信頼性を上げる
-- 本線の安定性を確保しつつ、将来の Turbopack 移行に向けた観測を継続する
-
-主な変更対象:
-
-- `.github/workflows/fe-code-check.yml`
-
-この単位で止める理由:
-
-- deploy にはまだ触れず、純粋に品質ゲートだけを強化できる
-- 以後の frontend 変更の安全性が上がる
-- bundler 方針を明文化し、チーム内の判断根拠をコードとドキュメントで一致させられる
-
-動作確認:
-
-- ローカルで `apps/fumufumu-frontend` にて `pnpm build`
-- PR で frontend workflow が通ること
-- `Run Next.js Build (Webpack)` が必須で成功すること
-- `Run Next.js Build (Turbopack monitor)` は失敗しても workflow 全体は失敗扱いにしないこと
-
-コミットメッセージ案:
-
-```text
-ci: frontend PRチェックを webpack本線 + Turbopack監視に整理
-
-- PRの必須ゲートは webpack build で安定運用するため
-- Turbopack は非blocking監視で将来移行の判断材料を残すため
-- frontend 変更時のみ実行して無関係PRのCI負荷を抑えるため
-```
-
-Step 1 方針メモ（2026-03-20 追記）:
-
-- 当面の deploy/CI 本線は `webpack`（`pnpm build`）とする
-- `Turbopack` は monitor レーン（`continue-on-error: true`）で継続実行する
-- 理由:
-  - Next.js 16 では Turbopack がデフォルトだが、プロジェクト依存で build の安定性に差が出るため
-  - 無料枠優先・manual production deploy 前提の Phase 1 では、まず必須ゲートの再現性を優先するため
-- 見直し条件:
-  - Turbopack monitor が連続 10 回成功したとき
-  - Next.js minor/patch を更新したとき
-  - Step 7（Cloudflare 向け build 基盤）を導入したとき
-
-#### Step 2. backend の CORS / Auth URL / Cookie 設定を環境変数ベースに寄せる
-
-目的:
-
-- Vercel 固定の前提を外し、配備先変更に耐える backend にする
-- frontend の production 切り替えを backend 側で受けられるようにする
-
-主な変更対象:
-
-- `apps/fumufumu-backend/src/index.ts`
-- `apps/fumufumu-backend/src/auth.ts`
-- `apps/fumufumu-backend/.env.example`
-- `apps/fumufumu-backend/wrangler.jsonc`
-- 必要なら型定義ファイル
-
-この単位で止める理由:
-
-- deploy workflow と切り離して、純粋な設定整理としてレビューできる
-- ここが不安定だと frontend 切り替え時の不具合調査が難しくなる
-
-動作確認:
-
-- backend テストが通ること
-- `localhost` と想定 production origin で CORS が意図通りかを確認
-- `BETTER_AUTH_URL` と Cookie 設定でログインが壊れていないこと
-
-コミットメッセージ案:
-
-```text
-refactor: backend のデプロイ先依存設定を環境変数ベースに整理
-
-- frontend 配備先を Vercel 固定から外せるようにするため
-- CORS と Better Auth の本番設定を環境ごとに安全に切り替えられるようにするため
-```
-
-#### Step 3. backend の D1 migration 実行導線を整理する
-
-目的:
-
-- production migration を backend deploy から切り離す
-- placeholder のままになっている migration 導線を、本番運用できる形に寄せる
-
-主な変更対象:
-
-- `apps/fumufumu-backend/package.json`
-- backend runbook / docs
-- 必要なら workflow 用 variables 名の整理
-
-この単位で止める理由:
-
-- migration 運用の前提だけを先に固められる
-- backend deploy workflow と切り離してレビューできる
-
-動作確認:
-
-- `wrangler d1 migrations list <database_name> --remote` の実行方法が明確であること
-- `wrangler d1 migrations apply <database_name> --remote` の実行手順が明確であること
-- `wrangler d1 time-travel info <database_name>` の退避手順が明確であること
-
-コミットメッセージ案:
-
-```text
-chore: D1 本番マイグレーションの実行導線を整理
-
-- DB migration を backend デプロイと分離して扱うため
-- placeholder のままだった本番適用手順を明示化するため
-```
-
-#### Step 4. D1 の manual migration workflow を追加する
-
-目的:
-
-- production DB の schema change を手動トリガーで安全に適用できるようにする
-- migration apply の成否を backend deploy と分離する
-
-主な変更対象:
-
-- 新規 `.github/workflows/be-db-migrate-manual.yml`
-- 必要なら GitHub Environment / variables 参照
-
-この単位で止める理由:
-
-- production DB への変更だけを独立して検証できる
-- backend Worker deploy がまだなくても先に整備できる
-
-動作確認:
-
-- `workflow_dispatch` で `migrations list` が走ること
-- `workflow_dispatch` で `migrations apply --remote` が通ること
-- 実行ログに対象 `database_name` が明示されること
-
-コミットメッセージ案:
-
-```text
-ci: D1 本番マイグレーションの手動workflowを追加
-
-- schema change を backend デプロイと切り離して安全に適用するため
-- production DB への変更タイミングを手動で制御できるようにするため
-```
-
-#### Step 5. backend の manual deploy workflow を追加する
-
-目的:
-
-- いきなり `main` 自動 deploy にせず、workflow と secrets の妥当性を確認する
-- backend だけ先に独立 deploy できるようにする
-
-主な変更対象:
-
-- 新規 `.github/workflows/be-deploy-manual.yml` もしくは既存 workflow の整理
-
-この単位で止める理由:
-
-- auto deploy に進む前に、GitHub Actions と Cloudflare 認証だけを検証できる
-- backend の deploy 成否とアプリコードの問題を分離できる
-
-動作確認:
-
-- `workflow_dispatch` で production 向け deploy が通ること
-- deploy 後に `/health` が 200 を返すこと
-
-コミットメッセージ案:
-
-```text
-ci: backend の手動デプロイworkflowを追加
-
-- 本番自動化の前に GitHub Actions と Cloudflare 認証の疎通を確認するため
-- backend を単体で安全にデプロイ検証できるようにするため
-```
-
-#### Step 6. backend の production deploy を当面は manual のまま運用する
-
-目的:
-
-- 無料枠優先の間は、production deploy のタイミングを明示的に制御できるようにする
-- backend と frontend の deploy 分離を、まずは manual 運用で成立させる
-
-主な変更対象:
-
-- docs / runbook
-- 必要なら既存 workflow 名や説明の整理
-
-この単位で止める理由:
-
-- 自動化を急がず、deploy 判断を手元で持てる
-- 個人開発での誤反映リスクを下げられる
-
-動作確認:
-
-- backend の deploy 手順が runbook と一致していること
-- manual deploy で再現性があること
-
-コミットメッセージ案:
-
-```text
-docs: backend デプロイを manual 運用前提で整理
-
-- 無料枠優先の間は本番反映タイミングを手動で制御するため
-- 個人開発での誤デプロイを避けつつ独立配備を進めるため
-```
-
-#### Step 7. frontend の Cloudflare build 基盤だけを追加する
-
-目的:
-
-- deploy する前に、Cloudflare 向け build が成立するかを確認する
-- OpenNext / Wrangler まわりの問題を deploy 問題と分離する
-
-主な変更対象:
-
-- `apps/fumufumu-frontend/package.json`
-- `apps/fumufumu-frontend/next.config.ts`
-- `apps/fumufumu-frontend/wrangler.jsonc` もしくは Cloudflare 向け設定ファイル
-- 必要なら OpenNext 関連設定ファイル
-
-この単位で止める理由:
-
-- frontend の本番切り替え前に、build のみを独立して検証できる
-- ここで失敗した場合、workflow やドメイン設定を疑わずに済む
-
-動作確認:
-
-- ローカルで `next build`
-- Cloudflare 向け build コマンドが通ること
-- 可能なら deploy なしの dry-run まで確認
-
-コミットメッセージ案:
-
-```text
-build: frontend の Cloudflare 向け build 基盤を追加
-
-- 本番デプロイ前に Cloudflare target の build 成否を独立確認するため
-- OpenNext 由来の問題を deploy 設定と切り分けて検証するため
-```
-
-#### Step 8. frontend の manual deploy workflow を production 向けに追加する
-
-目的:
-
-- frontend の Cloudflare deploy を production へ手動反映できるようにする
-- 自動化前に login / protected route / API 接続を本番同等条件で確認する
-
-主な変更対象:
-
-- 新規 `.github/workflows/fe-deploy-manual.yml`
-- 必要なら frontend production 用の variables 参照
-
-この単位で止める理由:
-
-- production 自動 deploy に進む前に、手動反映で安全に運用できる
-- frontend 側だけの Cloudflare 配備を独立して確認できる
-
-動作確認:
-
-- `workflow_dispatch` で production deploy が通ること
-- production URL の `/` と `/login` が表示できること
-- 未ログインで保護ページへ行くと login へ遷移すること
-- ログイン後に API 連携が動くこと
-
-コミットメッセージ案:
-
-```text
-ci: frontend の手動デプロイworkflowを追加
-
-- 無料枠優先の間は本番反映を手動で制御するため
-- 認証と API 接続を production 条件で安全に確認できるようにするため
-```
-
-#### Step 9. frontend / backend の production 環境値を確定し、実運用ドメイン前提へ寄せる
-
-目的:
-
-- 当面は `workers.dev` 前提で production 環境値を確定する
-- localhost と production の差分を最小化する
-- 将来 custom domain を追加するための切り替えポイントを明確にする
-
-主な変更対象:
-
-- backend の allowlist / auth URL / cookie domain 関連
-- frontend の `NEXT_PUBLIC_API_URL`
-- 必要なら docs / runbook
-
-この単位で止める理由:
-
-- 実際の運用 URL と secrets の話を deploy workflow から切り離せる
-- 問題が起きた時に「deploy 設定の問題」か「環境値の問題」かを分けて見られる
-
-動作確認:
-
-- production `workers.dev` URL で login / logout / protected route が通ること
-- production 用の値を review できること
-
-コミットメッセージ案:
-
-```text
-chore: frontend と backend の本番向け環境値を整理
-
-- 当面は workers.dev 前提で本番環境値を確定するため
-- localhost と production の差分を減らして安全に反映するため
-```
-
-#### Step 10. production deploy の自動化は Phase 2 として見送る
-
-目的:
-
-- continuous delivery までは整えつつ、continuous deployment は後回しにする
-- 無料枠優先と個人開発の運用負荷に合わせる
-
-主な変更対象:
-
-- docs / runbook
-- 必要になった時点で workflow 追加
-
-この単位で止める理由:
-
-- main merge = 即本番反映 を避けられる
-- 変更量と誤反映リスクを抑えられる
-
-動作確認:
-
-- manual deploy 運用で十分回ること
-- 自動化が本当に必要なタイミングを判断できること
-
-コミットメッセージ案:
-
-```text
-docs: 本番デプロイ自動化を Phase 2 扱いに整理
-
-- 無料枠優先の間は continuous delivery までに留めるため
-- 個人開発での本番反映を手動確認込みで進められるようにするため
-```
-
-#### Step 11. deploy 後 smoke test と失敗時の運用手順を追加する
-
-目的:
-
-- deploy 成功とアプリ正常を区別できるようにする
-- rollback 判断を早くする
-
-主な変更対象:
-
-- workflow 内の post-deploy check
-- 必要なら `docs/` 配下の runbook
-
-この単位で止める理由:
-
-- 本番 deploy 完成後に足すことで、必要な check が見えやすい
-- 監視や rollback を deploy 本体と分けてレビューできる
-
-動作確認:
-
-- `/`, `/login`, 保護ページの redirect など最低限の smoke test が通ること
-- 失敗時に workflow が落ちること
-
-コミットメッセージ案:
-
-```text
-ci: デプロイ後の smoke test を追加
-
-- デプロイ成功とアプリ正常を分けて確認できるようにするため
-- 本番障害時の検知と切り戻し判断を早くするため
-```
-
-#### Step 12. Preview Deploy は Phase 2 として別途導入する
-
-目的:
-
-- 本番 manual deploy 運用が安定してから preview 導線を追加する
-- 認証付きアプリの preview 複雑性を後回しにする
-
-主な変更対象:
-
-- preview 用 workflow
-- preview 用 env / domain / cleanup
-
-この単位で止める理由:
-
-- 初期導入コストが高く、今すぐの必須要件ではない
-- 先に本番安定を優先した方がよい
-
-動作確認:
-
-- PR ごとに preview URL が生成されること
-- preview でも認証導線が破綻しないこと
-- cleanup が回ること
-
-コミットメッセージ案:
-
-```text
-ci: frontend preview デプロイを追加
-
-- 本番運用が安定した後に UI レビュー導線を強化するため
-- 認証付きアプリでも PR 単位で確認できるようにするため
-```
-
-#### Step 13. 一般公開前に custom domain を追加する
-
-目的:
-
-- `workers.dev` から公開用 URL へ切り替える
-- auth / CORS / cookie を正式ドメイン前提に整える
-
-主な変更対象:
-
-- Cloudflare の custom domain 設定
-- DNS 設定
-- `BETTER_AUTH_URL`
-- `NEXT_PUBLIC_API_URL`
-- 必要なら `COOKIE_DOMAIN`
-
-この単位で止める理由:
-
-- 初期CI/CDと切り離して、公開前の仕上げとして扱える
-- ドメイン起因の問題を本体の build / deploy 問題と分けて確認できる
-
-動作確認:
-
-- custom domain で `/`, `/login`, 保護ページが動くこと
-- login / logout / session 維持が壊れていないこと
-- 旧 `workers.dev` から新 URL への移行手順が明確であること
-
-コミットメッセージ案:
-
-```text
-chore: 公開前の custom domain 切り替え手順を追加
-
-- 初期実装は workers.dev で進めつつ公開前に正式URLへ移行するため
-- auth と CORS を正式ドメイン前提で安全に整えるため
-```
-
-### A.5 実装順の要約
-
-最短で安全に進めるなら、順番は次の通り。
-
-1. `frontend build check`
-2. `backend env refactor`
-3. `db migration runbook`
-4. `db manual migration workflow`
-5. `backend manual deploy`
-6. `backend manual runbook finalize`
-7. `frontend cloudflare build`
-8. `frontend manual deploy (production)`
-9. `production env finalize`
-10. `auto deploy defer`
-11. `smoke test / rollback`
-12. `preview deploy`
-13. `custom domain cutover`
-
-### A.6 この順番にしている理由
-
-- backend はすでに Cloudflare 前提なので、先に deploy 分離を完成させやすい
-- DB migration は schema change なので、application deploy より先に独立した判断対象として置くべき
-- frontend は build 成立確認をした上で、無料枠優先の間は manual production deploy から始める方が安全
-- 認証と CORS は deploy より前に整えないと、原因切り分けが難しくなる
-- custom domain は公開前の仕上げとして後から足せる
-- preview は便利だが、初期の本質課題ではない
-
-### A.7 実装中に確認したいこと
-
-次は実装前に確認したい。未確定なら、推奨値で進めるのがよい。
-
-1. staging 環境は作る前提でよいか
-   - 推奨: `no`
-2. frontend / backend で GitHub Environment を分けるか
-   - 推奨: `yes`
-3. Cloudflare API Token は frontend / backend で分けるか
-   - 推奨: `yes`
-4. D1 migration の production apply は backend deploy と分離する前提でよいか
-   - 推奨: `yes`
-5. preview deploy は Phase 2 扱いでよいか
-   - 推奨: `yes`
-6. production deploy は当面 `workflow_dispatch` の manual 運用でよいか
-   - 推奨: `yes`
+具体的な実装計画と進捗管理は [docs/projects/07-cicd-and-deployment.md](../../projects/07-cicd-and-deployment.md) に記載した。  
+本 ADR は方針の決定を固定し、計画の組み替えや進捗の追従はそちらで行う。
