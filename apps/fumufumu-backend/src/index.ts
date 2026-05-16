@@ -42,7 +42,6 @@ export interface Env {
   BETTER_AUTH_URL: string;
   FRONTEND_URL: string;
   COOKIE_DOMAIN?: string;
-  VERCEL_TEAM_SLUG?: string;
   NOTIFICATION_INTERNAL_TOKEN?: string;
   RESEND_API_KEY?: string;
   RESEND_FROM_EMAIL?: string;
@@ -141,13 +140,6 @@ app.use('/api/*', async (c, next) => {
 
       // 環境変数に完全一致するOriginなら許可
       if (allowedOrigins.includes(origin)) {
-        return origin;
-      }
-
-      // Vercelのプレビュー環境を安全に動的許可
-      // (VERCEL_TEAM_SLUG が設定されている場合のみ、それに一致するプレビューURLを許可)
-      const vercelSlug = c.env.VERCEL_TEAM_SLUG;
-      if (vercelSlug && origin.startsWith('https://fumufumu-') && origin.endsWith(`-${vercelSlug}.vercel.app`)) {
         return origin;
       }
 

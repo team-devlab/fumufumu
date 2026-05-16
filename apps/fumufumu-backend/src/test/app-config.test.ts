@@ -48,21 +48,6 @@ describe('Backend API - Basic & Logic', () => {
       expect(res.headers.get('Access-Control-Allow-Origin')).toBe('https://another-app.com');
     });
 
-    it('CORS: VERCEL_TEAM_SLUG に基づく動的許可が正しく動作するか', async () => {
-      const mockEnv = {
-        ...env,
-        VERCEL_TEAM_SLUG: 'my-team-slug',
-      };
-
-      const previewOrigin = 'https://fumufumu-abc-123-my-team-slug.vercel.app';
-      const req = createApiRequest('/api/health');
-      req.headers.set('Origin', previewOrigin);
-
-      const res = await app.fetch(req, mockEnv);
-
-      expect(res.headers.get('Access-Control-Allow-Origin')).toBe(previewOrigin);
-    });
-
     it('CORS: 許可されていないドメインはフォールバック（最初のURL）が返るか', async () => {
       const mockEnv = {
         ...env,
