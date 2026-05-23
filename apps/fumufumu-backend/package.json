@@ -1,6 +1,7 @@
 {
   "name": "@fumufumu/backend",
   "type": "module",
+  "packageManager": "pnpm@10.33.2",
   "scripts": {
     "dev:require-config": "test -f \"${WRANGLER_DEV_CONFIG:-${WRANGLER_D1_CONFIG:-wrangler.local.jsonc}}\" || (echo \"Wrangler dev config not found: ${WRANGLER_DEV_CONFIG:-${WRANGLER_D1_CONFIG:-wrangler.local.jsonc}}\" && exit 1)",
     "dev": "pnpm dev:require-config && wrangler dev --config \"${WRANGLER_DEV_CONFIG:-${WRANGLER_D1_CONFIG:-wrangler.local.jsonc}}\"",
@@ -44,5 +45,13 @@
     "vite": "^7.2.7",
     "vitest": "^3.2.4",
     "wrangler": "^4.46.0"
+  },
+  "pnpm": {
+    "onlyBuiltDependencies": [
+      "better-sqlite3",
+      "esbuild",
+      "sharp",
+      "workerd"
+    ]
   }
 }
