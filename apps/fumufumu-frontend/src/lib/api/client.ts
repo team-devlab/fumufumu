@@ -59,6 +59,10 @@ export async function apiClient<T>(
         } else {
           const { headers } = await import("next/headers");
           const headersList = await headers();
+          // 注: 旧 proxy.ts が設定していた x-pathname は撤去されたため、
+          //     現状この値は常に undefined になり SSR 経由の returnTo 復元は機能しない。
+          //     OpenNext for Cloudflare の Node Middleware 非対応制約への対応として、
+          //     別途 layout / page 側で returnTo を構築する設計を後続 issue で扱う。
           const returnTo = headersList.get("x-pathname") || undefined;
           redirect(buildLoginUrl(returnTo));
         }
