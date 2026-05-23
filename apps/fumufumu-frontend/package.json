@@ -9,6 +9,7 @@
   "scripts": {
     "dev": "next dev",
     "build": "next build --webpack",
+    "build:cf": "opennextjs-cloudflare build",
     "start": "next start",
     "lint": "biome check",
     "format": "biome format --write",
@@ -25,6 +26,7 @@
   },
   "devDependencies": {
     "@biomejs/biome": "2.2.0",
+    "@opennextjs/cloudflare": "^1.19.11",
     "@tailwindcss/postcss": "^4",
     "@testing-library/jest-dom": "^6.9.1",
     "@testing-library/react": "^16.3.0",
@@ -36,6 +38,14 @@
     "jsdom": "^27.1.0",
     "tailwindcss": "^4",
     "typescript": "^5",
-    "vitest": "^4.0.6"
+    "vitest": "^4.0.6",
+    "wrangler": "^4.94.0"
+  },
+  "pnpm": {
+    "onlyBuiltDependencies": [
+      "esbuild",
+      "sharp",
+      "workerd"
+    ]
   }
 }

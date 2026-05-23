@@ -17,6 +17,12 @@
 /.next/
 /out/
 
+# opennext for cloudflare
+/.open-next/
+
+# wrangler / miniflare のローカル状態（Cache API シミュレーション用 SQLite など）
+/.wrangler/
+
 # production
 /build
 
