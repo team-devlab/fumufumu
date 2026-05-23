@@ -1,6 +1,7 @@
 import { betterAuth } from "better-auth";
 import { drizzleAdapter } from "better-auth/adapters/drizzle";
 import type { Env, DbInstance } from './index';
+import { hashPasswordPbkdf2, verifyPasswordPbkdf2 } from './lib/password-pbkdf2';
 
 /**
  * Drizzleインスタンスと環境変数を受け取って Better Auth インスタンスを生成する関数
@@ -22,6 +23,14 @@ export function createBetterAuth(db: DbInstance, env: Env) {
 		emailAndPassword: {
 			enabled: true,
 			autoSignIn: true,
+			// Better Auth のデフォルト hash (scrypt 系) は Cloudflare Workers Free の
+			// 10ms CPU 制限を超え、signup / login が 503 で失敗するため、
+			// Web Crypto API (PBKDF2) ベースの軽量実装に差し替える。
+			// 詳細は src/lib/password-pbkdf2.ts のコメント / Issue #123 / 実装計画 07 Phase 1.5 を参照。
+			password: {
+				hash: hashPasswordPbkdf2,
+				verify: verifyPasswordPbkdf2,
+			},
 		},
 		user: {
 			modelName: "authUsers",
