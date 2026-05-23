@@ -1,0 +1,38 @@
+// このファイルは .gitignore された wrangler.local.jsonc のテンプレート。
+// ローカルで deploy する前に、本ファイルをコピーして wrangler.local.jsonc を作成し、
+// `account_id` を実値に置き換えてから `DEPLOY_APPROVED=1 pnpm deploy:cf` を実行する。
+//
+// 運用パターンは backend (`apps/fumufumu-backend/wrangler.local.jsonc`) と同じ。
+//
+// 環境変数の置き場所について:
+//
+// 1. `NEXT_PUBLIC_API_URL` のような Next.js の build 時 inline される値
+//    → このファイルではなく `apps/fumufumu-frontend/.env.production.local` で解決する。
+//      理由: NEXT_PUBLIC_* は build 時に client side bundle に文字列として inline され、
+//            Worker runtime の env を読まない。`.env.production` ではなく `.env.production.local`
+//            を使うのは、`.env.local` を確実に override するため
+//            (詳細は `.env.production.local.example` のコメント参照)。
+//
+// 2. Worker runtime 側でだけ参照したい env（server-side API key 等）
+//    → 下記の `vars` セクション（コメントアウト中）に追加する。
+//      Worker のコードからは `env.XXX` で参照できる。
+//      機微情報は `vars` ではなく `wrangler secret put` で投入する。
+//
+// 現時点では frontend 側で Worker runtime 限定の env を必要としていないため、
+// `vars` セクションは省略している。
+{
+  "$schema": "node_modules/wrangler/config-schema.json",
+  "account_id": "YOUR_CLOUDFLARE_ACCOUNT_ID",
+  "name": "fumufumu-frontend",
+  "main": ".open-next/worker.js",
+  "compatibility_date": "2025-10-26",
+  "compatibility_flags": ["nodejs_compat", "global_fetch_strictly_public"],
+  "assets": {
+    "directory": ".open-next/assets",
+    "binding": "ASSETS"
+  }
+  // 将来 Worker runtime 限定の env が必要になったら、ここに追加する:
+  // "vars": {
+  //   "SOME_SERVER_ONLY_VAR": "some-value"
+  // }
+}

@@ -39,6 +39,11 @@ yarn-error.log*
 # env files (can opt-in for committing if needed)
 .env*
 !.env.local.example
+!.env.production.local.example
+
+# wrangler local config (with secrets / account_id)
+wrangler.local.jsonc
+wrangler.ci.jsonc
 
 # vercel
 .vercel
