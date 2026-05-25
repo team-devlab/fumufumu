@@ -1,7 +1,11 @@
 import { isRedirectError } from "next/dist/client/components/redirect-error";
 import { redirect } from "next/navigation";
 
-const API_URL = process.env.NEXT_PUBLIC_API_URL || "http://localhost:8787";
+// `??` で nullish (undefined) 時のみ localhost に fallback する。
+// production build では `.env.production.local` で空文字を inline して同一 origin の
+// 相対パス fetch にしたいケースがあり、`||` だと空文字を falsy として扱い localhost に
+// fallback してしまうため `??` を使う（Service Binding 経由の同一 origin 構成、#126）。
+const API_URL = process.env.NEXT_PUBLIC_API_URL ?? "http://localhost:8787";
 
 type ApiOptions = RequestInit & {
   // 401時のログイン画面リダイレクトを無効化する（認証API呼び出し等で利用）
