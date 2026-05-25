@@ -61,6 +61,7 @@
 - D1 migration は backend deploy に内包せず、独立した manual workflow / runbook として扱う
 - D1 migration 実行時は binding 名ではなく `database_name` を優先して使う
 - schema change は expand-and-contract を原則とし、破壊的変更を 1 回の本番適用で完了させない
+- `workers.dev` 運用期間中の Cookie 共有問題は、frontend に custom worker + Cloudflare Service Binding を導入して `/api/*` を backend Worker に内部転送することで、ブラウザから見て同一 origin にして回避する（custom domain 移行までの中間解、Section 4.2 で発展形として言及していた構成を前倒し採用）
 
 ### 採用しなかった案
 
