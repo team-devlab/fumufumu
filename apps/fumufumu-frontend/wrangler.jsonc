@@ -1,11 +1,21 @@
 {
   "$schema": "node_modules/wrangler/config-schema.json",
   "name": "fumufumu-frontend",
-  "main": ".open-next/worker.js",
+  "main": "./worker.ts",
   "compatibility_date": "2025-10-26",
   "compatibility_flags": ["nodejs_compat", "global_fetch_strictly_public"],
   "assets": {
     "directory": ".open-next/assets",
     "binding": "ASSETS"
-  }
+  },
+  // Cloudflare Service Binding 経由で backend Worker (fumufumu-worker) を呼び出す。
+  // custom worker (worker.ts) が `/api/*` のリクエストをこの binding 経由で転送し、
+  // frontend と backend をブラウザから見て同一 origin にする。
+  // 詳細は worker.ts のコメント / Issue #126 / ADR 008 参照。
+  "services": [
+    {
+      "binding": "BACKEND",
+      "service": "fumufumu-worker"
+    }
+  ]
 }
