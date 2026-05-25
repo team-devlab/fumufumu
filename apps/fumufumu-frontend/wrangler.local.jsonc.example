@@ -24,15 +24,20 @@
   "$schema": "node_modules/wrangler/config-schema.json",
   "account_id": "YOUR_CLOUDFLARE_ACCOUNT_ID",
   "name": "fumufumu-frontend",
-  "main": ".open-next/worker.js",
+  "main": "./worker.ts",
   "compatibility_date": "2025-10-26",
   "compatibility_flags": ["nodejs_compat", "global_fetch_strictly_public"],
   "assets": {
     "directory": ".open-next/assets",
     "binding": "ASSETS"
-  }
-  // 将来 Worker runtime 限定の env が必要になったら、ここに追加する:
-  // "vars": {
-  //   "SOME_SERVER_ONLY_VAR": "some-value"
-  // }
+  },
+  // Cloudflare Service Binding で backend Worker を呼び出す。
+  // custom worker (worker.ts) が `/api/*` をこの binding 経由で転送し同一 origin 化する。
+  // 詳細は worker.ts のコメント / Issue #126 参照。
+  "services": [
+    {
+      "binding": "BACKEND",
+      "service": "fumufumu-worker"
+    }
+  ]
 }
