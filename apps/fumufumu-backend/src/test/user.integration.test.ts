@@ -40,8 +40,28 @@ describe('Consultations API Integration Tests', () => {
             const data = await res.json() as any;
             expect(data.name).equal('Test User for Consultations');
             expect(data.disabled).equal(false);
+            // 新規ユーザーはデフォルトで role = 'user'。フロント admin layout guard が参照する。
+            expect(data.role).equal('user');
             expect(data).toHaveProperty('createdAt');
             expect(data).toHaveProperty('updatedAt');
+        });
+
+        it('admin ロールのユーザーは role: "admin" が返る', async () => {
+            const admin = await createAndLoginUser({
+                name: 'Admin User',
+                email: `admin-me-${Date.now()}@example.com`,
+                role: 'admin',
+            });
+
+            const req = createApiRequest('/api/users/me', 'GET', {
+                cookie: admin.cookie,
+            });
+
+            const res = await app.fetch(req, env);
+            expect(res.status).toBe(200);
+
+            const data = await res.json() as any;
+            expect(data.role).equal('admin');
         });
 
 

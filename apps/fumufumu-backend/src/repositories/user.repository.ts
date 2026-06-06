@@ -22,6 +22,7 @@ export class UserRepository {
 				id: true,
 				name: true,
 				disabled: true,
+				role: true,
 				createdAt: true,
 				updatedAt: true,
 			},
