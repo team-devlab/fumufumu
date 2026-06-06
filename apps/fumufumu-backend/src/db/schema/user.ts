@@ -2,11 +2,15 @@ import { sql } from "drizzle-orm";
 import { sqliteTable, text, integer } from "drizzle-orm/sqlite-core";
 import { authUsers } from "./auth";
 
+export const USER_ROLES = ["user", "admin"] as const;
+export type UserRole = (typeof USER_ROLES)[number];
+
 // 業務ロジックの主軸となる users テーブル
 export const users = sqliteTable("users", {
 	id: integer("id").primaryKey({ autoIncrement: true }),
 	name: text("name").notNull(),
 	disabled: integer("disabled", { mode: "boolean" }).default(false).notNull(),
+	role: text("role", { enum: USER_ROLES }).notNull().default("user"),
 	createdAt: integer("created_at", { mode: "timestamp_ms" })
 		.default(sql`(cast(unixepoch('subsecond') * 1000 as integer))`)
 		.notNull(),

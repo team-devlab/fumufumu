@@ -71,6 +71,13 @@
       "when": 1776348875034,
       "tag": "0009_new_patch",
       "breakpoints": true
+    },
+    {
+      "idx": 10,
+      "version": "6",
+      "when": 1780778116480,
+      "tag": "0010_aspiring_blacklash",
+      "breakpoints": true
     }
   ]
 }
