@@ -13,7 +13,8 @@ describe('Admin Content Check API - Consultations', () => {
 
   beforeAll(async () => {
     await setupIntegrationTest();
-    user = await createAndLoginUser();
+    // user は admin 系エンドポイントを叩くため admin ロールで作成（ADR 010）。
+    user = await createAndLoginUser({ role: 'admin' });
     anotherUser = await createAndLoginUser();
 
     const tagName = `content-check-tag-${Date.now()}`;

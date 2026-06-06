@@ -26,7 +26,8 @@ describe("Admin Content Check API - Advices", () => {
 
 	beforeAll(async () => {
 		await setupIntegrationTest();
-		user = await createAndLoginUser();
+		// user は admin 系エンドポイントを叩くため admin ロールで作成（ADR 010）。
+		user = await createAndLoginUser({ role: "admin" });
 
 		const tagName = `content-check-advice-tag-${Date.now()}`;
 		await env.DB.prepare("INSERT INTO tags (name) VALUES (?)").bind(tagName).run();
