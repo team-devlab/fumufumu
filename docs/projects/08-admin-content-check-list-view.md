@@ -181,10 +181,21 @@ src/features/admin-content-check/
 - 空状態 / エラー時 UI もこの Step に含める
 - 動作確認: ローカル dev server で admin ログイン → /admin → 一覧表示
 
-### Step 3 (必要なら): 既存テストへの影響確認・微調整
+### Step 3: 追加 UI component の vitest テスト
 
-- 既存の admin-guard.integration.test.ts は引き続き 200 を期待しているか確認
-- frontend test の追加は本 PR スコープでは行わない（Button 以外に component test 体制が無い）
+当初は「frontend の component test 体制が無い」と認識していたが、実際には vitest + @testing-library/react + @testing-library/jest-dom (vitest entry) + jsdom が `apps/fumufumu-frontend` に既に揃っていた (Button.test.tsx が前例)。
+そのため本 PR で追加した UI component に対するリグレッション防止テストを同梱する。
+
+対象と粒度:
+
+- `PendingItemCard.test.tsx`: title 有/無の分岐、authorId null / 数値の表示、meta slot の有無、created_at の日本語ロケール表示
+- `PendingConsultationList.test.tsx`: success + items / success + empty / error の 3 状態の表示分岐、件数バッジの存在
+- `PendingAdviceList.test.tsx`: 同上 + 所属相談 link が target="_blank" で出ているか
+
+意図的に含めないテスト:
+
+- `page.tsx` (Server Component): `Promise.allSettled` over server-only fetchers の組合せで、`next/headers` の `cookies()` mocking が fragile。E2E (将来の Playwright 等) に寄せるべき領域
+- `adminContentCheckApi.ts` (server-only): 同上の理由。API contract は backend 統合テスト (admin-guard) でカバー済みのため重複を避ける
 
 ---
 
