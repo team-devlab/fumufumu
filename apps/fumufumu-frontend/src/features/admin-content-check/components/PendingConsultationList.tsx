@@ -5,7 +5,7 @@ import { PendingItemCard } from "./PendingItemCard";
  * pending 相談のセクション (Server Component)
  *
  * page.tsx 側で Promise.allSettled の結果を unwrap し、成功 / 失敗を本 component に渡す。
- * これにより、アドバイス側が失敗しても本セクションは正常に表示できる (plan §5.3)。
+ * これにより、アドバイス側が失敗しても本セクションは正常に表示できる (docs/projects/08 §5.3)。
  */
 type Props =
   | {
