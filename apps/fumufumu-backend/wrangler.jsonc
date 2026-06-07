@@ -3,7 +3,7 @@
   "account_id": "YOUR_CLOUDFLARE_ACCOUNT_ID",
   "name": "your-worker-name",
   "main": "src/index.ts",
-  "compatibility_date": "2025-10-26",
+  "compatibility_date": "2026-06-07",
   "dev": {
     "ip": "127.0.0.1",
     "port": 8787,
