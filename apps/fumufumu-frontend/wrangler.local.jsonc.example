@@ -25,7 +25,7 @@
   "account_id": "YOUR_CLOUDFLARE_ACCOUNT_ID",
   "name": "fumufumu-frontend",
   "main": "./worker.ts",
-  "compatibility_date": "2025-10-26",
+  "compatibility_date": "2026-06-07",
   "compatibility_flags": ["nodejs_compat", "global_fetch_strictly_public"],
   "assets": {
     "directory": ".open-next/assets",
