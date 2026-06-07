@@ -29,6 +29,7 @@ export const adminGuard = async (c: AppContext, next: Next) => {
     console.warn('adminGuard: access denied', {
       appUserId,
       role: user?.role ?? null,
+      method: c.req.method,
       path: c.req.path,
     });
     return c.json({ error: 'Not Found' }, 404);

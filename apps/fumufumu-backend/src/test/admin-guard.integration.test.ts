@@ -47,4 +47,22 @@ describe('adminGuard middleware', () => {
 
     expect(res.status).toBe(200);
   });
+
+  it('POST 系 admin endpoint も非 admin は 404 を返す (method を問わず gate される)', async () => {
+    // GET だけテストすると「app.use('/*', ...) で本当に POST も拾えているか」が担保できないため、
+    // method 横断で gate が効くことを確認する。
+    const regularUser = await createAndLoginUser();
+
+    const req = createApiRequest('/api/admin/content-check/consultations/1/decision', 'POST', {
+      cookie: regularUser.cookie,
+      body: { decision: 'approved' },
+    });
+
+    const res = await app.fetch(req, env);
+
+    expect(res.status).toBe(404);
+
+    const data = await res.json() as { error: string };
+    expect(data.error).toBe('Not Found');
+  });
 });

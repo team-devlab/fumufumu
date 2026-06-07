@@ -204,6 +204,12 @@ api.route('/users', userRoute);
 api.route('/tags', tagsRoute);
 
 // 投稿チェック運営API（/api/admin/content-check）
+//
+// 🛡 /api/admin/* 配下を追加する際の必須ルール (ADR 010 §4):
+//   controller 側の middleware chain に必ず `authGuard, adminGuard` をセットで適用すること。
+//   - adminGuard は authGuard が確定させた appUserId を前提とするため、必ずこの順序
+//   - 未認可時は 404 を返し、admin API の存在自体を露出させない方針
+//   - この規約はコード上強制されていない。将来の構造的強制は別 Issue で検討する。
 api.route('/admin/content-check', adminContentCheckRoute);
 
 // 通知内部API（/api/internal/notifications）
