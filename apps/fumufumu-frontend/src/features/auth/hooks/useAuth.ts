@@ -45,12 +45,15 @@ export const useAuth = () => {
     }
   };
 
-  const signup = async (credentials: SignupCredentials) => {
+  const signup = async (
+    credentials: SignupCredentials,
+    returnTo?: string | null,
+  ) => {
     setIsLoading(true);
     setError(null);
     try {
       await authApi.signup(credentials);
-      router.push(ROUTES.CONSULTATION.LIST);
+      router.push(resolveReturnTo(returnTo));
     } catch (err) {
       setError(
         err instanceof Error ? err.message : "サインアップに失敗しました",
@@ -73,10 +76,31 @@ export const useAuth = () => {
     }
   };
 
+  const startGoogleAuth = async (returnTo?: string | null) => {
+    setError(null);
+    setIsLoading(true);
+
+    if (typeof window === "undefined") {
+      setIsLoading(false);
+      return;
+    }
+
+    try {
+      const absoluteReturnTo = `${window.location.origin}${resolveReturnTo(returnTo)}`;
+      await authApi.startGoogleSignIn(absoluteReturnTo);
+      // 成功時は window.location.href の書き換えで unmount される想定
+    } catch (_err) {
+      setError("Google認証に失敗しました。時間をおいて再度お試しください。");
+    } finally {
+      setIsLoading(false);
+    }
+  };
+
   return {
     signin,
     signup,
     signout,
+    startGoogleAuth,
     isLoading,
     error,
   };

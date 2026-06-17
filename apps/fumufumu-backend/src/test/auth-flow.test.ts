@@ -113,6 +113,41 @@ describe('Integration Tests', () => {
 			assertUnauthorizedError(body);
 		});
 
+		it('should lazily re-provision the business layer when the mapping is missing (issue #115)', async () => {
+			const user = await createAndLoginUser({
+				name: `Lazy Provision User ${Date.now()}`,
+				email: `lazy-provision-${Date.now()}@example.com`,
+			});
+
+			// 「セッションは有効だが業務層 (users / auth_mappings) が無い」状態を再現する。
+			// Google OAuth 経路や signup 途中失敗で起こりうるケース。
+			await env.DB.prepare('DELETE FROM auth_mappings WHERE auth_user_id = ?')
+				.bind(user.authUserId)
+				.run();
+			await env.DB.prepare('DELETE FROM users WHERE id = ?')
+				.bind(user.appUserId)
+				.run();
+
+			// 保護ルートへのアクセス時に authGuard が lazy provisioning で業務層を再生成する
+			const firstRes = await app.fetch(
+				createApiRequest('/api/protected', 'GET', { cookie: user.cookie }),
+				env,
+			);
+			expect(firstRes.status).toBe(200);
+			const firstBody = await firstRes.json() as any;
+			expect(firstBody.appUserId).toBeTruthy();
+			expect(firstBody.userName).toBe(user.name);
+
+			// 冪等性: 再アクセスしても同じ appUserId が返り、二重生成されない
+			const secondRes = await app.fetch(
+				createApiRequest('/api/protected', 'GET', { cookie: user.cookie }),
+				env,
+			);
+			expect(secondRes.status).toBe(200);
+			const secondBody = await secondRes.json() as any;
+			expect(secondBody.appUserId).toBe(firstBody.appUserId);
+		});
+
 		it('should return a client auth error instead of 500 when the user does not exist', async () => {
 			const signinReq = createApiRequest('/api/auth/signin', 'POST', {
 				body: {

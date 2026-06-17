@@ -11,7 +11,7 @@ type LoginFormProps = {
 };
 
 export const LoginForm = ({ reason, returnTo }: LoginFormProps) => {
-  const { signin, isLoading, error } = useAuth();
+  const { signin, startGoogleAuth, isLoading, error } = useAuth();
   const [email, setEmail] = useState("");
   const [password, setPassword] = useState("");
 
@@ -32,6 +32,10 @@ export const LoginForm = ({ reason, returnTo }: LoginFormProps) => {
     signed_out: {
       message: "サインアウトしました。\nご利用ありがとうございました。",
       className: "border-sky-200 bg-sky-50 text-sky-800",
+    },
+    oauth_failed: {
+      message: "Google認証に失敗しました。もう一度お試しください。",
+      className: "border-amber-300 bg-amber-50 text-amber-800",
     },
   };
 
@@ -116,6 +120,29 @@ export const LoginForm = ({ reason, returnTo }: LoginFormProps) => {
             {isLoading ? "ログイン中..." : "ログイン"}
           </Button>
         </form>
+
+        <div className="my-6 flex items-center gap-3 text-sm text-gray-400">
+          <span className="h-px flex-1 bg-gray-200" />
+          <span>または</span>
+          <span className="h-px flex-1 bg-gray-200" />
+        </div>
+
+        <button
+          type="button"
+          disabled={isLoading}
+          onClick={() => startGoogleAuth(returnTo)}
+          className="inline-flex w-full items-center justify-center gap-2 rounded-xl border border-gray-300 bg-white px-4 py-3 text-sm font-semibold text-gray-800 shadow-sm transition duration-150 hover:bg-gray-50 disabled:cursor-not-allowed disabled:opacity-50"
+        >
+          {/* biome-ignore lint/performance/noImgElement: 装飾用の静的SVGアイコン。next/image による最適化対象外のため img を使用 */}
+          <img
+            src="/google-logo.svg"
+            alt=""
+            width={20}
+            height={20}
+            aria-hidden="true"
+          />
+          <span>Googleでログイン</span>
+        </button>
       </div>
     </div>
   );

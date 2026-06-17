@@ -16,6 +16,25 @@ export function createBetterAuth(db: DbInstance, env: Env) {
 	// 各環境の FRONTEND_URL には、その環境固有のURLのみを設定してください。
 	const isSecure = env.FRONTEND_URL?.includes('https://') || env.BETTER_AUTH_URL?.startsWith('https://');
 
+	// FRONTEND_URL（カンマ区切り）を Better Auth の trustedOrigins に渡す。
+	// Better Auth は baseURL 以外のオリジンからのリクエストを CSRF 保護で弾くため、
+	// フロント（http://localhost:3000）からの /api/auth/* 呼び出しを許可するには
+	// 明示的に trustedOrigins を設定する必要がある。
+	const trustedOrigins = (env.FRONTEND_URL ?? '')
+		.split(',')
+		.map((v) => v.trim())
+		.filter(Boolean);
+
+	const socialProviders =
+		env.GOOGLE_CLIENT_ID && env.GOOGLE_CLIENT_SECRET
+			? {
+				google: {
+					clientId: env.GOOGLE_CLIENT_ID,
+					clientSecret: env.GOOGLE_CLIENT_SECRET,
+				},
+			}
+			: {};
+
 	return betterAuth({
 		database: drizzleAdapter(db, {
 			provider: "sqlite",
@@ -45,12 +64,31 @@ export function createBetterAuth(db: DbInstance, env: Env) {
 		},
 		account: {
 			modelName: "authAccounts",
+			// 自動アカウント連携を有効化する。Better Auth は emailVerified: true の
+			// OAuth プロバイダに限って自動紐づけするため、「そのメールアドレスの所有を
+			// プロバイダが検証済み」のときだけ連携が成立する。攻撃面はパスワード
+			// リセットと同等（ADR 010 参照）。
+			accountLinking: {
+				enabled: true,
+				// 注意: trustedProviders は意図的に未指定にしている。
+				// Better Auth は trustedProviders に含まれない provider のみ
+				// emailVerified ゲートを適用するため、ここに provider を追加すると
+				// 当該 provider の自動紐づけが emailVerified を問わず通るようになる。
+				// ADR 010 のセキュリティモデルは「emailVerified ゲート常時有効」前提のため、
+				// trustedProviders を追加するときは ADR の見直しを併せて行うこと。
+			},
 		},
 		verification: {
 			modelName: "authVerifications",
 		},
+		socialProviders,
+		// 業務層（users / auth_mappings）の生成は databaseHooks ではなく
+		// authGuard の lazy provisioning（ensureBusinessUser）に一本化している。
+		// email / Google いずれの経路でも初回の保護ルートアクセス時に生成される。
+		// 経緯は issue #115 / ADR 010 を参照。
 		secret: env.BETTER_AUTH_SECRET,
 		baseURL: env.BETTER_AUTH_URL,
+		trustedOrigins,
 		// セキュリティ設定（重要）
 		advanced: {
 			defaultCookieAttributes: {

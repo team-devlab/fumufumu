@@ -1,5 +1,5 @@
 import { sql } from "drizzle-orm";
-import { sqliteTable, text, integer } from "drizzle-orm/sqlite-core";
+import { sqliteTable, text, integer, unique } from "drizzle-orm/sqlite-core";
 import { authUsers } from "./auth";
 
 export const USER_ROLES = ["user", "admin"] as const;
@@ -33,4 +33,6 @@ export const authMappings = sqliteTable("auth_mappings", {
 		.notNull()
 		// auth_userテーブルはBetter Authが生成したスキーマを参照
 		.references(() => authUsers.id, { onDelete: "cascade" }),
-});
+}, (table) => ({
+	authUserIdUnique: unique("auth_mappings_auth_user_id_unique").on(table.authUserId),
+}));
