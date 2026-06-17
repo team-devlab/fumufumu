@@ -1,7 +1,7 @@
 # [ADR] Google OAuth 実装方針（Better Auth 標準フロー + emailVerified ゲート）
 
 * **Status**: Accepted
-* **Date**: 2026-04-21 (revised 2026-04-23)
+* **Date**: 2026-04-21 (revised 2026-04-23, 2026-06-18)
 
 ---
 
@@ -25,7 +25,7 @@
 - Google OAuth の入口・コールバック・セッション発行はすべて **Better Auth 組み込みフロー（`/api/auth/sign-in/social` と `/api/auth/callback/:provider`）に委譲する**
 - `accountLinking.enabled: true` を採用し、**既存メールとの紐づけは Better Auth の emailVerified ゲートに任せる**（`userInfo.emailVerified === true` のときのみ自動紐づけ）
 - 自前 OAuth ハンドラ（`/oauth/google/start` / `/callback/google` / `/oauth/google/link/confirm`）は **削除**する
-- 新規ユーザー作成時の業務層レコード（`users` / `authMappings`）生成は `databaseHooks.user.create.after` に集約する
+- 新規ユーザー作成時の業務層レコード（`users` / `authMappings`）生成は authGuard middleware の lazy provisioning（`ensureBusinessUser`）に集約する（当初は `databaseHooks.user.create.after` を採用していたが、issue #115 で移行。経緯は「3.4 業務層プロビジョニングの方式」参照）
 - OAuth 一時状態や連携チケット用の独自保存領域は不要。Better Auth が内部で `authVerifications` を使う
 
 ### 採用しなかった案
@@ -66,6 +66,8 @@ Google OAuth 追加 PR では当初、以下の UX 要件を満たすために**
 
 結論として、emailVerified ゲート付きの自動紐づけは**業界標準（Auth0 / Clerk / Supabase Auth 等）のセキュリティ水準と同じ**であり、パスワード再入力という追加ステップは**過剰な保守的対応**だった。
 
+> **⚠️ trustedProviders の落とし穴**: この emailVerified ゲートは、`accountLinking.trustedProviders` に**含まれない** provider に対してのみ適用される（`api-CkmycQ2x.mjs:826` のブロック条件 `(!trustedProviders.includes(provider) && !emailVerified) || enabled === false`）。つまり provider を `trustedProviders` に追加すると、その provider は emailVerified を問わず自動紐づけが通るようになり、本セキュリティモデルの前提が崩れる。本プロジェクトは `trustedProviders` を**意図的に未指定**にしており（`auth.ts` のコメント参照）、ここに provider を足すときは必ず本 ADR の見直しを伴うこと。
+
 ### 2.2 方針転換による影響
 
 自前フローを捨て Better Auth 標準に寄せることで以下の利点が得られる:
@@ -94,9 +96,9 @@ UX 面の影響:
 ### 3.1 Better Auth 設定
 
 - `account.accountLinking.enabled: true`
-- `trustedProviders` は未指定（= `emailVerified: true` を条件にする）
+- `trustedProviders` は**意図的に未指定**（= 全 provider に `emailVerified: true` ゲートを適用する）。§2.1 の落とし穴を参照
 - `socialProviders.google` に client id / secret を設定
-- `databaseHooks.user.create.after` で業務層レコード（`users` / `authMappings`）を作成
+- 業務層レコード（`users` / `authMappings`）は authGuard の lazy provisioning（`ensureBusinessUser`）で作成（§3.4 参照）
 
 ### 3.2 エンドポイント構成
 
@@ -110,9 +112,18 @@ UX 面の影響:
 - linkTicket の受け渡しや連携確定フォームは不要
 - エラーメッセージは `oauth_failed` / `oauth_cancelled` 等 Better Auth から返り得るものに限定
 
-### 3.4 既知の limitation
+### 3.4 業務層プロビジョニングの方式（issue #115 で改訂）
 
-- 業務層レコード（`users` / `authMappings`）の作成が `databaseHooks` で失敗した場合はエラーを再送出して認証フロー自体を失敗させる。`users` のみ作成済みだったケースではベストエフォートで rollback を試みるが、rollback 自体が失敗したときは運用での検知・補正が必要になる
+当初は新規ユーザー作成時に `databaseHooks.user.create.after` で業務層レコード（`users` / `authMappings`）を作成していたが、以下の理由で **authGuard middleware の lazy provisioning** に移行した（issue #115）。
+
+- **自動復旧**: signup 途中（`auth_accounts` / `auth_sessions` の INSERT 等）で業務層生成が中断しても、次回の保護ルートアクセス時に `ensureBusinessUser` が再試行するため、Google 経路を中心に多くの中途半端ステートが自動的に回復する
+- **構造の単純化**: Better Auth の hook シグネチャへの依存を切り、業務層生成の窓口を `ensureBusinessUser` 一箇所に集約
+
+実装上の性質と既知の limitation:
+
+- `ensureBusinessUser` は冪等。マッピングが既にあればそれを返し、無ければ `users` → `auth_mappings` の順で作成する
+- 並行リクエストによる二重生成は `auth_mappings.auth_user_id` の UNIQUE 制約で一方が弾かれる。衝突した側は勝者のマッピングを引き直し、自分が作成した `users` 行はベストエフォートで削除して孤立データを残さない
+- email/password 専用ユーザーが「`auth_users` のみ残ってマッピングが無い」状態に陥った場合は、再 signup（email UNIQUE で不可）も accountLinking 経由の救済もできないため自動復旧しない。将来 password reset 機能を実装すれば復旧経路ができる（issue #115 参照）
 
 ---
 

@@ -1,5 +1,6 @@
 import type { Metadata } from "next";
 import { SignupForm } from "@/features/auth/components/SignupForm";
+import { pickFirst } from "@/lib/searchParams";
 
 export const metadata: Metadata = {
   title: "サインアップ | Fumufumu App",
@@ -10,11 +11,6 @@ type PageProps = {
   searchParams: Promise<{
     returnTo?: string | string[];
   }>;
-};
-
-const pickFirst = (value?: string | string[]) => {
-  if (Array.isArray(value)) return value[0] ?? null;
-  return value ?? null;
 };
 
 export default async function SignupPage({ searchParams }: PageProps) {

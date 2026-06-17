@@ -8,6 +8,9 @@ BETTER_AUTH_SECRET=
 BETTER_AUTH_URL=
 
 # Google OAuth (ログイン/登録) 用
+# Google Cloud Console で OAuth クライアントを作成し、承認済みリダイレクト URI に
+# <BETTER_AUTH_URL>/api/auth/callback/google を登録してください。
+# https://console.cloud.google.com/apis/credentials
 GOOGLE_CLIENT_ID=
 GOOGLE_CLIENT_SECRET=
 

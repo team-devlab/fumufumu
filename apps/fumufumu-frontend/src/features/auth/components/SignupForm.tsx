@@ -99,12 +99,14 @@ export const SignupForm = ({ returnTo }: SignupFormProps) => {
         onClick={() => startGoogleAuth(returnTo)}
         className="inline-flex w-full items-center justify-center gap-2 rounded-lg border border-gray-300 bg-white px-4 py-3 text-sm font-semibold text-gray-800 shadow-sm transition duration-150 hover:bg-gray-50 disabled:cursor-not-allowed disabled:opacity-50"
       >
-        <span
+        {/* biome-ignore lint/performance/noImgElement: 装飾用の静的SVGアイコン。next/image による最適化対象外のため img を使用 */}
+        <img
+          src="/google-logo.svg"
+          alt=""
+          width={20}
+          height={20}
           aria-hidden="true"
-          className="inline-flex h-5 w-5 items-center justify-center rounded-full border border-gray-300 text-[11px] font-bold"
-        >
-          G
-        </span>
+        />
         <span>Googleで登録</span>
       </button>
 

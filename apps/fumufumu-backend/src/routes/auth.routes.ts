@@ -3,7 +3,7 @@ import { eq } from 'drizzle-orm';
 import type { ContentfulStatusCode } from 'hono/utils/http-status';
 
 import { authUsers } from '../db/schema/auth';
-import { authMappings } from '../db/schema/user';
+import { ensureBusinessUser } from '../services/auth-provisioning';
 
 import { type Env, type Variables } from '../index';
 
@@ -90,8 +90,8 @@ function copySetCookieHeader(source: Response, target: Response) {
  * サインアップ API (POST /api/auth/signup)
  *
  * Better Auth の signUpEmail を呼ぶ薄いラッパ。
- * 業務層 (users / authMappings) の作成は auth.ts の
- * databaseHooks.user.create.after で実施される。
+ * 業務層 (users / auth_mappings) の作成は ensureBusinessUser に委譲する
+ * （authGuard の lazy provisioning と同一の冪等関数。issue #115）。
  */
 authRouter.post('/signup', async (c) => {
   const auth = c.get('auth');
@@ -135,22 +135,20 @@ authRouter.post('/signup', async (c) => {
     return c.json({ error: 'Internal server error: Auth User ID missing.' }, 500);
   }
 
-  // 業務層マッピングは auth.ts の databaseHooks.user.create.after で作られている想定。
-  // レスポンスに appUserId を載せるために引き直す。
-  const db = c.get('db');
-  const mapping = await db.query.authMappings.findFirst({
-    where: eq(authMappings.authUserId, authUserId),
-  });
-
-  if (!mapping) {
-    console.error('Sign-up succeeded, but auth mapping was not created for auth user:', authUserId);
+  // 業務層 (users / auth_mappings) を生成し、レスポンス用に appUserId を得る。
+  // 冪等なので authGuard 側で先に生成済みでも安全。
+  let appUserId: number;
+  try {
+    appUserId = await ensureBusinessUser(c.get('db'), { authUserId, name: name ?? '' });
+  } catch (e) {
+    console.error('Sign-up succeeded, but business-layer provisioning failed for auth user:', authUserId, e);
     return c.json({ error: 'Failed to complete user setup on business DB.' }, 500);
   }
 
   const honoResponse = c.json({
     message: 'User created and signed in successfully.',
     auth_user_id: authUserId,
-    app_user_id: mapping.appUserId,
+    app_user_id: appUserId,
   }, 200);
 
   copySetCookieHeader(authResponse, honoResponse);

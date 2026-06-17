@@ -1,7 +1,5 @@
 import { betterAuth } from "better-auth";
 import { drizzleAdapter } from "better-auth/adapters/drizzle";
-import { eq } from "drizzle-orm";
-import { users, authMappings } from './db/schema/user';
 import type { Env, DbInstance } from './index';
 
 /**
@@ -63,54 +61,22 @@ export function createBetterAuth(db: DbInstance, env: Env) {
 			// リセットと同等（ADR 010 参照）。
 			accountLinking: {
 				enabled: true,
+				// 注意: trustedProviders は意図的に未指定にしている。
+				// Better Auth は trustedProviders に含まれない provider のみ
+				// emailVerified ゲートを適用するため、ここに provider を追加すると
+				// 当該 provider の自動紐づけが emailVerified を問わず通るようになる。
+				// ADR 010 のセキュリティモデルは「emailVerified ゲート常時有効」前提のため、
+				// trustedProviders を追加するときは ADR の見直しを併せて行うこと。
 			},
 		},
 		verification: {
 			modelName: "authVerifications",
 		},
 		socialProviders,
-		databaseHooks: {
-			user: {
-				create: {
-					// email/password 経由でも Google 経由でも、新規ユーザー作成時は
-					// ここで業務層（users / authMappings）を同時に作成する。
-					after: async (user) => {
-						let appUserId: number | null = null;
-
-						try {
-							const [appUser] = await db
-								.insert(users)
-								.values({ name: user.name || 'ユーザー' })
-								.returning({ id: users.id });
-
-							if (!appUser) {
-								throw new Error(`Failed to insert app user after auth user creation: ${user.id}`);
-							}
-
-							appUserId = appUser.id;
-
-							await db.insert(authMappings).values({
-								appUserId: appUser.id,
-								authUserId: user.id,
-							});
-						} catch (e) {
-							// authMappings 作成に失敗した場合、users のみ残ることを避けるため
-							// 直前に作成した app user はベストエフォートで削除する。
-							if (appUserId !== null) {
-								try {
-									await db.delete(users).where(eq(users.id, appUserId));
-								} catch (cleanupError) {
-									console.error('Failed to rollback app user creation after mapping failure:', cleanupError);
-								}
-							}
-
-							console.error('Failed to provision business-layer user during auth user creation:', e);
-							throw e;
-						}
-					},
-				},
-			},
-		},
+		// 業務層（users / auth_mappings）の生成は databaseHooks ではなく
+		// authGuard の lazy provisioning（ensureBusinessUser）に一本化している。
+		// email / Google いずれの経路でも初回の保護ルートアクセス時に生成される。
+		// 経緯は issue #115 / ADR 010 を参照。
 		secret: env.BETTER_AUTH_SECRET,
 		baseURL: env.BETTER_AUTH_URL,
 		trustedOrigins,
