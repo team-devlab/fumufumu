@@ -88,9 +88,10 @@ export const useAuth = () => {
     try {
       const absoluteReturnTo = `${window.location.origin}${resolveReturnTo(returnTo)}`;
       await authApi.startGoogleSignIn(absoluteReturnTo);
-      // startGoogleSignIn 内で window.location.href を書き換えるため、以降は到達しない想定
+      // 成功時は window.location.href の書き換えで unmount される想定
     } catch (_err) {
       setError("Google認証に失敗しました。時間をおいて再度お試しください。");
+    } finally {
       setIsLoading(false);
     }
   };
