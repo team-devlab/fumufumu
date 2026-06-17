@@ -2,8 +2,32 @@ import type { DbInstance } from "@/index";
 import { consultations } from "@/db/schema/consultations";
 import { advices } from "@/db/schema/advices";
 import { contentChecks } from "@/db/schema/content-checks";
-import { and, eq, inArray } from "drizzle-orm";
+import { and, eq, inArray, isNull } from "drizzle-orm";
 import { NotFoundError } from "@/errors/AppError";
+
+type ResendCandidate =
+	| {
+		targetType: "consultation";
+		targetId: number;
+		status: "approved";
+		authorId: number | null;
+		title: string;
+		checkedAt: Date | null;
+	}
+	| {
+		targetType: "advice";
+		targetId: number;
+		status: "approved";
+		authorId: number | null;
+		consultationId: number;
+		consultationTitle: string;
+		checkedAt: Date | null;
+	};
+
+type NotificationUpdateResult = {
+	targetType: "consultation" | "advice";
+	targetId: number;
+};
 
 export class ContentCheckRepository {
 	constructor(private db: DbInstance) {}
@@ -173,5 +197,168 @@ export class ContentCheckRepository {
 		}
 
 		return updated;
+	}
+
+	/**
+	 * 再送対象の approved レコードを target_type + target_id で単件取得する
+	 */
+	async findApprovedForResend(
+		targetType: "consultation" | "advice",
+		targetId: number,
+	): Promise<ResendCandidate | null> {
+		if (targetId <= 0) {
+			return null;
+		}
+
+		if (targetType === "consultation") {
+			const [row] = await this.db
+				.select({
+					targetId: contentChecks.targetId,
+					authorId: consultations.authorId,
+					title: consultations.title,
+					checkedAt: contentChecks.checkedAt,
+				})
+				.from(contentChecks)
+				.innerJoin(
+					consultations,
+					and(
+						eq(contentChecks.targetType, "consultation"),
+						eq(contentChecks.targetId, consultations.id),
+					),
+				)
+				.where(
+					and(
+						eq(contentChecks.targetType, "consultation"),
+						eq(contentChecks.targetId, targetId),
+						eq(contentChecks.status, "approved"),
+						isNull(contentChecks.notifiedAt),
+					),
+				)
+				.limit(1);
+
+			if (!row) {
+				return null;
+			}
+
+			return {
+				targetType: "consultation",
+				targetId: row.targetId,
+				status: "approved",
+				authorId: row.authorId,
+				title: row.title,
+				checkedAt: row.checkedAt,
+			};
+		}
+
+		const [row] = await this.db
+			.select({
+				targetId: contentChecks.targetId,
+				authorId: advices.authorId,
+				consultationId: advices.consultationId,
+				consultationTitle: consultations.title,
+				checkedAt: contentChecks.checkedAt,
+			})
+			.from(contentChecks)
+			.innerJoin(
+				advices,
+				and(
+					eq(contentChecks.targetType, "advice"),
+					eq(contentChecks.targetId, advices.id),
+				),
+			)
+			.innerJoin(consultations, eq(advices.consultationId, consultations.id))
+			.where(
+				and(
+					eq(contentChecks.targetType, "advice"),
+					eq(contentChecks.targetId, targetId),
+					eq(contentChecks.status, "approved"),
+					isNull(contentChecks.notifiedAt),
+				),
+			)
+			.limit(1);
+
+		if (!row) {
+			return null;
+		}
+
+		return {
+			targetType: "advice",
+			targetId: row.targetId,
+			status: "approved",
+			authorId: row.authorId,
+			consultationId: row.consultationId,
+			consultationTitle: row.consultationTitle,
+			checkedAt: row.checkedAt,
+		};
+	}
+
+	/**
+	 * 送信成功時に notified_at を確定し、直近エラーをクリアする
+	 */
+	async markNotificationSent(
+		targetType: "consultation" | "advice",
+		targetId: number,
+	): Promise<NotificationUpdateResult | null> {
+		if (targetId <= 0) {
+			return null;
+		}
+
+		const [updated] = await this.db
+			.update(contentChecks)
+			.set({
+				notifiedAt: new Date(),
+				notifyLastError: null,
+				updatedAt: new Date(),
+			})
+			.where(
+				and(
+					eq(contentChecks.targetType, targetType),
+					eq(contentChecks.targetId, targetId),
+					eq(contentChecks.status, "approved"),
+					isNull(contentChecks.notifiedAt),
+				),
+			)
+			.returning({
+				targetType: contentChecks.targetType,
+				targetId: contentChecks.targetId,
+			});
+
+		return updated ?? null;
+	}
+
+	/**
+	 * 送信失敗時に直近エラーを保存する（未通知の approved のみ）
+	 */
+	async markNotificationFailed(
+		targetType: "consultation" | "advice",
+		targetId: number,
+		errorMessage: string,
+	): Promise<NotificationUpdateResult | null> {
+		if (targetId <= 0) {
+			return null;
+		}
+
+		const normalizedError = errorMessage.trim() || "unknown notification error";
+
+		const [updated] = await this.db
+			.update(contentChecks)
+			.set({
+				notifyLastError: normalizedError,
+				updatedAt: new Date(),
+			})
+			.where(
+				and(
+					eq(contentChecks.targetType, targetType),
+					eq(contentChecks.targetId, targetId),
+					eq(contentChecks.status, "approved"),
+					isNull(contentChecks.notifiedAt),
+				),
+			)
+			.returning({
+				targetType: contentChecks.targetType,
+				targetId: contentChecks.targetId,
+			});
+
+		return updated ?? null;
 	}
 }

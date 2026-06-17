@@ -1,7 +1,7 @@
 {
   "version": "6",
   "dialect": "sqlite",
-  "id": "41e86ca2-486d-45b3-8ad9-e0853077aee9",
+  "id": "ae1068c3-2b85-4a8e-bb60-4edec1516a7b",
   "prevId": "f5243f66-6d13-468e-ae7f-5a5e35b4b090",
   "tables": {
     "advices": {
@@ -196,24 +196,7 @@
           "autoincrement": false
         }
       },
-      "indexes": {
-        "auth_accounts_provider_account_unique": {
-          "name": "auth_accounts_provider_account_unique",
-          "columns": [
-            "provider_id",
-            "account_id"
-          ],
-          "isUnique": true
-        },
-        "auth_accounts_user_provider_unique": {
-          "name": "auth_accounts_user_provider_unique",
-          "columns": [
-            "user_id",
-            "provider_id"
-          ],
-          "isUnique": true
-        }
-      },
+      "indexes": {},
       "foreignKeys": {
         "auth_accounts_user_id_auth_users_id_fk": {
           "name": "auth_accounts_user_id_auth_users_id_fk",
@@ -590,6 +573,20 @@
           "notNull": false,
           "autoincrement": false
         },
+        "notified_at": {
+          "name": "notified_at",
+          "type": "integer",
+          "primaryKey": false,
+          "notNull": false,
+          "autoincrement": false
+        },
+        "notify_last_error": {
+          "name": "notify_last_error",
+          "type": "text",
+          "primaryKey": false,
+          "notNull": false,
+          "autoincrement": false
+        },
         "created_at": {
           "name": "created_at",
           "type": "integer",
@@ -763,15 +760,7 @@
           "autoincrement": false
         }
       },
-      "indexes": {
-        "auth_mappings_auth_user_id_unique": {
-          "name": "auth_mappings_auth_user_id_unique",
-          "columns": [
-            "auth_user_id"
-          ],
-          "isUnique": true
-        }
-      },
+      "indexes": {},
       "foreignKeys": {
         "auth_mappings_app_user_id_users_id_fk": {
           "name": "auth_mappings_app_user_id_users_id_fk",

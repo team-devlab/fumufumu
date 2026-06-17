@@ -8,6 +8,17 @@ import { UserRepository } from "@/repositories/user.repository";
 import { UserService } from "@/services/user.service";
 import { TagRepository } from "@/repositories/tag.repository";
 import { TagService } from "@/services/tag.service";
+import { NotificationService } from "@/services/notification.service";
+import { ResendMailClient } from "@/clients/mail";
+
+export type NotificationServiceFactoryOptions = {
+	resendApiKey: string;
+	resendFrom: string;
+	appBaseUrl?: string;
+	resendEndpoint?: string;
+	timeoutMs?: number;
+	fetchImpl?: typeof fetch;
+};
 
 /**
  * ConsultationServiceのファクトリー関数
@@ -55,4 +66,30 @@ export function createUserService(db: DbInstance): UserService {
 export function createTagService(db: DbInstance): TagService {
 	const repository = new TagRepository(db);
 	return new TagService(repository);
+}
+
+/**
+ * NotificationServiceのファクトリー関数
+ * DBインスタンスとResend設定から依存関係を解決してServiceを生成する
+ *
+ * @param db - データベースインスタンス
+ * @param options - Resendクライアント設定
+ * @returns 依存関係が解決されたNotificationServiceインスタンス
+ */
+export function createNotificationService(
+	db: DbInstance,
+	options: NotificationServiceFactoryOptions,
+): NotificationService {
+	const contentCheckRepository = new ContentCheckRepository(db);
+	const userRepository = new UserRepository(db);
+	const mailClient = new ResendMailClient({
+		apiKey: options.resendApiKey,
+		from: options.resendFrom,
+		appBaseUrl: options.appBaseUrl,
+		endpoint: options.resendEndpoint,
+		timeoutMs: options.timeoutMs,
+		fetchImpl: options.fetchImpl,
+	});
+
+	return new NotificationService(contentCheckRepository, userRepository, mailClient);
 }

@@ -46,7 +46,7 @@ export const useAdviceConfirm = (consultationId: number) => {
 
       reset();
 
-      toast.success("回答を投稿しました！");
+      toast.success("アドバイスを投稿しました！");
       router.push(ROUTES.CONSULTATION.DETAIL(consultationId));
     } catch (error) {
       console.error(error);

@@ -3,6 +3,7 @@ import { createFactory } from "hono/factory";
 import { zValidator } from "@hono/zod-validator";
 import type { AppBindings } from "@/index";
 import { authGuard } from "@/middlewares/authGuard.middleware";
+import { adminGuard } from "@/middlewares/adminGuard.middleware";
 import { injectConsultationContentCheckService } from "@/middlewares/injectService.middleware";
 import {
   listConsultationContentChecksQuerySchema,
@@ -96,7 +97,9 @@ const decideAdviceContentCheckHandlers = factory.createHandlers(
 
 export const adminContentCheckRoute = new Hono<AppBindings>();
 
-adminContentCheckRoute.use("/*", authGuard, injectConsultationContentCheckService);
+// ADR 010 §4: /api/admin/* 全体に authGuard → adminGuard を必須化する。
+// adminGuard は authGuard が確定させた appUserId を前提とするため、必ずこの順序。
+adminContentCheckRoute.use("/*", authGuard, adminGuard, injectConsultationContentCheckService);
 adminContentCheckRoute.get("/consultations", ...listConsultationContentChecksHandlers);
 adminContentCheckRoute.post("/consultations/:consultationId/decision", ...decideConsultationContentCheckHandlers);
 adminContentCheckRoute.get("/advices", ...listAdviceContentChecksHandlers);

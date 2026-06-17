@@ -9,7 +9,7 @@ export const AdviceList = ({ advices }: Props) => {
   if (advices.length === 0) {
     return (
       <div className="p-8 text-center text-gray-500 bg-white rounded-xl border border-dashed border-gray-200">
-        まだ回答はありません。最初の回答を投稿してみましょう！
+        まだアドバイスはありません。最初のアドバイスを投稿してみましょう！
       </div>
     );
   }
@@ -17,7 +17,7 @@ export const AdviceList = ({ advices }: Props) => {
   return (
     <div className="space-y-6">
       <h2 className="text-lg font-bold text-gray-700 mb-4">
-        回答 ({advices.length}件)
+        アドバイス ({advices.length}件)
       </h2>
 
       {advices.map((advice) => {
@@ -63,7 +63,7 @@ export const AdviceList = ({ advices }: Props) => {
               </div>
             </div>
 
-            {/* 回答本文 */}
+            {/* アドバイス本文 */}
             <div className="text-gray-700 whitespace-pre-wrap text-sm leading-relaxed">
               {advice.body}
             </div>

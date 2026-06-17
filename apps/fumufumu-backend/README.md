@@ -1,14 +1,63 @@
+## 現在の production 環境
+
+- Worker URL: `https://fumufumu-worker.fumufumu.workers.dev`
+- Cloudflare account / Worker 名 / D1 `database_id` 等は git ignored の `wrangler.local.jsonc` で管理（リポジトリには `wrangler.local.jsonc.example` のみ）
+- Cloudflare plan: Free（Workers Standard への upgrade は auth の CPU 制限問題 #123 の解決方針次第）
+
+本書中の `<backend-production-url>` プレースホルダーは上記 URL を指す（custom domain 移行時に置き換える）。
+
 ## コマンド集
 - ローカル開発起動: `pnpm dev`
 - Drizzle Studio 起動: `pnpm studio`
 - curl http://127.0.0.1:8787/
 - ローカルタグ一覧: `pnpm tags:list`
 - ローカルタグ追加: `pnpm tags:add キャリア 人間関係 技術`
-- 手動デプロイ: `DEPLOY_APPROVED=1 WRANGLER_DEPLOY_CONFIG=wrangler.local.jsonc pnpm deploy`
+- 通知内部API（単体再送）: `POST /api/internal/notifications/resend`（Bearer認証）
+- 手動デプロイ: `DEPLOY_APPROVED=1 WRANGLER_DEPLOY_CONFIG=wrangler.local.jsonc pnpm run deploy`
+
+注: pnpm 10 以降は `pnpm deploy` が pnpm 内蔵のモノレポ deploy コマンドと衝突するため、必ず `pnpm run deploy` と明示する（package.json の `deploy` script を呼ぶため）。
 
 `pnpm dev` はデフォルトで `wrangler.local.jsonc` を使う。
 必要なら `WRANGLER_DEV_CONFIG` で dev 用 config を上書きできる。
 `pnpm studio` も同じ優先順（`WRANGLER_DEV_CONFIG` → `WRANGLER_D1_CONFIG` → `wrangler.local.jsonc`）でローカルD1を解決する。
+
+## Notification 内部API の環境変数
+
+内部API (`POST /api/internal/notifications/resend`) は Worker 環境変数を使用する。
+
+必須:
+- `NOTIFICATION_INTERNAL_TOKEN`
+- `RESEND_API_KEY`
+- `RESEND_FROM_EMAIL`
+
+任意:
+- `APP_BASE_URL`
+- `RESEND_ENDPOINT`
+- `RESEND_TIMEOUT_MS`
+
+呼び出し例:
+
+```bash
+curl -X POST "https://<backend>/api/internal/notifications/resend" \
+  -H "Authorization: Bearer ${NOTIFICATION_INTERNAL_TOKEN}" \
+  -H "Content-Type: application/json" \
+  -d '{"targetType":"consultation","targetId":123}'
+```
+
+## Notification 内部API の Secrets 運用
+
+### GitHub Actions / 本番実行環境
+- 以下を Secrets に登録する
+  - `RESEND_API_KEY`
+  - `RESEND_FROM_EMAIL`
+- 必要に応じて Variables または Secrets に登録する
+  - `APP_BASE_URL`
+  - `RESEND_ENDPOINT`
+  - `RESEND_TIMEOUT_MS`
+
+注意:
+- APIキー文字列をリポジトリに直接書かない
+- コマンド実行時は環境変数経由で注入する
 
 ## D1 migration runbook (production)
 
@@ -38,7 +87,7 @@ deploy 実行時は deploy 用 config を明示し、`DEPLOY_APPROVED=1` は実�
 
 ```bash
 export WRANGLER_DEPLOY_CONFIG=wrangler.local.jsonc
-DEPLOY_APPROVED=1 pnpm deploy
+DEPLOY_APPROVED=1 pnpm run deploy
 ```
 
 ### 実行順序
@@ -119,8 +168,8 @@ curl -fS https://<backend-production-url>/health
 
 - `WRANGLER_D1_CONFIG` が未設定の場合、`wrangler.local.jsonc` を参照する。
 - deploy の対象 Worker は `WRANGLER_DEPLOY_CONFIG` で指定した設定ファイル内の `name` で決定する。
-- `DEPLOY_APPROVED=1` を実行時に明示しない場合、`pnpm deploy` は実行を中断する（誤実行防止）。
-- `WRANGLER_DEPLOY_CONFIG` が未設定の場合、`pnpm deploy` は `wrangler.local.jsonc` を参照する。
+- `DEPLOY_APPROVED=1` を実行時に明示しない場合、`pnpm run deploy` は実行を中断する（誤実行防止）。
+- `WRANGLER_DEPLOY_CONFIG` が未設定の場合、`pnpm run deploy` は `wrangler.local.jsonc` を参照する。
 - ローカル適用は `pnpm local:migration` を使う。
 - smoke確認は専用ユーザーで実行し、`[smoke]` プレフィックスのデータを運用側で定期クリーンアップする。
 - smokeデータの削除例: `pnpm exec wrangler d1 execute DB --remote --command "DELETE FROM consultations WHERE author_id = <smoke_user_id> AND title LIKE '[smoke]%';" --config "${WRANGLER_D1_CONFIG:-wrangler.local.jsonc}"`

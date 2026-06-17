@@ -1,0 +1,191 @@
+import {
+	MailSendError,
+	type ApprovedMailTargetType,
+	type MailClient,
+} from "@/clients/mail";
+import { NotFoundError } from "@/errors/AppError";
+import type { ContentCheckRepository } from "@/repositories/content-check.repository";
+import type { UserRepository } from "@/repositories/user.repository";
+import type {
+	ResendFailureKind,
+	ResendSummary,
+} from "@/types/notification.types";
+
+type ResendTarget = NonNullable<
+	Awaited<ReturnType<ContentCheckRepository["findApprovedForResend"]>>
+>;
+
+type DispatchTarget =
+	| {
+		targetType: "consultation";
+		targetId: number;
+		authorId: number | null;
+		title: string;
+	}
+	| {
+		targetType: "advice";
+		targetId: number;
+		authorId: number | null;
+		consultationId: number;
+		consultationTitle: string;
+	};
+
+export class NotificationService {
+	constructor(
+		private readonly contentCheckRepository: ContentCheckRepository,
+		private readonly userRepository: UserRepository,
+		private readonly mailClient: MailClient,
+	) {}
+
+	/**
+	 * 指定対象を1件だけ再送する。
+	 * 条件に合致しない場合は送信せず、その理由を返す。
+	 */
+	async resend(
+		targetType: ApprovedMailTargetType,
+		targetId: number,
+	): Promise<ResendSummary> {
+		const target = await this.contentCheckRepository.findApprovedForResend(
+			targetType,
+			targetId,
+		);
+
+		if (!target) {
+			return {
+				sent: false,
+				targetType,
+				targetId,
+				kind: "not_found",
+				reason: "approved かつ未通知の対象が見つかりませんでした",
+			};
+		}
+
+		try {
+			await this.dispatchApprovedMail(this.toDispatchTarget(target));
+			await this.contentCheckRepository.markNotificationSent(
+				target.targetType,
+				target.targetId,
+			);
+
+			return {
+				sent: true,
+				targetType: target.targetType,
+				targetId: target.targetId,
+			};
+		} catch (error) {
+			const failure = this.toResendFailure(error);
+			await this.contentCheckRepository.markNotificationFailed(
+				target.targetType,
+				target.targetId,
+				failure.reason,
+			);
+
+			return {
+				sent: false,
+				targetType: target.targetType,
+				targetId: target.targetId,
+				kind: failure.kind,
+				reason: failure.reason,
+			};
+		}
+	}
+
+	/**
+	 * Repository が返す再送対象を、送信処理用の共通型へ変換する。
+	 */
+	private toDispatchTarget(target: ResendTarget): DispatchTarget {
+		if (target.targetType === "consultation") {
+			return {
+				targetType: "consultation",
+				targetId: target.targetId,
+				authorId: target.authorId,
+				title: target.title,
+			};
+		}
+
+		return {
+			targetType: "advice",
+			targetId: target.targetId,
+			authorId: target.authorId,
+			consultationId: target.consultationId,
+			consultationTitle: target.consultationTitle,
+		};
+	}
+
+	/**
+	 * 投稿者を特定し、対象種別に応じたメール送信を実行する。
+	 */
+	private async dispatchApprovedMail(target: DispatchTarget): Promise<void> {
+		if (target.authorId === null) {
+			throw new Error(
+				`通知対象の投稿者が存在しません: targetType=${target.targetType}, targetId=${target.targetId}`,
+			);
+		}
+
+		const recipient =
+			await this.userRepository.findNotificationRecipientByAppUserId(target.authorId);
+
+		if (target.targetType === "consultation") {
+			await this.mailClient.sendApproved({
+				targetType: "consultation",
+				targetId: target.targetId,
+				to: recipient.email,
+				consultationTitle: target.title,
+				recipientName: recipient.name,
+			});
+			return;
+		}
+
+		await this.mailClient.sendApproved({
+			targetType: "advice",
+			targetId: target.targetId,
+			to: recipient.email,
+			consultationId: target.consultationId,
+			consultationTitle: target.consultationTitle,
+			recipientName: recipient.name,
+		});
+	}
+
+	/**
+	 * 任意の例外を通知エラーログに保存可能な文字列へ正規化する。
+	 */
+	private toErrorMessage(error: unknown): string {
+		if (error instanceof MailSendError) {
+			return `[${error.kind}] ${error.message}`;
+		}
+		if (error instanceof Error) {
+			return `[unknown] ${error.message}`;
+		}
+		return "[unknown] unknown notification error";
+	}
+
+	/**
+	 * resend の失敗理由を、呼び出し側で判定しやすい kind 付きへ正規化する。
+	 */
+	private toResendFailure(error: unknown): {
+		kind: ResendFailureKind;
+		reason: string;
+	} {
+		if (error instanceof MailSendError) {
+			return {
+				kind: error.kind,
+				reason: this.toErrorMessage(error),
+			};
+		}
+
+		if (
+			error instanceof NotFoundError ||
+			(error instanceof Error && error.message.includes("通知対象の投稿者が存在しません"))
+		) {
+			return {
+				kind: "recipient_missing",
+				reason: this.toErrorMessage(error),
+			};
+		}
+
+		return {
+			kind: "unknown",
+			reason: this.toErrorMessage(error),
+		};
+	}
+}

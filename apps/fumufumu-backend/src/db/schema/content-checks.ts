@@ -14,6 +14,8 @@ export const contentChecks = sqliteTable("content_checks", {
   status: text("status", { enum: CONTENT_CHECK_STATUSES }).notNull().default("pending"),
   reason: text("reason"),
   checkedAt: integer("checked_at", { mode: "timestamp_ms" }),
+  notifiedAt: integer("notified_at", { mode: "timestamp_ms" }),
+  notifyLastError: text("notify_last_error"),
   createdAt: integer("created_at", { mode: "timestamp_ms" })
     .default(sql`(cast(unixepoch('subsecond') * 1000 as integer))`)
     .notNull(),

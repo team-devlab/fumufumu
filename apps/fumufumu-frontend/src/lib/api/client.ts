@@ -1,7 +1,11 @@
 import { isRedirectError } from "next/dist/client/components/redirect-error";
 import { redirect } from "next/navigation";
 
-const API_URL = process.env.NEXT_PUBLIC_API_URL || "http://localhost:8787";
+// `??` で nullish (undefined) 時のみ localhost に fallback する。
+// production build では `.env.production.local` で空文字を inline して同一 origin の
+// 相対パス fetch にしたいケースがあり、`||` だと空文字を falsy として扱い localhost に
+// fallback してしまうため `??` を使う（Service Binding 経由の同一 origin 構成、#126）。
+const API_URL = process.env.NEXT_PUBLIC_API_URL ?? "http://localhost:8787";
 
 type ApiOptions = RequestInit & {
   // 401時のログイン画面リダイレクトを無効化する（認証API呼び出し等で利用）
@@ -59,6 +63,10 @@ export async function apiClient<T>(
         } else {
           const { headers } = await import("next/headers");
           const headersList = await headers();
+          // 注: 旧 proxy.ts が設定していた x-pathname は撤去されたため、
+          //     現状この値は常に undefined になり SSR 経由の returnTo 復元は機能しない。
+          //     OpenNext for Cloudflare の Node Middleware 非対応制約への対応として、
+          //     別途 layout / page 側で returnTo を構築する設計を後続 issue で扱う。
           const returnTo = headersList.get("x-pathname") || undefined;
           redirect(buildLoginUrl(returnTo));
         }

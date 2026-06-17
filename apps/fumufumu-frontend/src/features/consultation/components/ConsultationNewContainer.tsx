@@ -1,7 +1,6 @@
 "use client";
 
 import { ConsultationForm } from "@/features/consultation/components/ConsultationForm";
-import { ConsultationFormActions } from "@/features/consultation/components/ConsultationFormActions";
 import { useConsultationEntry } from "@/features/consultation/hooks/useConsultationEntry";
 import type { Tag } from "@/features/consultation/types";
 
@@ -28,6 +27,12 @@ export const ConsultationNewContainer = ({ availableTags }: Props) => {
 
   return (
     <div className="max-w-4xl mx-auto w-full pb-20">
+      <header className="mb-5">
+        <h1 className="text-2xl font-bold tracking-tight text-slate-700">
+          相談投稿
+        </h1>
+      </header>
+
       <ConsultationForm
         title={title}
         body={body}
@@ -38,8 +43,6 @@ export const ConsultationNewContainer = ({ availableTags }: Props) => {
         onToggleTag={handleToggleTag}
         titleCharCount={titleCharCount}
         bodyCharCount={bodyCharCount}
-      />
-      <ConsultationFormActions
         onBack={handleBack}
         onSaveDraft={handleSaveDraft}
         onConfirm={handleConfirm}

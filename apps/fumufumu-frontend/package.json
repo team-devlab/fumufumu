@@ -2,12 +2,17 @@
   "name": "@fumufumu/frontend",
   "version": "0.1.0",
   "private": true,
+  "packageManager": "pnpm@10.33.2",
   "engines": {
     "node": ">=20.0.0"
   },
   "scripts": {
     "dev": "next dev",
     "build": "next build --webpack",
+    "build:cf": "opennextjs-cloudflare build",
+    "deploy:cf:require-approved": "test \"${DEPLOY_APPROVED:-}\" = \"1\" || (echo \"Set DEPLOY_APPROVED=1 to allow deploy\" && exit 1)",
+    "deploy:cf:require-config": "test -f \"${WRANGLER_DEPLOY_CONFIG:-wrangler.local.jsonc}\" || (echo \"Wrangler deploy config not found: ${WRANGLER_DEPLOY_CONFIG:-wrangler.local.jsonc}\" && exit 1)",
+    "deploy:cf": "pnpm deploy:cf:require-approved && pnpm deploy:cf:require-config && pnpm build:cf && wrangler deploy --config \"${WRANGLER_DEPLOY_CONFIG:-wrangler.local.jsonc}\"",
     "start": "next start",
     "lint": "biome check",
     "format": "biome format --write",
@@ -15,7 +20,7 @@
     "test:watch": "vitest --watch"
   },
   "dependencies": {
-    "next": "16.0.7",
+    "next": "16.2.6",
     "react": "19.2.1",
     "react-dom": "19.2.1",
     "react-hot-toast": "^2.6.0",
@@ -24,6 +29,8 @@
   },
   "devDependencies": {
     "@biomejs/biome": "2.2.0",
+    "@cloudflare/workers-types": "^4.20260523.1",
+    "@opennextjs/cloudflare": "^1.19.11",
     "@tailwindcss/postcss": "^4",
     "@testing-library/jest-dom": "^6.9.1",
     "@testing-library/react": "^16.3.0",
@@ -35,6 +42,14 @@
     "jsdom": "^27.1.0",
     "tailwindcss": "^4",
     "typescript": "^5",
-    "vitest": "^4.0.6"
+    "vitest": "^4.0.6",
+    "wrangler": "^4.94.0"
+  },
+  "pnpm": {
+    "onlyBuiltDependencies": [
+      "esbuild",
+      "sharp",
+      "workerd"
+    ]
   }
 }

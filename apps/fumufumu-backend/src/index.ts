@@ -18,6 +18,7 @@ import { protectedRouter } from '@/routes/protected.routes';
 import { userRoute } from '@/routes/user.controller';
 import { tagsRoute } from '@/routes/tags.controller';
 import { adminContentCheckRoute } from '@/routes/admin-content-check.controller';
+import { internalNotificationsRoute } from '@/routes/internal-notifications.controller';
 import type { ConsultationService } from '@/services/consultation.service';
 import type { ConsultationContentCheckService } from '@/services/consultation-content-check.service';
 import type { UserService } from '@/services/user.service';
@@ -43,7 +44,12 @@ export interface Env {
   GOOGLE_CLIENT_ID?: string;
   GOOGLE_CLIENT_SECRET?: string;
   COOKIE_DOMAIN?: string;
-  VERCEL_TEAM_SLUG?: string;
+  NOTIFICATION_INTERNAL_TOKEN?: string;
+  RESEND_API_KEY?: string;
+  RESEND_FROM_EMAIL?: string;
+  APP_BASE_URL?: string;
+  RESEND_ENDPOINT?: string;
+  RESEND_TIMEOUT_MS?: string;
 }
 
 // Hono Context (Variables) の拡張
@@ -139,13 +145,6 @@ app.use('/api/*', async (c, next) => {
         return origin;
       }
 
-      // Vercelのプレビュー環境を安全に動的許可
-      // (VERCEL_TEAM_SLUG が設定されている場合のみ、それに一致するプレビューURLを許可)
-      const vercelSlug = c.env.VERCEL_TEAM_SLUG;
-      if (vercelSlug && origin.startsWith('https://fumufumu-') && origin.endsWith(`-${vercelSlug}.vercel.app`)) {
-        return origin;
-      }
-
       // 許可されない場合はフォールバック（ブラウザがCORSエラーを出す）
       return allowedOrigins[0] || '*';
     },
@@ -207,7 +206,16 @@ api.route('/users', userRoute);
 api.route('/tags', tagsRoute);
 
 // 投稿チェック運営API（/api/admin/content-check）
+//
+// 🛡 /api/admin/* 配下を追加する際の必須ルール (ADR 010 §4):
+//   controller 側の middleware chain に必ず `authGuard, adminGuard` をセットで適用すること。
+//   - adminGuard は authGuard が確定させた appUserId を前提とするため、必ずこの順序
+//   - 未認可時は 404 を返し、admin API の存在自体を露出させない方針
+//   - この規約はコード上強制されていない。将来の構造的強制は別 Issue で検討する。
 api.route('/admin/content-check', adminContentCheckRoute);
+
+// 通知内部API（/api/internal/notifications）
+api.route('/internal/notifications', internalNotificationsRoute);
 
 // メインアプリにAPIルーターをマウント
 app.route('/api', api);

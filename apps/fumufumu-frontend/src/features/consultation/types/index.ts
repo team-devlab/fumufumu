@@ -100,7 +100,7 @@ export interface ConsultationDetail extends Consultation {
   body: string;
 
   /**
-   * 回答一覧
+   * アドバイス一覧
    * ※API改修前は空配列が入ります
    */
   advices: Advice[];

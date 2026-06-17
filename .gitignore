@@ -1,2 +1,5 @@
 apps/fumufumu-backend/cookie_jar.txt
 # ./claude
+
+# repomix CLI の出力（リポジトリ内容を 1 ファイルにまとめたダンプ）
+repomix-output.xml

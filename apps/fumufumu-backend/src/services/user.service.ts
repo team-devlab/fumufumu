@@ -1,13 +1,18 @@
 // Business層: ユーザービジネスロジック
 import type { UserRepository } from "@/repositories/user.repository";
+import type { UserRole } from "@/db/schema/user";
 
 /**
  * ユーザー情報レスポンス型
+ *
+ * role はフロントエンドの admin layout guard / UI 出し分けで参照される（ADR 010 §5）。
+ * 自分自身の role を返すだけで他人の role は露出しない。
  */
 export interface UserResponse {
 	id: number;
 	name: string;
 	disabled: boolean;
+	role: UserRole;
 	createdAt: string;
 	updatedAt: string;
 }
@@ -25,6 +30,7 @@ export class UserService {
 		id: number;
 		name: string;
 		disabled: boolean;
+		role: UserRole;
 		createdAt: Date;
 		updatedAt: Date;
 	}): UserResponse {
@@ -32,6 +38,7 @@ export class UserService {
 			id: user.id,
 			name: user.name,
 			disabled: user.disabled,
+			role: user.role,
 			createdAt: user.createdAt.toISOString(),
 			updatedAt: user.updatedAt.toISOString(),
 		};

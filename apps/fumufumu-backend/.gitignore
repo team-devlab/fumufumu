@@ -19,6 +19,7 @@ node_modules/
 # env
 .env
 .env.production
+.env.notifications
 .dev.vars
 wrangler.local.jsonc
 wrangler.ci.jsonc
