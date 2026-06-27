@@ -247,7 +247,8 @@ src/features/admin-content-check/
 
 - **詳細画面は作らない**: 一覧カードに title / body / author / created_at が既に出揃っており、別画面に遷移しても追加で見せる情報がない（§3.3）
 - **承認**: カード内 `[承認]` ボタン → `window.confirm("承認しますか？")` → POST → `toast.success("承認しました")` + `router.refresh()`
-  - 確認 dialog を挟む理由: 承認時は ADR 009 の `ctx.waitUntil()` で投稿者に **メールが飛ぶ** ため、誤操作の影響が大きい
+  - 確認 dialog を挟む理由: 承認は投稿を公開状態に遷移させる不可逆な操作 (撤回フローは現状未整備) で、誤クリックの影響が大きい
+  - 補足: ADR 009 §2 では承認 API 内 `ctx.waitUntil()` での自動メール送信を設計として掲げているが、現状の実装 (`consultation-content-check.service.ts`) は DB 更新のみで auto-send は未実装。`sendApproved` を呼ぶのは `POST /internal/notifications/resend` (Bearer token 付き internal API) 経由の手動 resend のみ
 - **却下**: カード内 `[却下]` ボタン → 理由入力モーダル → POST → `toast.success("却下しました")` + `router.refresh()`
   - 理由 textarea は **1〜500 文字** で client-side validation（backend validator と同条件、`apps/fumufumu-backend/src/validators/content-check.validator.ts`）
 - **二重送信防止**: 送信中はボタン `disabled`
