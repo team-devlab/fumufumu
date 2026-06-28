@@ -64,7 +64,7 @@ export const RejectDialog = ({ onSubmit, isSubmitting }: Props) => {
 
       <dialog
         ref={dialogRef}
-        className="w-full max-w-md rounded-lg p-0 shadow-xl backdrop:bg-black/50"
+        className="m-auto w-full max-w-md rounded-lg p-0 shadow-xl backdrop:bg-black/50"
       >
         <form onSubmit={handleSubmit} className="space-y-4 p-6">
           <h2 className="text-lg font-bold text-gray-900">投稿を却下する</h2>
