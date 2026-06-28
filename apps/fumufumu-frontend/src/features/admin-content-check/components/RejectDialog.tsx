@@ -2,6 +2,11 @@
 
 import { useId, useRef, useState } from "react";
 
+// backend validator (apps/fumufumu-backend/src/validators/content-check.validator.ts)
+// の reason 上限 (.max(500)) と同条件で宣言している。frontend 側のクライアント
+// バリデーションでカバーしたいだけで、本来は同じ schema / 定数を frontend から
+// 共有して参照すべき。片方を変えるともう片方も同時に更新する必要がある。
+// 共有定数化の検討は別 issue に切り出して扱う。
 const MAX_REASON_LENGTH = 500;
 
 type Props = {
