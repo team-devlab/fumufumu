@@ -52,10 +52,6 @@ export const RejectDialog = ({ onSubmit, isSubmitting }: Props) => {
       setError("却下理由を入力してください");
       return;
     }
-    if (trimmed.length > MAX_REASON_LENGTH) {
-      setError(`理由は${MAX_REASON_LENGTH}文字以内で入力してください`);
-      return;
-    }
     setError(null);
 
     // 成功 / 失敗どちらでも dialog は閉じる
