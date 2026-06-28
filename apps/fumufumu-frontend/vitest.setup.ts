@@ -16,3 +16,16 @@ vi.mock("next/navigation", () => ({
   usePathname: () => "/",
   useSearchParams: () => new URLSearchParams(),
 }));
+
+// jsdom は HTMLDialogElement.showModal / close を実装していないため、
+// open 属性をトグルするだけの最小スタブを当てる。これにより testing-library
+// が dialog 内の element を accessibility tree から取り出せるようになる。
+// 個別 test で呼び出し回数を観測したい場合は vi.spyOn で上書きできる。
+if (typeof HTMLDialogElement !== "undefined") {
+  HTMLDialogElement.prototype.showModal = function () {
+    this.open = true;
+  };
+  HTMLDialogElement.prototype.close = function () {
+    this.open = false;
+  };
+}
