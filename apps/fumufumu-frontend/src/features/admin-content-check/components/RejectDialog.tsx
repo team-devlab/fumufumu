@@ -1,6 +1,6 @@
 "use client";
 
-import { useRef, useState } from "react";
+import { useId, useRef, useState } from "react";
 
 const MAX_REASON_LENGTH = 500;
 
@@ -13,6 +13,13 @@ type Props = {
 
 export const RejectDialog = ({ onSubmit, isSubmitting }: Props) => {
   const dialogRef = useRef<HTMLDialogElement>(null);
+  // 親 (DecisionActions) は pending item の数だけ RejectDialog をレンダーする。
+  // id をベタ書きにすると document 内で衝突し、label↔textarea のペアリングや
+  // aria-labelledby の参照が「最初に見つかった一致」に倒れて壊れる。
+  // SSR/CSR で安定 (hydration mismatch を起こさない) かつ instance ごとに
+  // 一意になる id を React の useId で生成する。
+  const titleId = useId();
+  const reasonId = useId();
   const [reason, setReason] = useState("");
   const [error, setError] = useState<string | null>(null);
 
@@ -69,19 +76,22 @@ export const RejectDialog = ({ onSubmit, isSubmitting }: Props) => {
 
       <dialog
         ref={dialogRef}
+        aria-labelledby={titleId}
         className="m-auto w-full max-w-md rounded-lg p-0 shadow-xl backdrop:bg-black/50"
       >
         <form onSubmit={handleSubmit} className="space-y-4 p-6">
-          <h2 className="text-lg font-bold text-gray-900">投稿を却下する</h2>
+          <h2 id={titleId} className="text-lg font-bold text-gray-900">
+            投稿を却下する
+          </h2>
           <div>
             <label
-              htmlFor="reject-reason"
+              htmlFor={reasonId}
               className="block text-sm font-medium text-gray-700"
             >
               却下理由（1〜{MAX_REASON_LENGTH} 文字）
             </label>
             <textarea
-              id="reject-reason"
+              id={reasonId}
               value={reason}
               onChange={(e) => setReason(e.target.value)}
               rows={5}
