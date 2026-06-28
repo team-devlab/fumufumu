@@ -1,4 +1,5 @@
 import type { PendingConsultationDetail } from "../types";
+import { DecisionActions } from "./DecisionActions";
 import { PendingItemCard } from "./PendingItemCard";
 
 /**
@@ -55,6 +56,9 @@ export const PendingConsultationList = (props: Props) => {
                 body={item.body}
                 authorId={item.author_id}
                 createdAt={item.created_at}
+                actions={
+                  <DecisionActions kind="consultation" itemId={item.id} />
+                }
               />
             </li>
           ))}

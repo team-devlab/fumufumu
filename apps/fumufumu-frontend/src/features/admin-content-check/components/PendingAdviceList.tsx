@@ -1,4 +1,5 @@
 import type { PendingAdviceDetail } from "../types";
+import { DecisionActions } from "./DecisionActions";
 import { PendingItemCard } from "./PendingItemCard";
 
 /**
@@ -67,6 +68,7 @@ export const PendingAdviceList = (props: Props) => {
                     </a>
                   </span>
                 }
+                actions={<DecisionActions kind="advice" itemId={item.id} />}
               />
             </li>
           ))}

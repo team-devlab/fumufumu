@@ -21,6 +21,8 @@ type Props = {
   createdAt: string;
   /** カード末尾に追加表示したい補助情報 (例: 所属相談 id へのリンク) */
   meta?: React.ReactNode;
+  /** カード下端に表示する操作 UI (例: 承認/却下ボタン)。Client Component を渡す想定 */
+  actions?: React.ReactNode;
 };
 
 const formatAuthor = (authorId: number | null): string => {
@@ -41,6 +43,7 @@ export const PendingItemCard = ({
   authorId,
   createdAt,
   meta,
+  actions,
 }: Props) => {
   return (
     <article className="rounded-lg border border-gray-200 bg-white p-4 shadow-sm">
@@ -59,6 +62,8 @@ export const PendingItemCard = ({
         <span>投稿者: {formatAuthor(authorId)}</span>
         {meta}
       </div>
+
+      {actions && <div className="mt-3 flex justify-end gap-2">{actions}</div>}
     </article>
   );
 };

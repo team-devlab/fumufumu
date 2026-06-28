@@ -234,7 +234,68 @@ src/features/admin-content-check/
 
 ---
 
-## 10. 関連
+## 10. 承認 / 却下 UI（追記 / Phase 2）
+
+> 本ドキュメント Phase 1（§1-§9）の続編として、§8 #1 で「次の PR」と置いた承認 / 却下 UI を実装する。Phase 1 は merge 済み（PR #146）であり、本セクションは Phase 2 のスコープを定義する。
+
+### 10.1 スコープ
+
+- pending な相談 / アドバイスに対し、admin が **一覧画面のカード上で直接** 承認 / 却下できる
+- バックエンドへの変更なし（既存 API `POST /api/admin/content-check/.../:id/decision` を呼ぶだけ）
+
+### 10.2 UI 方針
+
+- **詳細画面は作らない**: 一覧カードに title / body / author / created_at が既に出揃っており、別画面に遷移しても追加で見せる情報がない（§3.3）
+- **承認**: カード内 `[承認]` ボタン → `window.confirm("承認しますか？")` → POST → `toast.success("承認しました")` + `router.refresh()`
+  - 確認 dialog を挟む理由: 承認は投稿を公開状態に遷移させる不可逆な操作 (撤回フローは現状未整備) で、誤クリックの影響が大きい
+  - 補足: ADR 009 §2 では承認 API 内 `ctx.waitUntil()` での自動メール送信を設計として掲げているが、現状の実装 (`consultation-content-check.service.ts`) は DB 更新のみで auto-send は未実装。`sendApproved` を呼ぶのは `POST /internal/notifications/resend` (Bearer token 付き internal API) 経由の手動 resend のみ
+- **却下**: カード内 `[却下]` ボタン → 理由入力モーダル → POST → `toast.success("却下しました")` + `router.refresh()`
+  - 理由 textarea は **1〜500 文字** で client-side validation（backend validator と同条件、`apps/fumufumu-backend/src/validators/content-check.validator.ts`）
+- **二重送信防止**: 送信中はボタン `disabled`
+- **同時操作（404）**: backend が "未処理の投稿チェックが見つかりません" を 404 で返した場合は `toast.error("他の管理者が既に処理した可能性があります")` + `router.refresh()`（リストから消える）
+
+### 10.3 実装方針
+
+- **mutation 経路**: 既存パターン踏襲で **Client から `apiClient` + `router.refresh()`**（Server Action は本リポジトリで初採用になり、本 PR と検証コストを混ぜない判断）
+- **CLAUDE.md 制約**: `useEffect` を使わず、すべて onClick / form handler / `useRef` で完結させる
+- **モーダル基盤**: native `<dialog>` + `showModal()` を採用。focus trap / ESC close が標準実装で、UI ライブラリ（shadcn / radix 等）を新規導入しない
+
+### 10.4 ファイル構成（追加）
+
+```
+src/features/admin-content-check/
+├── api/
+│   └── adminContentCheckDecisionApi.ts   # ★ 追加: client-side decision API wrapper
+├── components/
+│   ├── DecisionActions.tsx               # ★ 追加: [承認] [却下] ボタン群 (Client Component)
+│   └── RejectDialog.tsx                  # ★ 追加: 却下時の理由入力モーダル (Client Component)
+```
+
+`PendingItemCard` は既存の `meta` slot と同様に `actions?: React.ReactNode` slot を 1 つ増やすだけにとどめる。
+
+### 10.5 実装ステップ（コミット境界）
+
+1. **本コミット**: 本セクション追記（コードは変更しない）
+2. `adminContentCheckDecisionApi.ts` — `decideConsultationApi` / `decideAdviceApi` のみ実装、UI には繋がない
+3. `PendingItemCard` に `actions` slot を追加（既存呼び出しに影響なし）
+4. **承認 only** end-to-end — `DecisionActions` の承認パスと list 差し込み。ブラウザで承認が効く状態にする
+5. **却下** — `RejectDialog` と `DecisionActions` の却下パス追加。ブラウザで却下が効く状態にする
+6. vitest component tests を追加（`DecisionActions` / `RejectDialog`）
+7. typecheck / lint / test green
+
+### 10.6 権限
+
+ADR 010 §4 の `adminGuard` (backend) と `AdminLayout` (frontend) が既に効いているため、本 Phase では追加実装なし。
+
+### 10.7 本 Phase 2 で含めないこと
+
+- 却下理由（reason）の表示画面 / 履歴閲覧 — DB には保存されるが、運用上 DB 直見の前提のまま
+- 投稿者への却下通知 — 別途 ADR で議論
+- 楽観的更新（optimistic UI）— `router.refresh()` で十分軽快、Phase 1 と同じく "送信成功 → 再 fetch" にとどめる
+
+---
+
+## 11. 関連
 
 - ADR 007: [`docs/design/adr/007-content-check-mvp-operation-strategy.md`](../design/adr/007-content-check-mvp-operation-strategy.md) — content-check の DB 設計と運用方針
 - ADR 009: [`docs/design/adr/009-email-notification-delivery-strategy-mvp.md`](../design/adr/009-email-notification-delivery-strategy-mvp.md) — 承認時メール送信

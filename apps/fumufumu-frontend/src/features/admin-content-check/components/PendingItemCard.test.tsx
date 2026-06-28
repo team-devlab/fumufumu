@@ -56,6 +56,20 @@ describe("PendingItemCard", () => {
     expect(screen.getByTestId("meta-marker")).toBeInTheDocument();
   });
 
+  it("actions slot に渡した要素が描画される", () => {
+    render(
+      <PendingItemCard
+        {...baseProps}
+        actions={
+          <button type="button" data-testid="action-marker">
+            承認
+          </button>
+        }
+      />,
+    );
+    expect(screen.getByTestId("action-marker")).toBeInTheDocument();
+  });
+
   it("createdAt が ja-JP locale で表示される (年が含まれる)", () => {
     // toLocaleString('ja-JP') の出力は environment 依存だが、年部分はどの locale でも含まれる
     render(<PendingItemCard {...baseProps} createdAt="2026-01-15T10:00:00Z" />);
