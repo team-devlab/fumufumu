@@ -154,6 +154,24 @@ describe("DecisionActions", () => {
         expect(toast.error).toHaveBeenCalledWith("承認に失敗しました");
       });
     });
+
+    it("非 ApiError (network failure) で「ネットワーク接続を確認してください」toast が出る", async () => {
+      const user = userEvent.setup();
+      vi.spyOn(window, "confirm").mockReturnValue(true);
+      // fetch が TypeError で throw するケースを模す (network down 等)
+      vi.mocked(decideConsultationApi).mockRejectedValue(
+        new TypeError("Failed to fetch"),
+      );
+
+      render(<DecisionActions kind="consultation" itemId={1} />);
+      await user.click(screen.getByRole("button", { name: "承認" }));
+
+      await waitFor(() => {
+        expect(toast.error).toHaveBeenCalledWith(
+          "ネットワーク接続を確認してください",
+        );
+      });
+    });
   });
 
   describe("却下パス", () => {
@@ -225,6 +243,22 @@ describe("DecisionActions", () => {
 
       await waitFor(() => {
         expect(toast.error).toHaveBeenCalledWith("却下に失敗しました");
+      });
+    });
+
+    it("却下時の非 ApiError (network failure) で「ネットワーク接続を確認してください」toast が出る", async () => {
+      const user = userEvent.setup();
+      vi.mocked(decideConsultationApi).mockRejectedValue(
+        new TypeError("Failed to fetch"),
+      );
+
+      render(<DecisionActions kind="consultation" itemId={1} />);
+      await user.click(screen.getByTestId("reject-stub"));
+
+      await waitFor(() => {
+        expect(toast.error).toHaveBeenCalledWith(
+          "ネットワーク接続を確認してください",
+        );
       });
     });
   });

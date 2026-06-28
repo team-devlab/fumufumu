@@ -75,11 +75,11 @@ describe("RejectDialog", () => {
     });
   });
 
-  it("キャンセルボタンで close が呼ばれる", async () => {
+  it("閉じるボタンで close が呼ばれる", async () => {
     const user = userEvent.setup();
     render(<RejectDialog onSubmit={vi.fn()} isSubmitting={false} />);
     await user.click(screen.getByRole("button", { name: "却下" }));
-    await user.click(screen.getByRole("button", { name: "キャンセル" }));
+    await user.click(screen.getByRole("button", { name: "閉じる" }));
     expect(closeSpy).toHaveBeenCalledOnce();
   });
 

@@ -22,10 +22,20 @@ export const DecisionActions = ({ kind, itemId }: Props) => {
   const decide = async (decision: "approved" | "rejected", reason?: string) => {
     setIsSubmitting(true);
     try {
-      if (kind === "consultation") {
-        await decideConsultationApi(itemId, decision, reason);
-      } else {
-        await decideAdviceApi(itemId, decision, reason);
+      switch (kind) {
+        case "consultation":
+          await decideConsultationApi(itemId, decision, reason);
+          break;
+        case "advice":
+          await decideAdviceApi(itemId, decision, reason);
+          break;
+        default: {
+          // exhaustive check: 将来 kind に値を追加した際に compile error で気付ける。
+          // ここに来る = TS が網羅性チェックを失った状態なので、ランタイムでも明示的に
+          // 落とす。
+          const _exhaustiveCheck: never = kind;
+          throw new Error(`Unknown kind: ${_exhaustiveCheck}`);
+        }
       }
       toast.success(decision === "approved" ? "承認しました" : "却下しました");
       router.refresh();
@@ -35,10 +45,15 @@ export const DecisionActions = ({ kind, itemId }: Props) => {
       if (error instanceof ApiError && error.status === 404) {
         toast.error("他の管理者が既に処理した可能性があります");
         router.refresh();
-      } else {
+      } else if (error instanceof ApiError) {
+        // 4xx / 5xx 等の backend が返した API エラー
         toast.error(
           decision === "approved" ? "承認に失敗しました" : "却下に失敗しました",
         );
+      } else {
+        // ApiError 以外 = fetch 自体が失敗 (network down / CORS / TypeError 等)。
+        // backend に到達できていないので、ユーザにはネットワーク観点の手当を促す
+        toast.error("ネットワーク接続を確認してください");
       }
     } finally {
       setIsSubmitting(false);
