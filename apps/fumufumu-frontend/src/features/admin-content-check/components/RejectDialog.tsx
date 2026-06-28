@@ -42,8 +42,13 @@ export const RejectDialog = ({ onSubmit, isSubmitting }: Props) => {
 
     // 成功 / 失敗どちらでも dialog は閉じる
     // (成功: list refresh で行が消える / 失敗: toast を親側で出すので dialog は不要)
+    // 親 (DecisionActions.decide) が全エラーを握りつぶす契約だが、safety net で
+    // 本コンポーネント側でも catch する。catch しないと <form onSubmit> から
+    // unhandled rejection として leak する。
     try {
       await onSubmit(trimmed);
+    } catch {
+      // intentionally swallowed; parent is responsible for user-visible error feedback
     } finally {
       handleClose();
     }
