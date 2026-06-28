@@ -27,6 +27,18 @@ describe('Consultations API - Advice List (GET /:id/advices)', () => {
 			.bind(consultationId)
 			.run();
 	};
+	const approveAdvice = async (adviceId: number) => {
+		await env.DB
+			.prepare("UPDATE content_checks SET status = 'approved', checked_at = (cast(unixepoch('subsecond') * 1000 as integer)), updated_at = (cast(unixepoch('subsecond') * 1000 as integer)) WHERE target_type = 'advice' AND target_id = ?")
+			.bind(adviceId)
+			.run();
+	};
+	const rejectAdvice = async (adviceId: number) => {
+		await env.DB
+			.prepare("UPDATE content_checks SET status = 'rejected', checked_at = (cast(unixepoch('subsecond') * 1000 as integer)), updated_at = (cast(unixepoch('subsecond') * 1000 as integer)) WHERE target_type = 'advice' AND target_id = ?")
+			.bind(adviceId)
+			.run();
+	};
 	const draftAdviceBody = '下書き回答（一覧非表示）のテストです。10文字以上あります。';
 	const hiddenAdviceBody = '非表示回答（一覧非表示）のテストです。10文字以上あります。';
 	const filterTargetPublicBodies = [
@@ -82,6 +94,8 @@ describe('Consultations API - Advice List (GET /:id/advices)', () => {
 				},
 			}), env);
 			expect(adviceRes.status).toBe(201);
+			const advice = await adviceRes.json() as any;
+			await approveAdvice(advice.id);
 		}
 
 		const draftAdviceRes = await app.fetch(createApiRequest(`/api/consultations/${consultationId}/advice`, 'POST', {
@@ -102,6 +116,7 @@ describe('Consultations API - Advice List (GET /:id/advices)', () => {
 		}), env);
 		expect(hiddenAdviceRes.status).toBe(201);
 		const hiddenAdvice = await hiddenAdviceRes.json() as any;
+		await approveAdvice(hiddenAdvice.id);
 		await env.DB
 			.prepare("UPDATE advices SET hidden_at = (cast(unixepoch('subsecond') * 1000 as integer)) WHERE id = ?")
 			.bind(hiddenAdvice.id)
@@ -161,6 +176,8 @@ describe('Consultations API - Advice List (GET /:id/advices)', () => {
 				},
 			}), env);
 			expect(adviceRes.status).toBe(201);
+			const advice = await adviceRes.json() as any;
+			await approveAdvice(advice.id);
 		}
 
 		const filterTargetDraftRes = await app.fetch(createApiRequest(`/api/consultations/${userIdFilterConsultationId}/advice`, 'POST', {
@@ -181,6 +198,7 @@ describe('Consultations API - Advice List (GET /:id/advices)', () => {
 		}), env);
 		expect(filterTargetHiddenRes.status).toBe(201);
 		const filterTargetHiddenAdvice = await filterTargetHiddenRes.json() as any;
+		await approveAdvice(filterTargetHiddenAdvice.id);
 		await env.DB
 			.prepare("UPDATE advices SET hidden_at = (cast(unixepoch('subsecond') * 1000 as integer)) WHERE id = ?")
 			.bind(filterTargetHiddenAdvice.id)
@@ -195,6 +213,8 @@ describe('Consultations API - Advice List (GET /:id/advices)', () => {
 				},
 			}), env);
 			expect(adviceRes.status).toBe(201);
+			const advice = await adviceRes.json() as any;
+			await approveAdvice(advice.id);
 		}
 
 		const noPublicDraftRes = await app.fetch(createApiRequest(`/api/consultations/${userIdFilterConsultationId}/advice`, 'POST', {
@@ -215,6 +235,7 @@ describe('Consultations API - Advice List (GET /:id/advices)', () => {
 		}), env);
 		expect(noPublicHiddenRes.status).toBe(201);
 		const noPublicHiddenAdvice = await noPublicHiddenRes.json() as any;
+		await approveAdvice(noPublicHiddenAdvice.id);
 		await env.DB
 			.prepare("UPDATE advices SET hidden_at = (cast(unixepoch('subsecond') * 1000 as integer)) WHERE id = ?")
 			.bind(noPublicHiddenAdvice.id)
@@ -524,5 +545,102 @@ describe('Consultations API - Advice List (GET /:id/advices)', () => {
 		const body = await res.json() as any;
 		expect(body.error).toBe('NotFoundError');
 		expect(body.message).toBe(`相談が見つかりません: id=${created.id}`);
+	});
+
+	describe('content_check による advice 可視性フィルタ', () => {
+		const approvedAdviceBody = 'approved な公開回答です。10文字以上あります。';
+		const pendingAdviceBody = 'pending な公開回答です。10文字以上あります。';
+		const rejectedAdviceBody = 'rejected な公開回答です。10文字以上あります。';
+		const pendingAttackerBody = 'attacker の pending 回答です。10文字以上あります。';
+		let visibilityConsultationId: number;
+
+		beforeAll(async () => {
+			const consultationRes = await app.fetch(createApiRequest('/api/consultations', 'POST', {
+				cookie: user.cookie,
+				body: {
+					title: 'advice 可視性検証用相談',
+					body: 'content_check による advice 可視性を検証する本文です。',
+					draft: false,
+					tagIds: [tagId],
+				},
+			}), env);
+			expect(consultationRes.status).toBe(201);
+			const consultation = await consultationRes.json() as any;
+			visibilityConsultationId = consultation.id;
+			await approveConsultation(visibilityConsultationId);
+
+			const approvedRes = await app.fetch(createApiRequest(`/api/consultations/${visibilityConsultationId}/advice`, 'POST', {
+				cookie: user.cookie,
+				body: { body: approvedAdviceBody, draft: false },
+			}), env);
+			expect(approvedRes.status).toBe(201);
+			await approveAdvice((await approvedRes.json() as any).id);
+
+			const pendingRes = await app.fetch(createApiRequest(`/api/consultations/${visibilityConsultationId}/advice`, 'POST', {
+				cookie: user.cookie,
+				body: { body: pendingAdviceBody, draft: false },
+			}), env);
+			expect(pendingRes.status).toBe(201);
+			// pending のまま放置
+
+			const rejectedRes = await app.fetch(createApiRequest(`/api/consultations/${visibilityConsultationId}/advice`, 'POST', {
+				cookie: user.cookie,
+				body: { body: rejectedAdviceBody, draft: false },
+			}), env);
+			expect(rejectedRes.status).toBe(201);
+			await rejectAdvice((await rejectedRes.json() as any).id);
+
+			const pendingAttackerRes = await app.fetch(createApiRequest(`/api/consultations/${visibilityConsultationId}/advice`, 'POST', {
+				cookie: attacker.cookie,
+				body: { body: pendingAttackerBody, draft: false },
+			}), env);
+			expect(pendingAttackerRes.status).toBe(201);
+		});
+
+		it('他者視点では approved な advice のみが一覧に含まれる', async () => {
+			const req = createApiRequest(`/api/consultations/${visibilityConsultationId}/advices`, 'GET', {
+				cookie: attacker.cookie,
+				queryParams: { limit: 100 },
+			});
+			const res = await app.fetch(req, env);
+			expect(res.status).toBe(200);
+			const body = await res.json() as any;
+			const bodies = body.data.map((a: any) => a.body);
+			expect(bodies).toContain(approvedAdviceBody);
+			expect(bodies).not.toContain(pendingAdviceBody);
+			expect(bodies).not.toContain(rejectedAdviceBody);
+			expect(bodies).not.toContain(pendingAttackerBody);
+			expect(body.pagination.total_items).toBe(1);
+		});
+
+		it('author 本人視点でも自分の pending / rejected advice は相談詳細の一覧に含まれない', async () => {
+			const req = createApiRequest(`/api/consultations/${visibilityConsultationId}/advices`, 'GET', {
+				cookie: user.cookie,
+				queryParams: { limit: 100 },
+			});
+			const res = await app.fetch(req, env);
+			expect(res.status).toBe(200);
+			const body = await res.json() as any;
+			const bodies = body.data.map((a: any) => a.body);
+			expect(bodies).toContain(approvedAdviceBody);
+			expect(bodies).not.toContain(pendingAdviceBody);
+			expect(bodies).not.toContain(rejectedAdviceBody);
+			expect(body.pagination.total_items).toBe(1);
+		});
+
+		it('GET /api/consultations/:id の advices にも同じ可視性フィルタが効く', async () => {
+			const req = createApiRequest(`/api/consultations/${visibilityConsultationId}`, 'GET', {
+				cookie: attacker.cookie,
+			});
+			const res = await app.fetch(req, env);
+			expect(res.status).toBe(200);
+			const body = await res.json() as any;
+			const advices = body.advices ?? [];
+			const bodies = advices.map((a: any) => a.body);
+			expect(bodies).toContain(approvedAdviceBody);
+			expect(bodies).not.toContain(pendingAdviceBody);
+			expect(bodies).not.toContain(rejectedAdviceBody);
+			expect(bodies).not.toContain(pendingAttackerBody);
+		});
 	});
 });
