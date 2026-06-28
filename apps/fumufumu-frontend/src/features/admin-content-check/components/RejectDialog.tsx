@@ -5,7 +5,13 @@ import { useId, useRef, useState } from "react";
 const MAX_REASON_LENGTH = 500;
 
 type Props = {
-  /** 却下を確定したとき呼ばれる。throw しても dialog は閉じる (finally で close) */
+  /**
+   * 却下を確定したとき呼ばれる。
+   * 成否にかかわらず dialog は閉じる (finally で close)。
+   * throw された error は内部で握りつぶされるため、user-visible な error
+   * feedback (toast 等) は親 component の責務。何も通知しないと silent fail
+   * になる点に注意。
+   */
   onSubmit: (reason: string) => Promise<void>;
   /** 親 (DecisionActions) の submission 状態と同期。submit ボタンの二重押下防止に使う */
   isSubmitting: boolean;
