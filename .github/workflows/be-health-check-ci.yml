@@ -70,9 +70,16 @@ jobs:
         jq "$JQ_FILTER" wrangler.jsonc > wrangler.tmp.jsonc && mv wrangler.tmp.jsonc wrangler.jsonc
         echo "D1 database binding (DB -> ${{ secrets.D1_DATABASE_ID }}) added to wrangler.jsonc for CI deployment."
 
-        # 2. Worker名に使用するブランチ名を整形（スラッシュをハイフンに置換）
+        # 2. Worker名に使用するブランチ名を整形（スラッシュをハイフンに置換し、54文字制限内に収める）
+        # Cloudflare Workers の preview 有効スクリプト名は最大 54 文字（code: 100315）
         BRANCH_NAME="${{ github.head_ref || github.ref_name }}"
-        WORKER_NAME=$(echo "$BRANCH_NAME" | tr '/' '-' | tr '[:upper:]' '[:lower:]')-ci-test
+        BRANCH_NORMALIZED=$(echo "$BRANCH_NAME" | tr '/' '-' | tr '[:upper:]' '[:lower:]')
+        SUFFIX="-ci-test"
+        MAX_BRANCH_LEN=$((54 - ${#SUFFIX}))
+        TRUNCATED_BRANCH="${BRANCH_NORMALIZED:0:$MAX_BRANCH_LEN}"
+        # truncate 結果の末尾ハイフンを除去（区切り重複を避けるため）
+        TRUNCATED_BRANCH="${TRUNCATED_BRANCH%-}"
+        WORKER_NAME="${TRUNCATED_BRANCH}${SUFFIX}"
 
         # 3. デプロイを実行（D1バインディング情報も同時に適用される）
         set +e
@@ -133,9 +140,14 @@ jobs:
       if: always() # 後のステップで失敗しても、必ず実行する 
       run: |
         set +e
-        # ステップ 2 で使用した Worker 名を再構築
+        # ステップ 2 で使用した Worker 名を再構築（同じ truncate ロジックを適用）
         BRANCH_NAME="${{ github.head_ref || github.ref_name }}"
-        WORKER_NAME=$(echo "$BRANCH_NAME" | tr '/' '-' | tr '[:upper:]' '[:lower:]')-ci-test
+        BRANCH_NORMALIZED=$(echo "$BRANCH_NAME" | tr '/' '-' | tr '[:upper:]' '[:lower:]')
+        SUFFIX="-ci-test"
+        MAX_BRANCH_LEN=$((54 - ${#SUFFIX}))
+        TRUNCATED_BRANCH="${BRANCH_NORMALIZED:0:$MAX_BRANCH_LEN}"
+        TRUNCATED_BRANCH="${TRUNCATED_BRANCH%-}"
+        WORKER_NAME="${TRUNCATED_BRANCH}${SUFFIX}"
               
         echo "Checking if Worker exists: $WORKER_NAME"
         
