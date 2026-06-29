@@ -1,7 +1,13 @@
 import { env } from 'cloudflare:test';
 import { beforeAll, describe, expect, it } from 'vitest';
 import app from '../../index';
-import { setupIntegrationTest } from '../helpers/db-helper';
+import {
+	approveAdvice,
+	approveConsultation,
+	rejectAdvice,
+	rejectConsultation,
+	setupIntegrationTest,
+} from '../helpers/db-helper';
 import { createAndLoginUser } from '../helpers/auth-helper';
 import { createApiRequest } from '../helpers/request-helper';
 import { assertUnauthorizedError, assertValidationError } from '../helpers/assert-helper';
@@ -15,30 +21,6 @@ describe('Consultations API - Advice List (GET /:id/advices)', () => {
 	let draftConsultationId: number;
 	let hiddenConsultationId: number;
 	let tagId: number;
-	const approveConsultation = async (consultationId: number) => {
-		await env.DB
-			.prepare("UPDATE content_checks SET status = 'approved', checked_at = (cast(unixepoch('subsecond') * 1000 as integer)), updated_at = (cast(unixepoch('subsecond') * 1000 as integer)) WHERE target_type = 'consultation' AND target_id = ?")
-			.bind(consultationId)
-			.run();
-	};
-	const rejectConsultation = async (consultationId: number) => {
-		await env.DB
-			.prepare("UPDATE content_checks SET status = 'rejected', checked_at = (cast(unixepoch('subsecond') * 1000 as integer)), updated_at = (cast(unixepoch('subsecond') * 1000 as integer)) WHERE target_type = 'consultation' AND target_id = ?")
-			.bind(consultationId)
-			.run();
-	};
-	const approveAdvice = async (adviceId: number) => {
-		await env.DB
-			.prepare("UPDATE content_checks SET status = 'approved', checked_at = (cast(unixepoch('subsecond') * 1000 as integer)), updated_at = (cast(unixepoch('subsecond') * 1000 as integer)) WHERE target_type = 'advice' AND target_id = ?")
-			.bind(adviceId)
-			.run();
-	};
-	const rejectAdvice = async (adviceId: number) => {
-		await env.DB
-			.prepare("UPDATE content_checks SET status = 'rejected', checked_at = (cast(unixepoch('subsecond') * 1000 as integer)), updated_at = (cast(unixepoch('subsecond') * 1000 as integer)) WHERE target_type = 'advice' AND target_id = ?")
-			.bind(adviceId)
-			.run();
-	};
 	const draftAdviceBody = '下書き回答（一覧非表示）のテストです。10文字以上あります。';
 	const hiddenAdviceBody = '非表示回答（一覧非表示）のテストです。10文字以上あります。';
 	const filterTargetPublicBodies = [

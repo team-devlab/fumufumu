@@ -1,7 +1,12 @@
 import { env } from 'cloudflare:test';
 import { describe, it, expect, beforeAll } from 'vitest';
 import app from '../../index';
-import { setupIntegrationTest, forceSetHidden } from '../helpers/db-helper';
+import {
+  approveAdvice,
+  approveConsultation,
+  forceSetHidden,
+  setupIntegrationTest,
+} from '../helpers/db-helper';
 import { createAndLoginUser } from '../helpers/auth-helper';
 import { createApiRequest } from '../helpers/request-helper';
 import { assertUnauthorizedError, assertValidationError } from '../helpers/assert-helper';
@@ -11,18 +16,6 @@ describe('Consultations API - Detail (GET /:id)', () => {
   let attacker: Awaited<ReturnType<typeof createAndLoginUser>>;
   let tagId: number;
   let existingId: number;
-  const approveConsultation = async (consultationId: number) => {
-    await env.DB
-      .prepare("UPDATE content_checks SET status = 'approved', checked_at = (cast(unixepoch('subsecond') * 1000 as integer)), updated_at = (cast(unixepoch('subsecond') * 1000 as integer)) WHERE target_type = 'consultation' AND target_id = ?")
-      .bind(consultationId)
-      .run();
-  };
-  const approveAdvice = async (adviceId: number) => {
-    await env.DB
-      .prepare("UPDATE content_checks SET status = 'approved', checked_at = (cast(unixepoch('subsecond') * 1000 as integer)), updated_at = (cast(unixepoch('subsecond') * 1000 as integer)) WHERE target_type = 'advice' AND target_id = ?")
-      .bind(adviceId)
-      .run();
-  };
 
   const testBody = 'テスト本文です。10文字以上にします。';
 
