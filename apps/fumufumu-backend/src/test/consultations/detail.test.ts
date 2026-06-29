@@ -1,7 +1,12 @@
 import { env } from 'cloudflare:test';
 import { describe, it, expect, beforeAll } from 'vitest';
 import app from '../../index';
-import { setupIntegrationTest, forceSetHidden } from '../helpers/db-helper';
+import {
+  approveAdvice,
+  approveConsultation,
+  forceSetHidden,
+  setupIntegrationTest,
+} from '../helpers/db-helper';
 import { createAndLoginUser } from '../helpers/auth-helper';
 import { createApiRequest } from '../helpers/request-helper';
 import { assertUnauthorizedError, assertValidationError } from '../helpers/assert-helper';
@@ -11,12 +16,6 @@ describe('Consultations API - Detail (GET /:id)', () => {
   let attacker: Awaited<ReturnType<typeof createAndLoginUser>>;
   let tagId: number;
   let existingId: number;
-  const approveConsultation = async (consultationId: number) => {
-    await env.DB
-      .prepare("UPDATE content_checks SET status = 'approved', checked_at = (cast(unixepoch('subsecond') * 1000 as integer)), updated_at = (cast(unixepoch('subsecond') * 1000 as integer)) WHERE target_type = 'consultation' AND target_id = ?")
-      .bind(consultationId)
-      .run();
-  };
 
   const testBody = 'テスト本文です。10文字以上にします。';
 
@@ -111,6 +110,7 @@ describe('Consultations API - Detail (GET /:id)', () => {
     });
     const publicRes = await app.fetch(createPublicAdviceReq, env);
     expect(publicRes.status).toBe(201);
+    await approveAdvice((await publicRes.json() as any).id);
 
     const createDraftAdviceReq = createApiRequest(`/api/consultations/${existingId}/advice`, 'POST', {
       cookie: user.cookie,
@@ -294,6 +294,7 @@ describe('Consultations API - Detail (GET /:id)', () => {
         body: { body, draft: false },
       }), env);
       expect(adviceRes.status).toBe(201);
+      await approveAdvice((await adviceRes.json() as any).id);
     }
 
     const detailRes = await app.fetch(createApiRequest(`/api/consultations/${consultation.id}`, 'GET', {
@@ -339,6 +340,7 @@ describe('Consultations API - Detail (GET /:id)', () => {
         body: { body: `範囲外検証回答${i}: 10文字以上の本文です。`, draft: false },
       }), env);
       expect(adviceRes.status).toBe(201);
+      await approveAdvice((await adviceRes.json() as any).id);
     }
 
     const detailRes = await app.fetch(createApiRequest(`/api/consultations/${consultation.id}`, 'GET', {
@@ -398,6 +400,7 @@ describe('Consultations API - Detail (GET /:id)', () => {
       body: { body: visibleAdviceBody, draft: false },
     }), env);
     expect(visibleAdviceRes.status).toBe(201);
+    await approveAdvice((await visibleAdviceRes.json() as any).id);
 
     const hiddenAdviceRes = await app.fetch(createApiRequest(`/api/consultations/${consultation.id}/advice`, 'POST', {
       cookie: user.cookie,
@@ -405,6 +408,7 @@ describe('Consultations API - Detail (GET /:id)', () => {
     }), env);
     expect(hiddenAdviceRes.status).toBe(201);
     const hiddenAdvice = await hiddenAdviceRes.json() as any;
+    await approveAdvice(hiddenAdvice.id);
 
     await env.DB
       .prepare("UPDATE advices SET hidden_at = (cast(unixepoch('subsecond') * 1000 as integer)) WHERE id = ?")
@@ -446,6 +450,7 @@ describe('Consultations API - Detail (GET /:id)', () => {
     }), env);
     expect(newerAdviceRes.status).toBe(201);
     const newerAdvice = await newerAdviceRes.json() as any;
+    await approveAdvice(newerAdvice.id);
 
     const olderAdviceRes = await app.fetch(createApiRequest(`/api/consultations/${consultation.id}/advice`, 'POST', {
       cookie: user.cookie,
@@ -453,6 +458,7 @@ describe('Consultations API - Detail (GET /:id)', () => {
     }), env);
     expect(olderAdviceRes.status).toBe(201);
     const olderAdvice = await olderAdviceRes.json() as any;
+    await approveAdvice(olderAdvice.id);
 
     const now = Date.now();
     const olderTs = now - 100000;

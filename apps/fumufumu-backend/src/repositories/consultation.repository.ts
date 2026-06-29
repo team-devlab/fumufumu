@@ -131,6 +131,36 @@ export class ConsultationRepository {
 		) as SQL;
 	}
 
+	private buildAdvicePublicVisibilityCondition(): SQL {
+		const approvedCheckExists = exists(
+			this.db
+				.select({ id: contentChecks.id })
+				.from(contentChecks)
+				.where(
+					and(
+						eq(contentChecks.targetType, "advice"),
+						eq(contentChecks.targetId, advices.id),
+						eq(contentChecks.status, "approved"),
+					),
+				),
+		);
+
+		const noCheckExists = notExists(
+			this.db
+				.select({ id: contentChecks.id })
+				.from(contentChecks)
+				.where(
+					and(
+						eq(contentChecks.targetType, "advice"),
+						eq(contentChecks.targetId, advices.id),
+					),
+				),
+		);
+
+		// 既存データ(no-check)は表示を維持しつつ、check付きは approved のみ表示する
+		return or(approvedCheckExists, noCheckExists) as SQL;
+	}
+
 	/**
 	 * フィルタ条件からWHERE句を構築する（findAll / count 共通）
 	 */
@@ -172,6 +202,7 @@ export class ConsultationRepository {
 			eq(advices.consultationId, consultationId),
 			eq(advices.draft, false),
 			isNull(advices.hiddenAt),
+			this.buildAdvicePublicVisibilityCondition(),
 		];
 
 		if (filters?.userId !== undefined) {

@@ -88,3 +88,30 @@ export async function forceSetHidden(id: number) {
     "UPDATE consultations SET hidden_at = (cast(unixepoch('subsecond') * 1000 as integer)) WHERE id = ?"
   ).bind(id).run();
 }
+
+const updateContentCheckStatusSql =
+  "UPDATE content_checks SET status = ?, checked_at = (cast(unixepoch('subsecond') * 1000 as integer)), updated_at = (cast(unixepoch('subsecond') * 1000 as integer)) WHERE target_type = ? AND target_id = ?";
+
+export async function approveConsultation(consultationId: number) {
+  await env.DB.prepare(updateContentCheckStatusSql)
+    .bind("approved", "consultation", consultationId)
+    .run();
+}
+
+export async function rejectConsultation(consultationId: number) {
+  await env.DB.prepare(updateContentCheckStatusSql)
+    .bind("rejected", "consultation", consultationId)
+    .run();
+}
+
+export async function approveAdvice(adviceId: number) {
+  await env.DB.prepare(updateContentCheckStatusSql)
+    .bind("approved", "advice", adviceId)
+    .run();
+}
+
+export async function rejectAdvice(adviceId: number) {
+  await env.DB.prepare(updateContentCheckStatusSql)
+    .bind("rejected", "advice", adviceId)
+    .run();
+}

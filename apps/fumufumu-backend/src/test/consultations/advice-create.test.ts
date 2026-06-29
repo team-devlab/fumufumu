@@ -1,7 +1,13 @@
 import { env } from 'cloudflare:test';
 import { describe, it, expect, beforeAll } from 'vitest';
 import app from '../../index';
-import { setupIntegrationTest, forceSetHidden } from '../helpers/db-helper';
+import {
+  approveAdvice,
+  approveConsultation,
+  forceSetHidden,
+  rejectConsultation,
+  setupIntegrationTest,
+} from '../helpers/db-helper';
 import { createAndLoginUser } from '../helpers/auth-helper';
 import { createApiRequest } from '../helpers/request-helper';
 import { assertUnauthorizedError, assertValidationError } from '../helpers/assert-helper';
@@ -10,18 +16,6 @@ describe('Consultations API - Advice Create (POST /:id/advice)', () => {
   let user: Awaited<ReturnType<typeof createAndLoginUser>>;
   let consultationId: number;
   let tagId: number;
-  const approveConsultation = async (id: number) => {
-    await env.DB
-      .prepare("UPDATE content_checks SET status = 'approved', checked_at = (cast(unixepoch('subsecond') * 1000 as integer)), updated_at = (cast(unixepoch('subsecond') * 1000 as integer)) WHERE target_type = 'consultation' AND target_id = ?")
-      .bind(id)
-      .run();
-  };
-  const rejectConsultation = async (id: number) => {
-    await env.DB
-      .prepare("UPDATE content_checks SET status = 'rejected', checked_at = (cast(unixepoch('subsecond') * 1000 as integer)), updated_at = (cast(unixepoch('subsecond') * 1000 as integer)) WHERE target_type = 'consultation' AND target_id = ?")
-      .bind(id)
-      .run();
-  };
 
   beforeAll(async () => {
     await setupIntegrationTest();
@@ -68,7 +62,7 @@ describe('Consultations API - Advice Create (POST /:id/advice)', () => {
     expect(data.draft).toBe(false);
   });
 
-  it('アドバイス投稿後、親の相談詳細を取得するとアドバイスが含まれている', async () => {
+  it('アドバイス投稿 + approved 後、親の相談詳細にアドバイスが含まれる', async () => {
     const postReq = createApiRequest(`/api/consultations/${consultationId}/advice`, 'POST', {
       cookie: user.cookie,
       body: {
@@ -77,6 +71,8 @@ describe('Consultations API - Advice Create (POST /:id/advice)', () => {
     });
     const postRes = await app.fetch(postReq, env);
     expect(postRes.status).toBe(201);
+    const posted = await postRes.json() as any;
+    await approveAdvice(posted.id);
 
     const getReq = createApiRequest(`/api/consultations/${consultationId}`, 'GET', {
       cookie: user.cookie,

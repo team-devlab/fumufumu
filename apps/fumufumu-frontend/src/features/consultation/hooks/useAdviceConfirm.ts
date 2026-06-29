@@ -46,8 +46,10 @@ export const useAdviceConfirm = (consultationId: number) => {
 
       reset();
 
-      toast.success("アドバイスを投稿しました！");
-      router.push(ROUTES.CONSULTATION.DETAIL(consultationId));
+      // 投稿直後は content_check が pending のため一般画面には表示されない。
+      // ADR 007 の導線に従い、author 自身が投稿状況を確認できるプロフィールへ遷移する。
+      toast.success("投稿しました。チェック完了後に表示されます。");
+      router.replace(ROUTES.USER);
     } catch (error) {
       console.error(error);
       toast.error("投稿に失敗しました。");
