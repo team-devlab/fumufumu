@@ -191,6 +191,10 @@ export class ConsultationRepository {
 				conditions.push(isNull(consultations.hiddenAt));
 			}
 
+			// hiddenOnly/includeHidden(admin)でもbuildPublicVisibilityConditionは意図的に外さない。
+			// モデレーションは「承認済みコンテンツの事後hide/unhide」を対象とする方針(ADR 011 §5.1、
+			// approve→事後hideのフロー)であり、未承認(pending/rejected)投稿はcontent-checkの
+			// 投稿チェック待ちタブで扱う。よって「未承認かつhidden」は非表示中タブの対象外(承認後に現れる)。
 			if (!filters?.includeUnapprovedForOwn) {
 				conditions.push(this.buildPublicVisibilityCondition());
 			}
