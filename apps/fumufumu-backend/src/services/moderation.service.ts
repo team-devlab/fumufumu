@@ -46,6 +46,21 @@ export class ModerationService {
 		return this.toTargetResponse(updated, targetType);
 	}
 
+	/**
+	 * 複数対象の「現在の非表示理由」をまとめて返す（非表示中タブの理由併記用）。
+	 * 履歴が無い/理由なしhideの対象は null を返す。レスポンスは target_id をキーにしたマップ。
+	 */
+	async getLatestHideReasons(targetType: ModerationTargetType, targetIds: number[]) {
+		const reasonByTarget = await this.repository.getLatestHideReasons(targetType, targetIds);
+
+		const reasons: Record<number, string | null> = {};
+		for (const id of targetIds) {
+			reasons[id] = reasonByTarget.get(id) ?? null;
+		}
+
+		return { reasons };
+	}
+
 	async getHistory(targetType: ModerationTargetType, targetId: number) {
 		const rows = await this.repository.findHistory(targetType, targetId);
 

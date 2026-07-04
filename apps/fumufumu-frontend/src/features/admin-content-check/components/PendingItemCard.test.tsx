@@ -46,6 +46,24 @@ describe("PendingItemCard", () => {
     ).toBeInTheDocument();
   });
 
+  it("authorName が渡されると「ユーザー#{id}」より優先表示される", () => {
+    render(<PendingItemCard {...baseProps} authorName="やまだ たろう" />);
+    expect(screen.getByText(/投稿者:\s*やまだ たろう/)).toBeInTheDocument();
+  });
+
+  it("authorId が null なら authorName が渡されても退会/削除済み表示が優先される", () => {
+    render(
+      <PendingItemCard
+        {...baseProps}
+        authorId={null}
+        authorName="やまだ たろう"
+      />,
+    );
+    expect(
+      screen.getByText(/投稿者:\s*退会済み or 削除済みユーザー/),
+    ).toBeInTheDocument();
+  });
+
   it("meta slot に渡した要素が描画される", () => {
     render(
       <PendingItemCard

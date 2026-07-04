@@ -3,7 +3,7 @@ import { consultations } from "@/db/schema/consultations";
 import { advices } from "@/db/schema/advices";
 import { moderationActions } from "@/db/schema/moderation-actions";
 import type { ModerationTargetType, ModerationActionType } from "@/db/schema/moderation-actions";
-import { eq, and, desc } from "drizzle-orm";
+import { eq, and, desc, inArray } from "drizzle-orm";
 import { NotFoundError } from "@/errors/AppError";
 
 type ModerationTargetRow = {
@@ -169,6 +169,48 @@ export class ModerationRepository {
 			reason: null,
 			skipAuditLog: params.skipAuditLog,
 		});
+	}
+
+	/**
+	 * 複数対象の「現在の非表示理由」= 各対象の直近hideアクションのreasonを1クエリでまとめて取得する。
+	 *
+	 * 非表示中タブは表示中の全対象について理由を併記する必要があるが、対象ごとにfindHistoryを
+	 * 叩くとN+1(1ページ最大件数ぶんのDB往復)になるため、target_id IN (...)で一括取得する。
+	 * created_atが同一ミリ秒でも決定的に「最新のhide」を選べるよう、idを二次ソートキーに加える。
+	 * unhide後にskipAuditLogで再hideした等でhistoryが実状態とズレるケースはPhase 2の履歴UIで扱う。
+	 */
+	async getLatestHideReasons(
+		targetType: ModerationTargetType,
+		targetIds: number[],
+	): Promise<Map<number, string | null>> {
+		const latestByTarget = new Map<number, string | null>();
+		if (targetIds.length === 0) {
+			return latestByTarget;
+		}
+
+		const rows = await this.db
+			.select({
+				targetId: moderationActions.targetId,
+				reason: moderationActions.reason,
+			})
+			.from(moderationActions)
+			.where(
+				and(
+					eq(moderationActions.targetType, targetType),
+					inArray(moderationActions.targetId, targetIds),
+					eq(moderationActions.action, "hide"),
+				),
+			)
+			.orderBy(desc(moderationActions.createdAt), desc(moderationActions.id));
+
+		// 新しい順に走査し、各target_idで最初に出会った(=最新の)hideのreasonを採用する
+		for (const row of rows) {
+			if (!latestByTarget.has(row.targetId)) {
+				latestByTarget.set(row.targetId, row.reason);
+			}
+		}
+
+		return latestByTarget;
 	}
 
 	/**

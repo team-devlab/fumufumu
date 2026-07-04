@@ -96,6 +96,7 @@ export class ConsultationService {
 	private toAdviceResponse(advice: AdviceEntity | AdviceEntityFromList): AdviceResponse {
 		return {
 			id: advice.id,
+			consultation_id: advice.consultationId,
 			body: advice.body,
 			draft: advice.draft,
 			hidden_at: advice.hiddenAt?.toISOString() ?? null,
@@ -312,6 +313,33 @@ export class ConsultationService {
 		const [adviceList, totalCount] = await Promise.all([
 			this.repository.findAdvicesByConsultationId(consultationId, { page, limit }, filters),
 			this.repository.countAdvicesByConsultationId(consultationId, filters),
+		]);
+
+		return {
+			data: adviceList.map((advice) => this.toAdviceResponse(advice)),
+			pagination: this.calculatePagination({ page, limit }, totalCount),
+		};
+	}
+
+	/**
+	 * 相談横断のアドバイス一覧を取得する。
+	 *
+	 * 【設計メモ】プロフィール画面の「自分のアドバイス一覧」(userIdフィルタ)と、
+	 * admin モデレーションの「公開中/非表示中」タブ(includeHidden/hiddenOnly、コントローラ層で
+	 * role検証済み)の両方から利用する共通APIとして設計している。
+	 * 特定相談スコープの listAdvices と異なり、対象相談を1件に固定できないため、
+	 * 親相談自体の非公開判定(draft/hidden/未承認)は Repository層のSQL(exists条件)で
+	 * 行毎に検証する（buildAdviceParentVisibilityCondition, ADR 011 §4.1 のcascadeと同義）。
+	 */
+	async listAllAdvices(
+		filters?: AdviceFilters,
+		pagination?: PaginationParams,
+	): Promise<AdviceListResponse> {
+		const { page = 1, limit = 20 } = pagination || {};
+
+		const [adviceList, totalCount] = await Promise.all([
+			this.repository.findAllAdvices(filters, { page, limit }),
+			this.repository.countAdvices(filters),
 		]);
 
 		return {

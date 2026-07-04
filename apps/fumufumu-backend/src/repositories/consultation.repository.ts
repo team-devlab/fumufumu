@@ -185,10 +185,16 @@ export class ConsultationRepository {
 		} else {
 			conditions.push(eq(consultations.draft, false));
 
-			if (!filters?.includeHidden) {
+			if (filters?.hiddenOnly) {
+				conditions.push(isNotNull(consultations.hiddenAt));
+			} else if (!filters?.includeHidden) {
 				conditions.push(isNull(consultations.hiddenAt));
 			}
 
+			// hiddenOnly/includeHidden(admin)でもbuildPublicVisibilityConditionは意図的に外さない。
+			// モデレーションは「承認済みコンテンツの事後hide/unhide」を対象とする方針(ADR 011 §5.1、
+			// approve→事後hideのフロー)であり、未承認(pending/rejected)投稿はcontent-checkの
+			// 投稿チェック待ちタブで扱う。よって「未承認かつhidden」は非表示中タブの対象外(承認後に現れる)。
 			if (!filters?.includeUnapprovedForOwn) {
 				conditions.push(this.buildPublicVisibilityCondition());
 			}
@@ -198,17 +204,51 @@ export class ConsultationRepository {
 	}
 
 	/**
-	 * アドバイス一覧のWHERE句を構築する（findAdvicesByConsultationId / countAdvicesByConsultationId 共通）
+	 * 相談横断のアドバイス一覧で、親相談自体が非公開(draft/hidden/未承認)なら
+	 * アドバイス自身の状態に関わらず到達不可にする(cascade, ADR 011 §4.1)。
+	 * consultationIdでスコープされた既存の /:id/advices は呼び出し元Service層の
+	 * assertConsultationReadableOrThrowで親を検証済みのため、本条件は適用しない。
 	 */
-	private buildAdviceWhereConditions(consultationId: number, filters?: AdviceFilters): SQL {
+	private buildAdviceParentVisibilityCondition(): SQL {
+		return exists(
+			this.db
+				.select({ id: consultations.id })
+				.from(consultations)
+				.where(
+					and(
+						eq(consultations.id, advices.consultationId),
+						this.buildPublicConsultationCondition(),
+					),
+				),
+		) as SQL;
+	}
+
+	/**
+	 * アドバイス一覧のWHERE句を構築する
+	 * （findAdvicesByConsultationId / countAdvicesByConsultationId / findAllAdvices / countAdvices 共通）
+	 *
+	 * @param filters.consultationId - 指定時は特定の相談配下に絞り込む（未指定時は相談横断の一覧になる）
+	 */
+	private buildAdviceWhereConditions(filters?: AdviceFilters & { consultationId?: number }): SQL {
 		const conditions: SQL[] = [
-			eq(advices.consultationId, consultationId),
 			eq(advices.draft, false),
 			this.buildAdvicePublicVisibilityCondition(),
 		];
 
-		if (!filters?.includeHidden) {
+		if (filters?.consultationId !== undefined) {
+			conditions.push(eq(advices.consultationId, filters.consultationId));
+		}
+
+		if (filters?.hiddenOnly) {
+			conditions.push(isNotNull(advices.hiddenAt));
+		} else if (!filters?.includeHidden) {
 			conditions.push(isNull(advices.hiddenAt));
+		}
+
+		// 相談横断の一覧(consultationId未指定)かつ非admin相当のクエリの場合のみ、親相談の可視性を追加検証する。
+		// admin(includeHidden/hiddenOnly)は個別にhideしたアドバイスを親の状態と無関係に管理できる必要があるため対象外。
+		if (filters?.consultationId === undefined && !filters?.includeHidden && !filters?.hiddenOnly) {
+			conditions.push(this.buildAdviceParentVisibilityCondition());
 		}
 
 		if (filters?.userId !== undefined) {
@@ -303,7 +343,7 @@ export class ConsultationRepository {
 		const offset = (page - 1) * limit;
 
 		return await this.db.query.advices.findMany({
-			where: this.buildAdviceWhereConditions(consultationId, filters),
+			where: this.buildAdviceWhereConditions({ ...filters, consultationId }),
 			orderBy: (fields, { asc, desc }) =>
 				sortOrder === "asc"
 					? [asc(fields.createdAt), asc(fields.id)]
@@ -323,7 +363,38 @@ export class ConsultationRepository {
 		const result = await this.db
 			.select({ count: sql<number>`count(*)` })
 			.from(advices)
-			.where(this.buildAdviceWhereConditions(consultationId, filters));
+			.where(this.buildAdviceWhereConditions({ ...filters, consultationId }));
+
+		return result[0]?.count || 0;
+	}
+
+	/**
+	 * 相談横断のアドバイス一覧を取得する（プロフィール画面の「自分のアドバイス一覧」、
+	 * admin モデレーションの「公開中/非表示中」タブの両方から利用する想定）
+	 */
+	async findAllAdvices(filters?: AdviceFilters, pagination?: PaginationParams) {
+		const { page = PAGINATION_CONFIG.DEFAULT_PAGE, limit = PAGINATION_CONFIG.DEFAULT_LIMIT } = pagination || {};
+		const offset = (page - 1) * limit;
+
+		return await this.db.query.advices.findMany({
+			where: this.buildAdviceWhereConditions(filters),
+			orderBy: (fields, { desc }) => [desc(fields.createdAt), desc(fields.id)],
+			limit,
+			offset,
+			with: {
+				author: true,
+			},
+		});
+	}
+
+	/**
+	 * 相談横断のアドバイス総件数を取得する（findAllAdvices と対）
+	 */
+	async countAdvices(filters?: AdviceFilters): Promise<number> {
+		const result = await this.db
+			.select({ count: sql<number>`count(*)` })
+			.from(advices)
+			.where(this.buildAdviceWhereConditions(filters));
 
 		return result[0]?.count || 0;
 	}

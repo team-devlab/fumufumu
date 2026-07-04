@@ -47,6 +47,15 @@ export interface ConsultationListResponse {
   data: Consultation[];
 }
 
+/**
+ * 相談横断のアドバイス一覧レスポンス
+ * src: apps/fumufumu-backend/src/types/advice.response.ts (AdviceListResponse)
+ */
+export interface AdviceListResponse {
+  pagination: PaginationMeta;
+  data: Advice[];
+}
+
 export interface Tag {
   id: number;
   name: string;
@@ -78,6 +87,12 @@ export interface CreateAdviceParams {
 
 export interface Advice {
   id: number;
+  /**
+   * 所属する相談のID。
+   * 相談スコープの取得API(相談詳細のadvices)ではURLから既知のため使わなくてよいが、
+   * 相談横断のGET /api/advicesではモデレーション対象の判断に必須のため利用する。
+   */
+  consultation_id: number;
   body: string;
   draft: boolean;
   hidden_at: string | null;
