@@ -5,8 +5,9 @@
  * を `meta` slot で受ける形にしている。これは将来 author や tag 情報が API 拡張で
  * 載ってきた際の差し替えを 1 箇所に閉じるため。
  *
- * author は API が author_id (number) しか返さないため、暫定で「ユーザー#{id}」表記。
- * 将来の API 拡張で author.name が取れるようになったら本 component を差し替える。
+ * content-check の pending API は author_id (number) しか返さないため、暫定で
+ * 「ユーザー#{id}」表記にフォールバックする。公開中/非表示中タブ (モデレーション) の
+ * ように API が author.name を返す場合は `authorName` を渡すと実名表示になる。
  * 詳細は docs/projects/08 §4.1 を参照。
  */
 type Props = {
@@ -17,6 +18,8 @@ type Props = {
   body: string;
   /** 投稿者の業務 user id。退会済み等で null になり得る */
   authorId: number | null;
+  /** API が author.name を返す場合に指定する。指定時は「ユーザー#{id}」より優先表示する */
+  authorName?: string;
   /** ISO 8601 created_at */
   createdAt: string;
   /** カード末尾に追加表示したい補助情報 (例: 所属相談 id へのリンク) */
@@ -25,8 +28,9 @@ type Props = {
   actions?: React.ReactNode;
 };
 
-const formatAuthor = (authorId: number | null): string => {
+const formatAuthor = (authorId: number | null, authorName?: string): string => {
   if (authorId === null) return "退会済み or 削除済みユーザー";
+  if (authorName !== undefined) return authorName;
   // 暫定: author 名取得は API 拡張待ち (docs/projects/08 §4.1)
   return `ユーザー#${authorId}`;
 };
@@ -41,6 +45,7 @@ export const PendingItemCard = ({
   title,
   body,
   authorId,
+  authorName,
   createdAt,
   meta,
   actions,
@@ -59,7 +64,7 @@ export const PendingItemCard = ({
       <p className="mt-2 whitespace-pre-wrap text-sm text-gray-800">{body}</p>
 
       <div className="mt-3 flex items-center justify-between gap-4 text-xs text-gray-500">
-        <span>投稿者: {formatAuthor(authorId)}</span>
+        <span>投稿者: {formatAuthor(authorId, authorName)}</span>
         {meta}
       </div>
 
