@@ -2,11 +2,10 @@
 import { Hono } from "hono";
 import { createFactory } from "hono/factory";
 import { zValidator } from "@hono/zod-validator";
-import { eq } from "drizzle-orm";
 import type { AppBindings, DbInstance } from "@/index";
 import { authGuard } from "@/middlewares/authGuard.middleware";
 import { injectConsultationService } from "@/middlewares/injectService.middleware";
-import { users } from "@/db/schema/user";
+import { getUserRole } from "@/lib/user-role";
 import type { ConsultationFilters, PaginationParams } from "@/types/consultation.types";
 import type { AdviceFilters } from "@/types/advice.types";
 import {
@@ -39,12 +38,8 @@ async function resolveIncludeHidden(
 		return false;
 	}
 
-	const user = await db.query.users.findFirst({
-		where: eq(users.id, appUserId),
-		columns: { role: true },
-	});
-
-	return user?.role === "admin";
+	const role = await getUserRole(db, appUserId);
+	return role === "admin";
 }
 
 // ============================================
