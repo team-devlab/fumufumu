@@ -90,14 +90,16 @@ describe("Advices API - 相談横断の一覧", () => {
     return app.fetch(req, env);
   };
 
-  it("公開中のアドバイスを一覧できる", async () => {
+  it("公開中のアドバイスを一覧できる（所属相談のconsultation_idも返る）", async () => {
     const consultation = await createApprovedConsultation("global-advices-published-consultation");
     const advice = await createApprovedAdvice(consultation.id, "公開中アドバイス本文です。");
 
     const res = await listAdvices(viewer.cookie);
     expect(res.status).toBe(200);
-    const data = await res.json() as { data: Array<{ id: number }> };
-    expect(data.data.some((item) => item.id === advice.id)).toBe(true);
+    const data = await res.json() as { data: Array<{ id: number; consultation_id: number }> };
+    const found = data.data.find((item) => item.id === advice.id);
+    expect(found).toBeDefined();
+    expect(found?.consultation_id).toBe(consultation.id);
   });
 
   it("親相談がhideされたアドバイスは、自身がhideされていなくても一覧から除外される（cascade）", async () => {

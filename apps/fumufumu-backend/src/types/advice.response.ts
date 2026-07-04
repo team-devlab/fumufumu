@@ -3,6 +3,7 @@ import type { PaginationMeta } from "@/types/consultation.types";
 
 export type AdviceResponse = {
 	id: number;
+	consultation_id: number;
 	body: string;
 	draft: boolean;
 	hidden_at: string | null;

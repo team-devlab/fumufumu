@@ -96,6 +96,7 @@ export class ConsultationService {
 	private toAdviceResponse(advice: AdviceEntity | AdviceEntityFromList): AdviceResponse {
 		return {
 			id: advice.id,
+			consultation_id: advice.consultationId,
 			body: advice.body,
 			draft: advice.draft,
 			hidden_at: advice.hiddenAt?.toISOString() ?? null,
