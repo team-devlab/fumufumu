@@ -21,6 +21,23 @@ vi.mock("react-hot-toast", () => ({
   },
 }));
 
+// vitest.setup.ts の useRouter は呼び出しごとに新しい refresh(vi.fn) を返すため、
+// refresh が呼ばれたことを観測できない。安定した参照を掴むためこのファイル限定で
+// next/navigation を再モックし、router.refresh() の呼び出しを検証できるようにする。
+const { refreshMock } = vi.hoisted(() => ({ refreshMock: vi.fn() }));
+vi.mock("next/navigation", () => ({
+  useRouter: () => ({
+    refresh: refreshMock,
+    push: vi.fn(),
+    replace: vi.fn(),
+    back: vi.fn(),
+    forward: vi.fn(),
+    prefetch: vi.fn(),
+  }),
+  usePathname: () => "/",
+  useSearchParams: () => new URLSearchParams(),
+}));
+
 const dummyModerationResponse = {
   target_type: "consultation" as const,
   target_id: 1,
@@ -39,9 +56,17 @@ describe("ModerationActions", () => {
   describe("mode=hide", () => {
     it("送信するとhideModerationTargetApiがtargetType/targetId/reason/skipAuditLogで呼ばれる", async () => {
       const user = userEvent.setup();
-      vi.mocked(hideModerationTargetApi).mockResolvedValue(dummyModerationResponse);
+      vi.mocked(hideModerationTargetApi).mockResolvedValue(
+        dummyModerationResponse,
+      );
 
-      render(<ModerationActions mode="hide" targetType="consultations" targetId={42} />);
+      render(
+        <ModerationActions
+          mode="hide"
+          targetType="consultations"
+          targetId={42}
+        />,
+      );
       await user.click(screen.getByRole("button", { name: "非表示にする" }));
       await user.type(screen.getByLabelText(/非表示理由/), "reason");
       await user.click(screen.getByRole("button", { name: "実行する" }));
@@ -59,35 +84,59 @@ describe("ModerationActions", () => {
 
     it("成功時にtoast.successが呼ばれ、routerがrefreshされる想定でエラーは出ない", async () => {
       const user = userEvent.setup();
-      vi.mocked(hideModerationTargetApi).mockResolvedValue(dummyModerationResponse);
+      vi.mocked(hideModerationTargetApi).mockResolvedValue(
+        dummyModerationResponse,
+      );
 
-      render(<ModerationActions mode="hide" targetType="advices" targetId={1} />);
+      render(
+        <ModerationActions mode="hide" targetType="advices" targetId={1} />,
+      );
       await user.click(screen.getByRole("button", { name: "非表示にする" }));
       await user.click(screen.getByRole("button", { name: "実行する" }));
 
       await waitFor(() => {
         expect(toast.success).toHaveBeenCalledWith("非表示にしました");
       });
+      // 成功後に一覧を最新化するため router.refresh() が呼ばれること
+      expect(refreshMock).toHaveBeenCalled();
     });
 
     it("ApiError(404)で「他の管理者が...」toastが出る", async () => {
       const user = userEvent.setup();
-      vi.mocked(hideModerationTargetApi).mockRejectedValue(new ApiError(404, "Not Found"));
+      vi.mocked(hideModerationTargetApi).mockRejectedValue(
+        new ApiError(404, "Not Found"),
+      );
 
-      render(<ModerationActions mode="hide" targetType="consultations" targetId={1} />);
+      render(
+        <ModerationActions
+          mode="hide"
+          targetType="consultations"
+          targetId={1}
+        />,
+      );
       await user.click(screen.getByRole("button", { name: "非表示にする" }));
       await user.click(screen.getByRole("button", { name: "実行する" }));
 
       await waitFor(() => {
-        expect(toast.error).toHaveBeenCalledWith("他の管理者が既に処理した可能性があります");
+        expect(toast.error).toHaveBeenCalledWith(
+          "他の管理者が既に処理した可能性があります",
+        );
       });
     });
 
     it("ApiError(500)で「非表示化に失敗しました」toastが出る", async () => {
       const user = userEvent.setup();
-      vi.mocked(hideModerationTargetApi).mockRejectedValue(new ApiError(500, "Internal Error"));
+      vi.mocked(hideModerationTargetApi).mockRejectedValue(
+        new ApiError(500, "Internal Error"),
+      );
 
-      render(<ModerationActions mode="hide" targetType="consultations" targetId={1} />);
+      render(
+        <ModerationActions
+          mode="hide"
+          targetType="consultations"
+          targetId={1}
+        />,
+      );
       await user.click(screen.getByRole("button", { name: "非表示にする" }));
       await user.click(screen.getByRole("button", { name: "実行する" }));
 
@@ -98,20 +147,36 @@ describe("ModerationActions", () => {
 
     it("非ApiError(network failure)で「ネットワーク接続を確認してください」toastが出る", async () => {
       const user = userEvent.setup();
-      vi.mocked(hideModerationTargetApi).mockRejectedValue(new TypeError("Failed to fetch"));
+      vi.mocked(hideModerationTargetApi).mockRejectedValue(
+        new TypeError("Failed to fetch"),
+      );
 
-      render(<ModerationActions mode="hide" targetType="consultations" targetId={1} />);
+      render(
+        <ModerationActions
+          mode="hide"
+          targetType="consultations"
+          targetId={1}
+        />,
+      );
       await user.click(screen.getByRole("button", { name: "非表示にする" }));
       await user.click(screen.getByRole("button", { name: "実行する" }));
 
       await waitFor(() => {
-        expect(toast.error).toHaveBeenCalledWith("ネットワーク接続を確認してください");
+        expect(toast.error).toHaveBeenCalledWith(
+          "ネットワーク接続を確認してください",
+        );
       });
     });
 
     it("投稿者本人にも効く旨の注意文が表示される", async () => {
       const user = userEvent.setup();
-      render(<ModerationActions mode="hide" targetType="consultations" targetId={1} />);
+      render(
+        <ModerationActions
+          mode="hide"
+          targetType="consultations"
+          targetId={1}
+        />,
+      );
       await user.click(screen.getByRole("button", { name: "非表示にする" }));
       expect(
         screen.getByText(/投稿者本人であってもこの投稿を閲覧できなくなります/),
@@ -122,7 +187,9 @@ describe("ModerationActions", () => {
   describe("mode=unhide", () => {
     it("送信するとunhideModerationTargetApiがtargetType/targetId/skipAuditLogで呼ばれる", async () => {
       const user = userEvent.setup();
-      vi.mocked(unhideModerationTargetApi).mockResolvedValue(dummyModerationResponse);
+      vi.mocked(unhideModerationTargetApi).mockResolvedValue(
+        dummyModerationResponse,
+      );
 
       render(
         <ModerationActions
@@ -136,7 +203,11 @@ describe("ModerationActions", () => {
       await user.click(screen.getByRole("button", { name: "実行する" }));
 
       await waitFor(() => {
-        expect(unhideModerationTargetApi).toHaveBeenCalledWith("consultations", 42, false);
+        expect(unhideModerationTargetApi).toHaveBeenCalledWith(
+          "consultations",
+          42,
+          false,
+        );
       });
       expect(hideModerationTargetApi).not.toHaveBeenCalled();
     });
@@ -157,7 +228,9 @@ describe("ModerationActions", () => {
 
     it("成功時にtoast.success('再度公開しました')が呼ばれる", async () => {
       const user = userEvent.setup();
-      vi.mocked(unhideModerationTargetApi).mockResolvedValue(dummyModerationResponse);
+      vi.mocked(unhideModerationTargetApi).mockResolvedValue(
+        dummyModerationResponse,
+      );
 
       render(
         <ModerationActions
@@ -173,11 +246,15 @@ describe("ModerationActions", () => {
       await waitFor(() => {
         expect(toast.success).toHaveBeenCalledWith("再度公開しました");
       });
+      // 成功後に一覧を最新化するため router.refresh() が呼ばれること
+      expect(refreshMock).toHaveBeenCalled();
     });
 
     it("ApiError(500)で「再公開に失敗しました」toastが出る", async () => {
       const user = userEvent.setup();
-      vi.mocked(unhideModerationTargetApi).mockRejectedValue(new ApiError(500, "Internal Error"));
+      vi.mocked(unhideModerationTargetApi).mockRejectedValue(
+        new ApiError(500, "Internal Error"),
+      );
 
       render(
         <ModerationActions
