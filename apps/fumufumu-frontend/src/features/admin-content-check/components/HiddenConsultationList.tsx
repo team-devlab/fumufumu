@@ -1,4 +1,7 @@
-import type { Consultation, PaginationMeta } from "@/features/consultation/types";
+import type {
+  Consultation,
+  PaginationMeta,
+} from "@/features/consultation/types";
 import { ModerationActions } from "./ModerationActions";
 import { ModerationPagination } from "./ModerationPagination";
 import { PendingItemCard } from "./PendingItemCard";
@@ -22,7 +25,8 @@ type Props =
     };
 
 export const HiddenConsultationList = (props: Props) => {
-  const count = props.status === "success" ? props.pagination.total_items : null;
+  const count =
+    props.status === "success" ? props.pagination.total_items : null;
 
   return (
     <section className="space-y-3">
@@ -75,7 +79,10 @@ export const HiddenConsultationList = (props: Props) => {
       )}
 
       {props.status === "success" && (
-        <ModerationPagination pagination={props.pagination} baseHref={props.baseHref} />
+        <ModerationPagination
+          pagination={props.pagination}
+          baseHref={props.baseHref}
+        />
       )}
     </section>
   );

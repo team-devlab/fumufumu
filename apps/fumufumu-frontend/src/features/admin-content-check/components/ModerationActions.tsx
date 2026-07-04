@@ -47,7 +47,11 @@ export const ModerationActions = (props: Props) => {
         );
         toast.success("非表示にしました");
       } else {
-        await unhideModerationTargetApi(props.targetType, props.targetId, skipAuditLog);
+        await unhideModerationTargetApi(
+          props.targetType,
+          props.targetId,
+          skipAuditLog,
+        );
         toast.success("再度公開しました");
       }
       router.refresh();
@@ -59,7 +63,9 @@ export const ModerationActions = (props: Props) => {
         router.refresh();
       } else if (error instanceof ApiError) {
         toast.error(
-          props.mode === "hide" ? "非表示化に失敗しました" : "再公開に失敗しました",
+          props.mode === "hide"
+            ? "非表示化に失敗しました"
+            : "再公開に失敗しました",
         );
       } else {
         toast.error("ネットワーク接続を確認してください");
@@ -96,7 +102,9 @@ export const ModerationActions = (props: Props) => {
       description={
         <p>
           現在の非表示理由:{" "}
-          {props.currentReason ?? <span className="text-gray-400">(未入力)</span>}
+          {props.currentReason ?? (
+            <span className="text-gray-400">(未入力)</span>
+          )}
         </p>
       }
       onSubmit={handleSubmit}

@@ -3,7 +3,9 @@ import { describe, expect, it } from "vitest";
 import type { PaginationMeta } from "@/features/consultation/types";
 import { ModerationPagination } from "./ModerationPagination";
 
-const basePagination = (overrides?: Partial<PaginationMeta>): PaginationMeta => ({
+const basePagination = (
+  overrides?: Partial<PaginationMeta>,
+): PaginationMeta => ({
   current_page: 2,
   per_page: 20,
   total_items: 45,
@@ -17,7 +19,11 @@ describe("ModerationPagination", () => {
   it("total_pages<=1なら何も描画しない", () => {
     const { container } = render(
       <ModerationPagination
-        pagination={basePagination({ total_pages: 1, has_next: false, has_prev: false })}
+        pagination={basePagination({
+          total_pages: 1,
+          has_next: false,
+          has_prev: false,
+        })}
         baseHref="/admin?tab=published"
       />,
     );
@@ -25,12 +31,22 @@ describe("ModerationPagination", () => {
   });
 
   it("現在ページ/全ページ数が表示される", () => {
-    render(<ModerationPagination pagination={basePagination()} baseHref="/admin?tab=published" />);
+    render(
+      <ModerationPagination
+        pagination={basePagination()}
+        baseHref="/admin?tab=published"
+      />,
+    );
     expect(screen.getByText("2 / 3 ページ")).toBeInTheDocument();
   });
 
   it("has_prev/has_nextともにtrueなら両方リンクになり、pageクエリが付与される", () => {
-    render(<ModerationPagination pagination={basePagination()} baseHref="/admin?tab=published" />);
+    render(
+      <ModerationPagination
+        pagination={basePagination()}
+        baseHref="/admin?tab=published"
+      />,
+    );
     expect(screen.getByRole("link", { name: "前のページ" })).toHaveAttribute(
       "href",
       "/admin?tab=published&page=1",
@@ -64,7 +80,9 @@ describe("ModerationPagination", () => {
   });
 
   it("baseHrefにクエリが無い場合は?でpageを連結する", () => {
-    render(<ModerationPagination pagination={basePagination()} baseHref="/admin" />);
+    render(
+      <ModerationPagination pagination={basePagination()} baseHref="/admin" />,
+    );
     expect(screen.getByRole("link", { name: "前のページ" })).toHaveAttribute(
       "href",
       "/admin?page=1",

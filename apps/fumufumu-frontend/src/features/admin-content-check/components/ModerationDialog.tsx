@@ -22,7 +22,10 @@ type Props = {
    * 成否にかかわらずdialogは閉じる (finallyでclose)。throwされたerrorは内部で握りつぶすため、
    * user-visibleなerror feedback (toast等) は親componentの責務。
    */
-  onSubmit: (input: { reason?: string; skipAuditLog: boolean }) => Promise<void>;
+  onSubmit: (input: {
+    reason?: string;
+    skipAuditLog: boolean;
+  }) => Promise<void>;
   /** 親の submission 状態と同期。submit ボタンの二重押下防止に使う */
   isSubmitting: boolean;
 };
@@ -113,7 +116,9 @@ export const ModerationDialog = ({
                 disabled={isSubmitting}
                 className="mt-1 w-full rounded-md border border-gray-300 px-3 py-2 text-sm shadow-sm focus:border-teal-500 focus:outline-none focus:ring-1 focus:ring-teal-500 disabled:bg-gray-100"
               />
-              <p className="mt-1 text-xs text-gray-500">残り {remaining} 文字</p>
+              <p className="mt-1 text-xs text-gray-500">
+                残り {remaining} 文字
+              </p>
             </div>
           )}
 

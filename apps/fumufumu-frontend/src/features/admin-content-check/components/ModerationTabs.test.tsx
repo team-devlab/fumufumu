@@ -5,7 +5,9 @@ import { ModerationTabs } from "./ModerationTabs";
 describe("ModerationTabs", () => {
   it("3つのタブが表示される", () => {
     render(<ModerationTabs activeTab="pending" />);
-    expect(screen.getByRole("link", { name: "投稿チェック待ち" })).toBeInTheDocument();
+    expect(
+      screen.getByRole("link", { name: "投稿チェック待ち" }),
+    ).toBeInTheDocument();
     expect(screen.getByRole("link", { name: "公開中" })).toBeInTheDocument();
     expect(screen.getByRole("link", { name: "非表示中" })).toBeInTheDocument();
   });

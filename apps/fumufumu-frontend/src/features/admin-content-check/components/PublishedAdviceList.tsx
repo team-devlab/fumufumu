@@ -21,7 +21,8 @@ type Props =
     };
 
 export const PublishedAdviceList = (props: Props) => {
-  const count = props.status === "success" ? props.pagination.total_items : null;
+  const count =
+    props.status === "success" ? props.pagination.total_items : null;
 
   return (
     <section className="space-y-3">
@@ -72,7 +73,11 @@ export const PublishedAdviceList = (props: Props) => {
                   </span>
                 }
                 actions={
-                  <ModerationActions mode="hide" targetType="advices" targetId={item.id} />
+                  <ModerationActions
+                    mode="hide"
+                    targetType="advices"
+                    targetId={item.id}
+                  />
                 }
               />
             </li>
@@ -81,7 +86,10 @@ export const PublishedAdviceList = (props: Props) => {
       )}
 
       {props.status === "success" && (
-        <ModerationPagination pagination={props.pagination} baseHref={props.baseHref} />
+        <ModerationPagination
+          pagination={props.pagination}
+          baseHref={props.baseHref}
+        />
       )}
     </section>
   );

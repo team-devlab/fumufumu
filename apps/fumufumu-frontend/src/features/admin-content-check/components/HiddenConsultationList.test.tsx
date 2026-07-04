@@ -1,10 +1,15 @@
 import { render, screen, within } from "@testing-library/react";
 import userEvent from "@testing-library/user-event";
 import { describe, expect, it } from "vitest";
-import type { Consultation, PaginationMeta } from "@/features/consultation/types";
+import type {
+  Consultation,
+  PaginationMeta,
+} from "@/features/consultation/types";
 import { HiddenConsultationList } from "./HiddenConsultationList";
 
-const samplePagination = (overrides?: Partial<PaginationMeta>): PaginationMeta => ({
+const samplePagination = (
+  overrides?: Partial<PaginationMeta>,
+): PaginationMeta => ({
   current_page: 1,
   per_page: 20,
   total_items: 1,
@@ -39,7 +44,9 @@ describe("HiddenConsultationList", () => {
       />,
     );
     expect(screen.getByText(/（2 件）/)).toBeInTheDocument();
-    expect(screen.getAllByRole("button", { name: "再度公開する" })).toHaveLength(2);
+    expect(
+      screen.getAllByRole("button", { name: "再度公開する" }),
+    ).toHaveLength(2);
   });
 
   it("reasonsに登録された理由がunhideダイアログに併記される", async () => {
@@ -54,7 +61,9 @@ describe("HiddenConsultationList", () => {
       />,
     );
     await user.click(screen.getByRole("button", { name: "再度公開する" }));
-    expect(screen.getByText(/現在の非表示理由:\s*スパム投稿のため/)).toBeInTheDocument();
+    expect(
+      screen.getByText(/現在の非表示理由:\s*スパム投稿のため/),
+    ).toBeInTheDocument();
   });
 
   it("reasonsに無いidは(未入力)表示になる", async () => {
@@ -86,8 +95,15 @@ describe("HiddenConsultationList", () => {
   });
 
   it("status=error だとエラーメッセージが出る", () => {
-    render(<HiddenConsultationList status="error" message="サーバーが応答しませんでした" />);
+    render(
+      <HiddenConsultationList
+        status="error"
+        message="サーバーが応答しませんでした"
+      />,
+    );
     const alert = screen.getByRole("alert");
-    expect(within(alert).getByText("相談の取得に失敗しました")).toBeInTheDocument();
+    expect(
+      within(alert).getByText("相談の取得に失敗しました"),
+    ).toBeInTheDocument();
   });
 });

@@ -20,7 +20,8 @@ type Props =
     };
 
 export const HiddenAdviceList = (props: Props) => {
-  const count = props.status === "success" ? props.pagination.total_items : null;
+  const count =
+    props.status === "success" ? props.pagination.total_items : null;
 
   return (
     <section className="space-y-3">
@@ -85,7 +86,10 @@ export const HiddenAdviceList = (props: Props) => {
       )}
 
       {props.status === "success" && (
-        <ModerationPagination pagination={props.pagination} baseHref={props.baseHref} />
+        <ModerationPagination
+          pagination={props.pagination}
+          baseHref={props.baseHref}
+        />
       )}
     </section>
   );

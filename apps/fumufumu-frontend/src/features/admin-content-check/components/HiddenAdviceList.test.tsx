@@ -4,7 +4,9 @@ import { describe, expect, it } from "vitest";
 import type { Advice, PaginationMeta } from "@/features/consultation/types";
 import { HiddenAdviceList } from "./HiddenAdviceList";
 
-const samplePagination = (overrides?: Partial<PaginationMeta>): PaginationMeta => ({
+const samplePagination = (
+  overrides?: Partial<PaginationMeta>,
+): PaginationMeta => ({
   current_page: 1,
   per_page: 20,
   total_items: 1,
@@ -38,7 +40,9 @@ describe("HiddenAdviceList", () => {
       />,
     );
     expect(screen.getByText(/（2 件）/)).toBeInTheDocument();
-    expect(screen.getAllByRole("button", { name: "再度公開する" })).toHaveLength(2);
+    expect(
+      screen.getAllByRole("button", { name: "再度公開する" }),
+    ).toHaveLength(2);
   });
 
   it("reasonsに登録された理由がunhideダイアログに併記される", async () => {
@@ -53,7 +57,9 @@ describe("HiddenAdviceList", () => {
       />,
     );
     await user.click(screen.getByRole("button", { name: "再度公開する" }));
-    expect(screen.getByText(/現在の非表示理由:\s*不適切な内容のため/)).toBeInTheDocument();
+    expect(
+      screen.getByText(/現在の非表示理由:\s*不適切な内容のため/),
+    ).toBeInTheDocument();
   });
 
   it("所属相談IDへのlinkが出る", () => {
@@ -82,12 +88,21 @@ describe("HiddenAdviceList", () => {
         reasons={new Map()}
       />,
     );
-    expect(screen.getByText("非表示中のアドバイスはありません")).toBeInTheDocument();
+    expect(
+      screen.getByText("非表示中のアドバイスはありません"),
+    ).toBeInTheDocument();
   });
 
   it("status=error だとエラーメッセージが出る", () => {
-    render(<HiddenAdviceList status="error" message="サーバーが応答しませんでした" />);
+    render(
+      <HiddenAdviceList
+        status="error"
+        message="サーバーが応答しませんでした"
+      />,
+    );
     const alert = screen.getByRole("alert");
-    expect(within(alert).getByText("アドバイスの取得に失敗しました")).toBeInTheDocument();
+    expect(
+      within(alert).getByText("アドバイスの取得に失敗しました"),
+    ).toBeInTheDocument();
   });
 });

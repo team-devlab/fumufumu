@@ -3,7 +3,9 @@ import { describe, expect, it } from "vitest";
 import type { Advice, PaginationMeta } from "@/features/consultation/types";
 import { PublishedAdviceList } from "./PublishedAdviceList";
 
-const samplePagination = (overrides?: Partial<PaginationMeta>): PaginationMeta => ({
+const samplePagination = (
+  overrides?: Partial<PaginationMeta>,
+): PaginationMeta => ({
   current_page: 1,
   per_page: 20,
   total_items: 1,
@@ -30,14 +32,19 @@ describe("PublishedAdviceList", () => {
     render(
       <PublishedAdviceList
         status="success"
-        items={[sampleItem({ id: 1, body: "アドバイスA" }), sampleItem({ id: 2, body: "アドバイスB" })]}
+        items={[
+          sampleItem({ id: 1, body: "アドバイスA" }),
+          sampleItem({ id: 2, body: "アドバイスB" }),
+        ]}
         pagination={samplePagination({ total_items: 2 })}
         baseHref="/admin?tab=published"
       />,
     );
     expect(screen.getByText(/（2 件）/)).toBeInTheDocument();
     expect(screen.getByText("アドバイスA")).toBeInTheDocument();
-    expect(screen.getAllByRole("button", { name: "非表示にする" })).toHaveLength(2);
+    expect(
+      screen.getAllByRole("button", { name: "非表示にする" }),
+    ).toHaveLength(2);
   });
 
   it("所属相談IDへのlinkがtarget='_blank'で出る", () => {
@@ -63,12 +70,21 @@ describe("PublishedAdviceList", () => {
         baseHref="/admin?tab=published"
       />,
     );
-    expect(screen.getByText("公開中のアドバイスはありません")).toBeInTheDocument();
+    expect(
+      screen.getByText("公開中のアドバイスはありません"),
+    ).toBeInTheDocument();
   });
 
   it("status=error だとエラーメッセージが出る", () => {
-    render(<PublishedAdviceList status="error" message="サーバーが応答しませんでした" />);
+    render(
+      <PublishedAdviceList
+        status="error"
+        message="サーバーが応答しませんでした"
+      />,
+    );
     const alert = screen.getByRole("alert");
-    expect(within(alert).getByText("アドバイスの取得に失敗しました")).toBeInTheDocument();
+    expect(
+      within(alert).getByText("アドバイスの取得に失敗しました"),
+    ).toBeInTheDocument();
   });
 });

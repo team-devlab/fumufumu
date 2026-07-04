@@ -25,7 +25,13 @@ describe("ModerationDialog", () => {
 
   it("トリガークリックで showModal が呼ばれる", async () => {
     const user = userEvent.setup();
-    render(<ModerationDialog {...hideProps} onSubmit={vi.fn()} isSubmitting={false} />);
+    render(
+      <ModerationDialog
+        {...hideProps}
+        onSubmit={vi.fn()}
+        isSubmitting={false}
+      />,
+    );
     await user.click(screen.getByRole("button", { name: "非表示にする" }));
     expect(showModalSpy).toHaveBeenCalledOnce();
   });
@@ -33,35 +39,62 @@ describe("ModerationDialog", () => {
   it("mode=hide: reasonを入力せず送信するとonSubmitがreason=undefinedで呼ばれる（reasonは任意）", async () => {
     const user = userEvent.setup();
     const onSubmit = vi.fn().mockResolvedValue(undefined);
-    render(<ModerationDialog {...hideProps} onSubmit={onSubmit} isSubmitting={false} />);
+    render(
+      <ModerationDialog
+        {...hideProps}
+        onSubmit={onSubmit}
+        isSubmitting={false}
+      />,
+    );
     await user.click(screen.getByRole("button", { name: "非表示にする" }));
     await user.click(screen.getByRole("button", { name: "実行する" }));
     await waitFor(() => {
-      expect(onSubmit).toHaveBeenCalledWith({ reason: undefined, skipAuditLog: false });
+      expect(onSubmit).toHaveBeenCalledWith({
+        reason: undefined,
+        skipAuditLog: false,
+      });
     });
   });
 
   it("mode=hide: reasonを入力するとtrimしてonSubmitに渡る", async () => {
     const user = userEvent.setup();
     const onSubmit = vi.fn().mockResolvedValue(undefined);
-    render(<ModerationDialog {...hideProps} onSubmit={onSubmit} isSubmitting={false} />);
+    render(
+      <ModerationDialog
+        {...hideProps}
+        onSubmit={onSubmit}
+        isSubmitting={false}
+      />,
+    );
     await user.click(screen.getByRole("button", { name: "非表示にする" }));
     await user.type(screen.getByLabelText(/非表示理由/), "  spam です  ");
     await user.click(screen.getByRole("button", { name: "実行する" }));
     await waitFor(() => {
-      expect(onSubmit).toHaveBeenCalledWith({ reason: "spam です", skipAuditLog: false });
+      expect(onSubmit).toHaveBeenCalledWith({
+        reason: "spam です",
+        skipAuditLog: false,
+      });
     });
   });
 
   it("スキップチェックを入れて送信するとskipAuditLog=trueで呼ばれる", async () => {
     const user = userEvent.setup();
     const onSubmit = vi.fn().mockResolvedValue(undefined);
-    render(<ModerationDialog {...hideProps} onSubmit={onSubmit} isSubmitting={false} />);
+    render(
+      <ModerationDialog
+        {...hideProps}
+        onSubmit={onSubmit}
+        isSubmitting={false}
+      />,
+    );
     await user.click(screen.getByRole("button", { name: "非表示にする" }));
     await user.click(screen.getByLabelText(/テストデータ/));
     await user.click(screen.getByRole("button", { name: "実行する" }));
     await waitFor(() => {
-      expect(onSubmit).toHaveBeenCalledWith({ reason: undefined, skipAuditLog: true });
+      expect(onSubmit).toHaveBeenCalledWith({
+        reason: undefined,
+        skipAuditLog: true,
+      });
     });
   });
 
@@ -84,7 +117,13 @@ describe("ModerationDialog", () => {
   it("onSubmitがrejectしてもcloseが呼ばれる (finally経由)", async () => {
     const user = userEvent.setup();
     const onSubmit = vi.fn().mockRejectedValue(new Error("api error"));
-    render(<ModerationDialog {...hideProps} onSubmit={onSubmit} isSubmitting={false} />);
+    render(
+      <ModerationDialog
+        {...hideProps}
+        onSubmit={onSubmit}
+        isSubmitting={false}
+      />,
+    );
     await user.click(screen.getByRole("button", { name: "非表示にする" }));
     await user.click(screen.getByRole("button", { name: "実行する" }));
     await waitFor(() => {
@@ -94,14 +133,26 @@ describe("ModerationDialog", () => {
 
   it("閉じるボタンでcloseが呼ばれる", async () => {
     const user = userEvent.setup();
-    render(<ModerationDialog {...hideProps} onSubmit={vi.fn()} isSubmitting={false} />);
+    render(
+      <ModerationDialog
+        {...hideProps}
+        onSubmit={vi.fn()}
+        isSubmitting={false}
+      />,
+    );
     await user.click(screen.getByRole("button", { name: "非表示にする" }));
     await user.click(screen.getByRole("button", { name: "閉じる" }));
     expect(closeSpy).toHaveBeenCalledOnce();
   });
 
   it("isSubmitting=trueならトリガーがdisabled", () => {
-    render(<ModerationDialog {...hideProps} onSubmit={vi.fn()} isSubmitting={true} />);
+    render(
+      <ModerationDialog
+        {...hideProps}
+        onSubmit={vi.fn()}
+        isSubmitting={true}
+      />,
+    );
     expect(screen.getByRole("button", { name: "非表示にする" })).toBeDisabled();
   });
 

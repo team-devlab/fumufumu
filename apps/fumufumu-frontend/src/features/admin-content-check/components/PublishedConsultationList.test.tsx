@@ -1,9 +1,14 @@
 import { render, screen, within } from "@testing-library/react";
 import { describe, expect, it } from "vitest";
-import type { Consultation, PaginationMeta } from "@/features/consultation/types";
+import type {
+  Consultation,
+  PaginationMeta,
+} from "@/features/consultation/types";
 import { PublishedConsultationList } from "./PublishedConsultationList";
 
-const samplePagination = (overrides?: Partial<PaginationMeta>): PaginationMeta => ({
+const samplePagination = (
+  overrides?: Partial<PaginationMeta>,
+): PaginationMeta => ({
   current_page: 1,
   per_page: 20,
   total_items: 2,
@@ -41,11 +46,15 @@ describe("PublishedConsultationList", () => {
       />,
     );
 
-    expect(screen.getByRole("heading", { level: 2, name: "相談" })).toBeInTheDocument();
+    expect(
+      screen.getByRole("heading", { level: 2, name: "相談" }),
+    ).toBeInTheDocument();
     expect(screen.getByText(/（2 件）/)).toBeInTheDocument();
     expect(screen.getByText("相談A")).toBeInTheDocument();
     expect(screen.getByText("相談B")).toBeInTheDocument();
-    expect(screen.getAllByRole("button", { name: "非表示にする" })).toHaveLength(2);
+    expect(
+      screen.getAllByRole("button", { name: "非表示にする" }),
+    ).toHaveLength(2);
   });
 
   it("authorのnameがカードに表示される", () => {
@@ -74,11 +83,20 @@ describe("PublishedConsultationList", () => {
   });
 
   it("status=error だと件数バッジは出ず、エラーメッセージと詳細が出る", () => {
-    render(<PublishedConsultationList status="error" message="サーバーが応答しませんでした" />);
+    render(
+      <PublishedConsultationList
+        status="error"
+        message="サーバーが応答しませんでした"
+      />,
+    );
     expect(screen.queryByText(/件）/)).toBeNull();
     const alert = screen.getByRole("alert");
-    expect(within(alert).getByText("相談の取得に失敗しました")).toBeInTheDocument();
-    expect(within(alert).getByText("サーバーが応答しませんでした")).toBeInTheDocument();
+    expect(
+      within(alert).getByText("相談の取得に失敗しました"),
+    ).toBeInTheDocument();
+    expect(
+      within(alert).getByText("サーバーが応答しませんでした"),
+    ).toBeInTheDocument();
   });
 
   it("pagination(total_pages>1)を渡すとページ送りリンクが出る", () => {
