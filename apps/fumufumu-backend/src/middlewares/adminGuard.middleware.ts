@@ -1,8 +1,7 @@
 import { Next, Context } from 'hono';
-import { eq } from 'drizzle-orm';
 
 import { type Env, type Variables } from '../index';
-import { users } from '../db/schema/user';
+import { getUserRole } from '@/lib/user-role';
 
 type AppContext = Context<{ Bindings: Env, Variables: Variables }>;
 
@@ -17,18 +16,15 @@ export const adminGuard = async (c: AppContext, next: Next) => {
   const appUserId = c.get('appUserId');
   const db = c.get('db');
 
-  const user = await db.query.users.findFirst({
-    where: eq(users.id, appUserId),
-    columns: { role: true },
-  });
+  const role = await getUserRole(db, appUserId);
 
-  if (user?.role !== 'admin') {
+  if (role !== 'admin') {
     // クライアントには 404 を返しつつ、サーバーログでは「権限不足」を区別可能にする。
     // 運用上「自分が見れないのは権限不足？それとも本当に存在しない URL？」を切り分けるため。
     // TODO: プロジェクト全体で構造化ロガーを導入した際は、このログもそちらに寄せる。
     console.warn('adminGuard: access denied', {
       appUserId,
-      role: user?.role ?? null,
+      role,
       method: c.req.method,
       path: c.req.path,
     });

@@ -184,7 +184,10 @@ export class ConsultationRepository {
 			conditions.push(isNull(consultations.hiddenAt));
 		} else {
 			conditions.push(eq(consultations.draft, false));
-			conditions.push(isNull(consultations.hiddenAt));
+
+			if (!filters?.includeHidden) {
+				conditions.push(isNull(consultations.hiddenAt));
+			}
 
 			if (!filters?.includeUnapprovedForOwn) {
 				conditions.push(this.buildPublicVisibilityCondition());
@@ -201,9 +204,12 @@ export class ConsultationRepository {
 		const conditions: SQL[] = [
 			eq(advices.consultationId, consultationId),
 			eq(advices.draft, false),
-			isNull(advices.hiddenAt),
 			this.buildAdvicePublicVisibilityCondition(),
 		];
+
+		if (!filters?.includeHidden) {
+			conditions.push(isNull(advices.hiddenAt));
+		}
 
 		if (filters?.userId !== undefined) {
 			conditions.push(eq(advices.authorId, filters.userId));

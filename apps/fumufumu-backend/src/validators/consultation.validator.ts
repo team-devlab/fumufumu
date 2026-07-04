@@ -96,6 +96,12 @@ export const listConsultationsQuerySchema = paginationQuerySchema.extend({
 	 * - "true" または "false" の文字列をbooleanに変換
 	 */
 	solved: booleanStringSchema.optional(),
+
+	/**
+	 * 非表示(hidden_at設定済み)の投稿も含めるか（オプショナル）
+	 * - admin権限時のみ有効。コントローラ層でrole検証を行う
+	 */
+	includeHidden: booleanStringSchema.optional(),
 });
 
 /**
@@ -112,6 +118,12 @@ export const listAdvicesQuerySchema = paginationQuerySchema.extend({
 	 * - 正の整数のみ許可
 	 */
 	userId: positiveIntegerStringSchema.optional(),
+
+	/**
+	 * 非表示(hidden_at設定済み)の回答も含めるか（オプショナル）
+	 * - admin権限時のみ有効。コントローラ層でrole検証を行う
+	 */
+	includeHidden: booleanStringSchema.optional(),
 });
 
 const createConsultationBaseSchema = z.object({

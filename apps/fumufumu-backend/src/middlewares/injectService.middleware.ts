@@ -4,6 +4,7 @@ import type { AppBindings } from "@/index";
 import {
 	createConsultationService,
 	createConsultationContentCheckService,
+	createModerationService,
 	createUserService,
 	createTagService,
 } from "@/services/service.factory";
@@ -42,6 +43,20 @@ export async function injectConsultationContentCheckService(
 	const db = c.get("db");
 	const consultationContentCheckService = createConsultationContentCheckService(db);
 	c.set("consultationContentCheckService", consultationContentCheckService);
+	await next();
+}
+
+/**
+ * ModerationServiceを注入するミドルウェア
+ * DBインスタンスからModerationServiceを生成してContextに格納する
+ */
+export async function injectModerationService(
+	c: Context<AppBindings>,
+	next: Next,
+) {
+	const db = c.get("db");
+	const moderationService = createModerationService(db);
+	c.set("moderationService", moderationService);
 	await next();
 }
 

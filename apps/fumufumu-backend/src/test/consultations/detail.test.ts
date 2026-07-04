@@ -185,12 +185,12 @@ describe('Consultations API - Detail (GET /:id)', () => {
     expect(getRes.status).toBe(404);
   });
 
-  it('hidden相談は所有者なら取得できる', async () => {
+  it('【404 Not Found】hidden相談は所有者でも取得できない（モデレーションによる非表示は著者にも効かせる）', async () => {
     const createReq = createApiRequest('/api/consultations', 'POST', {
       cookie: user.cookie,
       body: {
         title: '自分のhidden相談',
-        body: 'これは本人だけが閲覧できるhidden相談です。',
+        body: 'これは運営によって非表示化されたhidden相談です。',
         draft: false,
         tagIds: [tagId],
       },
@@ -208,10 +208,7 @@ describe('Consultations API - Detail (GET /:id)', () => {
     });
     const getRes = await app.fetch(getReq, env);
 
-    expect(getRes.status).toBe(200);
-    const data = await getRes.json() as any;
-    expect(data.id).toBe(created.id);
-    expect(data.hidden_at).not.toBeNull();
+    expect(getRes.status).toBe(404);
   });
 
   it('【404 Not Found】他人のhidden相談は取得できない', async () => {

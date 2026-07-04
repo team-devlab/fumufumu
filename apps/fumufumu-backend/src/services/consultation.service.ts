@@ -206,11 +206,16 @@ export class ConsultationService {
 			hiddenAt: Date | null;
 		},
 		requestUserId?: number,
+		includeHidden?: boolean,
 	): Promise<void> {
 		const contentCheck = await this.repository.findConsultationContentCheckByConsultationId(consultationId);
-		const isHiddenConsultation = consultation.draft || consultation.hiddenAt !== null;
+		// draftは著者本人のみ閲覧可能（自分の下書き編集のため）
+		const isDraftAndNotOwner = consultation.draft && consultation.authorId !== requestUserId;
+		// モデレーションによるhiddenは著者本人にも効かせる（advice hideと挙動を揃える）。
+		// includeHidden(admin限定・コントローラ層でrole検証済み)の場合のみバイパスする
+		const isHiddenByModeration = consultation.hiddenAt !== null && !includeHidden;
 		const isNotApproved = contentCheck !== undefined && contentCheck.status !== "approved";
-		if ((isHiddenConsultation && consultation.authorId !== requestUserId) || isNotApproved) {
+		if (isDraftAndNotOwner || isHiddenByModeration || isNotApproved) {
 			throw new NotFoundError(`相談が見つかりません: id=${consultationId}`);
 		}
 	}
@@ -302,7 +307,7 @@ export class ConsultationService {
 		const { page = 1, limit = 20 } = pagination || {};
 
 		const consultation = await this.repository.findConsultationByIdForAccessCheck(consultationId);
-		await this.assertConsultationReadableOrThrow(consultationId, consultation, requestUserId);
+		await this.assertConsultationReadableOrThrow(consultationId, consultation, requestUserId, filters?.includeHidden);
 
 		const [adviceList, totalCount] = await Promise.all([
 			this.repository.findAdvicesByConsultationId(consultationId, { page, limit }, filters),
