@@ -14,6 +14,12 @@ type ModerationTargetRow = {
 export class ModerationRepository {
 	constructor(private db: DbInstance) {}
 
+	private notFoundMessage(targetType: ModerationTargetType, targetId: number): string {
+		return targetType === "consultation"
+			? `対象の相談が見つかりません: id=${targetId}`
+			: `対象のアドバイスが見つかりません: id=${targetId}`;
+	}
+
 	private async findTargetOrThrow(
 		targetType: ModerationTargetType,
 		targetId: number,
@@ -24,7 +30,7 @@ export class ModerationRepository {
 				where: eq(consultations.id, targetId),
 			});
 			if (!row) {
-				throw new NotFoundError(`対象の相談が見つかりません: id=${targetId}`);
+				throw new NotFoundError(this.notFoundMessage(targetType, targetId));
 			}
 			return row;
 		}
@@ -34,47 +40,85 @@ export class ModerationRepository {
 			where: eq(advices.id, targetId),
 		});
 		if (!row) {
-			throw new NotFoundError(`対象のアドバイスが見つかりません: id=${targetId}`);
+			throw new NotFoundError(this.notFoundMessage(targetType, targetId));
 		}
 		return row;
 	}
 
-	private async setHiddenAt(
+	private buildUpdateHiddenAtQuery(
 		targetType: ModerationTargetType,
 		targetId: number,
 		hiddenAt: Date | null,
-	): Promise<ModerationTargetRow> {
+	) {
 		if (targetType === "consultation") {
-			const [updated] = await this.db
+			return this.db
 				.update(consultations)
 				.set({ hiddenAt })
 				.where(eq(consultations.id, targetId))
 				.returning({ id: consultations.id, hiddenAt: consultations.hiddenAt });
-			return updated;
 		}
 
-		const [updated] = await this.db
+		return this.db
 			.update(advices)
 			.set({ hiddenAt })
 			.where(eq(advices.id, targetId))
 			.returning({ id: advices.id, hiddenAt: advices.hiddenAt });
-		return updated;
 	}
 
-	private async recordAction(
+	private buildRecordActionQuery(
 		targetType: ModerationTargetType,
 		targetId: number,
 		action: ModerationActionType,
 		adminUserId: number,
 		reason: string | null,
-	): Promise<void> {
-		await this.db.insert(moderationActions).values({
+	) {
+		return this.db.insert(moderationActions).values({
 			targetType,
 			targetId,
 			action,
 			reason,
 			adminUserId,
 		});
+	}
+
+	/**
+	 * hidden_atの更新とmoderation_actionsへの記録を1バッチで実行する（consultation.repository.tsのupdate()と同じ原子性パターン）。
+	 * skipAuditLog時はhidden_atの更新のみを単発実行する。
+	 */
+	private async applyHiddenAtChange(params: {
+		targetType: ModerationTargetType;
+		targetId: number;
+		hiddenAt: Date | null;
+		action: ModerationActionType;
+		adminUserId: number;
+		reason: string | null;
+		skipAuditLog?: boolean;
+	}): Promise<ModerationTargetRow> {
+		const updateQuery = this.buildUpdateHiddenAtQuery(params.targetType, params.targetId, params.hiddenAt);
+
+		if (params.skipAuditLog) {
+			const [updated] = await updateQuery;
+			if (!updated) {
+				throw new NotFoundError(this.notFoundMessage(params.targetType, params.targetId));
+			}
+			return updated;
+		}
+
+		const recordActionQuery = this.buildRecordActionQuery(
+			params.targetType,
+			params.targetId,
+			params.action,
+			params.adminUserId,
+			params.reason,
+		);
+
+		const [updateResult] = await this.db.batch([updateQuery, recordActionQuery]);
+		const [updated] = updateResult;
+		if (!updated) {
+			throw new NotFoundError(this.notFoundMessage(params.targetType, params.targetId));
+		}
+
+		return updated;
 	}
 
 	/**
@@ -87,20 +131,18 @@ export class ModerationRepository {
 		reason?: string;
 		skipAuditLog?: boolean;
 	}): Promise<ModerationTargetRow> {
+		// 対象が存在しない場合にmoderation_actionsへ書き込んでしまわないよう、事前に存在確認する
 		await this.findTargetOrThrow(params.targetType, params.targetId);
-		const updated = await this.setHiddenAt(params.targetType, params.targetId, new Date());
 
-		if (!params.skipAuditLog) {
-			await this.recordAction(
-				params.targetType,
-				params.targetId,
-				"hide",
-				params.adminUserId,
-				params.reason ?? null,
-			);
-		}
-
-		return updated;
+		return this.applyHiddenAtChange({
+			targetType: params.targetType,
+			targetId: params.targetId,
+			hiddenAt: new Date(),
+			action: "hide",
+			adminUserId: params.adminUserId,
+			reason: params.reason ?? null,
+			skipAuditLog: params.skipAuditLog,
+		});
 	}
 
 	/**
@@ -118,13 +160,15 @@ export class ModerationRepository {
 			return target;
 		}
 
-		const updated = await this.setHiddenAt(params.targetType, params.targetId, null);
-
-		if (!params.skipAuditLog) {
-			await this.recordAction(params.targetType, params.targetId, "unhide", params.adminUserId, null);
-		}
-
-		return updated;
+		return this.applyHiddenAtChange({
+			targetType: params.targetType,
+			targetId: params.targetId,
+			hiddenAt: null,
+			action: "unhide",
+			adminUserId: params.adminUserId,
+			reason: null,
+			skipAuditLog: params.skipAuditLog,
+		});
 	}
 
 	/**
