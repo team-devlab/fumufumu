@@ -102,6 +102,13 @@ export const listConsultationsQuerySchema = paginationQuerySchema.extend({
 	 * - admin権限時のみ有効。コントローラ層でrole検証を行う
 	 */
 	includeHidden: booleanStringSchema.optional(),
+
+	/**
+	 * 非表示(hidden_at設定済み)の投稿のみに絞り込むか（オプショナル）
+	 * - admin権限時のみ有効。コントローラ層でrole検証を行う
+	 * - includeHiddenと同時指定時はこちらを優先する
+	 */
+	hiddenOnly: booleanStringSchema.optional(),
 });
 
 /**
@@ -124,6 +131,13 @@ export const listAdvicesQuerySchema = paginationQuerySchema.extend({
 	 * - admin権限時のみ有効。コントローラ層でrole検証を行う
 	 */
 	includeHidden: booleanStringSchema.optional(),
+
+	/**
+	 * 非表示(hidden_at設定済み)の回答のみに絞り込むか（オプショナル）
+	 * - admin権限時のみ有効。コントローラ層でrole検証を行う
+	 * - includeHiddenと同時指定時はこちらを優先する
+	 */
+	hiddenOnly: booleanStringSchema.optional(),
 });
 
 const createConsultationBaseSchema = z.object({

@@ -352,4 +352,47 @@ describe("Admin Moderation API - hide/unhide", () => {
     const viewerAdvicesRes = await app.fetch(viewerAdvicesReq, env);
     expect(viewerAdvicesRes.status).toBe(404);
   });
+
+  it("hiddenOnly: adminはhideされた投稿のみに絞り込める（公開中の投稿は含まれない）", async () => {
+    const hiddenConsultation = await createApprovedConsultation("moderation-hidden-only-hidden-consultation");
+    const publishedConsultation = await createApprovedConsultation("moderation-hidden-only-published-consultation");
+    const hideRes = await hide("consultations", hiddenConsultation.id, { reason: "hiddenOnly検証" });
+    expect(hideRes.status).toBe(200);
+
+    const adminListReq = createApiRequest("/api/consultations", "GET", {
+      cookie: admin.cookie,
+      queryParams: { hiddenOnly: true },
+    });
+    const adminListRes = await app.fetch(adminListReq, env);
+    expect(adminListRes.status).toBe(200);
+    const adminListData = await adminListRes.json() as { data: Array<{ id: number }> };
+    expect(adminListData.data.some((item) => item.id === hiddenConsultation.id)).toBe(true);
+    expect(adminListData.data.some((item) => item.id === publishedConsultation.id)).toBe(false);
+
+    const nonAdminListReq = createApiRequest("/api/consultations", "GET", {
+      cookie: author.cookie,
+      queryParams: { hiddenOnly: true },
+    });
+    const nonAdminListRes = await app.fetch(nonAdminListReq, env);
+    const nonAdminListData = await nonAdminListRes.json() as { data: Array<{ id: number }> };
+    expect(nonAdminListData.data.some((item) => item.id === hiddenConsultation.id)).toBe(false);
+  });
+
+  it("hiddenOnly: adminはhideされた助言のみに絞り込める（公開中の助言は含まれない）", async () => {
+    const consultation = await createApprovedConsultation("moderation-hidden-only-advices-consultation");
+    const hiddenAdvice = await createApprovedAdvice(consultation.id, "hiddenOnly検証用の非表示アドバイス本文です。");
+    const publishedAdvice = await createApprovedAdvice(consultation.id, "hiddenOnly検証用の公開アドバイス本文です。");
+    const hideRes = await hide("advices", hiddenAdvice.id, { reason: "hiddenOnly検証" });
+    expect(hideRes.status).toBe(200);
+
+    const adminAdvicesReq = createApiRequest(`/api/consultations/${consultation.id}/advices`, "GET", {
+      cookie: admin.cookie,
+      queryParams: { hiddenOnly: true },
+    });
+    const adminAdvicesRes = await app.fetch(adminAdvicesReq, env);
+    expect(adminAdvicesRes.status).toBe(200);
+    const adminAdvicesData = await adminAdvicesRes.json() as { data: Array<{ id: number }> };
+    expect(adminAdvicesData.data.some((item) => item.id === hiddenAdvice.id)).toBe(true);
+    expect(adminAdvicesData.data.some((item) => item.id === publishedAdvice.id)).toBe(false);
+  });
 });

@@ -185,7 +185,9 @@ export class ConsultationRepository {
 		} else {
 			conditions.push(eq(consultations.draft, false));
 
-			if (!filters?.includeHidden) {
+			if (filters?.hiddenOnly) {
+				conditions.push(isNotNull(consultations.hiddenAt));
+			} else if (!filters?.includeHidden) {
 				conditions.push(isNull(consultations.hiddenAt));
 			}
 
@@ -207,7 +209,9 @@ export class ConsultationRepository {
 			this.buildAdvicePublicVisibilityCondition(),
 		];
 
-		if (!filters?.includeHidden) {
+		if (filters?.hiddenOnly) {
+			conditions.push(isNotNull(advices.hiddenAt));
+		} else if (!filters?.includeHidden) {
 			conditions.push(isNull(advices.hiddenAt));
 		}
 

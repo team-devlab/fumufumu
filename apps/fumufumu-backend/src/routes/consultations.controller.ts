@@ -26,20 +26,25 @@ import {
 const factory = createFactory<AppBindings>();
 
 /**
- * includeHiddenクエリはadmin権限時のみ有効にする（ADR 011 §3.3, §3.4）
- * 未指定時はDB問い合わせを行わない
+ * includeHidden/hiddenOnlyクエリはadmin権限時のみ有効にする（ADR 011 §3.3, §3.4）
+ * 未指定時はDB問い合わせを行わない。role判定は1回のDB問い合わせに集約する
  */
-async function resolveIncludeHidden(
+async function resolveModerationVisibilityFlags(
 	db: DbInstance,
 	appUserId: number,
 	requestedIncludeHidden: boolean | undefined,
-): Promise<boolean> {
-	if (!requestedIncludeHidden) {
-		return false;
+	requestedHiddenOnly: boolean | undefined,
+): Promise<{ includeHidden: boolean; hiddenOnly: boolean }> {
+	if (!requestedIncludeHidden && !requestedHiddenOnly) {
+		return { includeHidden: false, hiddenOnly: false };
 	}
 
 	const role = await getUserRole(db, appUserId);
-	return role === "admin";
+	const isAdmin = role === "admin";
+	return {
+		includeHidden: isAdmin && !!requestedIncludeHidden,
+		hiddenOnly: isAdmin && !!requestedHiddenOnly,
+	};
 }
 
 // ============================================
@@ -82,13 +87,19 @@ export const listConsultationsHandlers = factory.createHandlers(
 		const db = c.get("db");
 		const service = c.get("consultationService");
 
-		const includeHidden = await resolveIncludeHidden(db, appUserId, validatedQuery.includeHidden);
+		const { includeHidden, hiddenOnly } = await resolveModerationVisibilityFlags(
+			db,
+			appUserId,
+			validatedQuery.includeHidden,
+			validatedQuery.hiddenOnly,
+		);
 
 		const filters: ConsultationFilters = {
 			userId: validatedQuery.userId,
 			draft: validatedQuery.draft,
 			solved: validatedQuery.solved,
 			includeHidden,
+			hiddenOnly,
 		};
 
 		const pagination: PaginationParams = {
@@ -101,9 +112,9 @@ export const listConsultationsHandlers = factory.createHandlers(
 
 		// NOTE: キャッシュ制御 (D1課金対策 & セキュリティ)
 		// 下書き(draft=true)は「個人情報」に近いのでキャッシュしてはいけない。
-		// includeHidden(admin限定)のレスポンスも共有キャッシュに乗せると非表示投稿が他ユーザーに漏れるため同様に禁止する。
+		// includeHidden/hiddenOnly(admin限定)のレスポンスも共有キャッシュに乗せると非表示投稿が他ユーザーに漏れるため同様に禁止する。
 		// 公開データの場合のみ、60秒間のキャッシュを許可。
-		if (!filters.draft && !filters.includeHidden) {
+		if (!filters.draft && !filters.includeHidden && !filters.hiddenOnly) {
 			c.header('Cache-Control', 'public, max-age=60');
 		} else {
 			// 下書き・includeHiddenの場合はキャッシュしない（明示的に指定）
@@ -185,7 +196,12 @@ export const listAdvicesHandlers = factory.createHandlers(
 		const db = c.get("db");
 		const service = c.get("consultationService");
 
-		const includeHidden = await resolveIncludeHidden(db, appUserId, validatedQuery.includeHidden);
+		const { includeHidden, hiddenOnly } = await resolveModerationVisibilityFlags(
+			db,
+			appUserId,
+			validatedQuery.includeHidden,
+			validatedQuery.hiddenOnly,
+		);
 
 		const pagination: PaginationParams = {
 			page: validatedQuery.page,
@@ -195,6 +211,7 @@ export const listAdvicesHandlers = factory.createHandlers(
 		const filters: AdviceFilters = {
 			userId: validatedQuery.userId,
 			includeHidden,
+			hiddenOnly,
 		};
 
 		const result = await service.listAdvices(id, pagination, appUserId, filters);
