@@ -19,9 +19,11 @@ import { protectedRouter } from '@/routes/protected.routes';
 import { userRoute } from '@/routes/user.controller';
 import { tagsRoute } from '@/routes/tags.controller';
 import { adminContentCheckRoute } from '@/routes/admin-content-check.controller';
+import { adminModerationRoute } from '@/routes/admin-moderation.controller';
 import { internalNotificationsRoute } from '@/routes/internal-notifications.controller';
 import type { ConsultationService } from '@/services/consultation.service';
 import type { ConsultationContentCheckService } from '@/services/consultation-content-check.service';
+import type { ModerationService } from '@/services/moderation.service';
 import type { UserService } from '@/services/user.service';
 import type { TagService } from '@/services/tag.service';
 
@@ -59,6 +61,7 @@ export interface Variables {
   db: DbInstance;
   consultationService: ConsultationService;
   consultationContentCheckService: ConsultationContentCheckService;
+  moderationService: ModerationService;
   userService: UserService;
   tagService: TagService;
 }
@@ -213,6 +216,10 @@ api.route('/tags', tagsRoute);
 //   - 未認可時は 404 を返し、admin API の存在自体を露出させない方針
 //   - この規約はコード上強制されていない。将来の構造的強制は別 Issue で検討する。
 api.route('/admin/content-check', adminContentCheckRoute);
+
+// 投稿モデレーション運営API（/api/admin/moderation）
+// 🛡 上記と同様に authGuard → adminGuard の順序を必須とする (ADR 010 §4 / ADR 011 §3.4)
+api.route('/admin/moderation', adminModerationRoute);
 
 // 通知内部API（/api/internal/notifications）
 api.route('/internal/notifications', internalNotificationsRoute);
