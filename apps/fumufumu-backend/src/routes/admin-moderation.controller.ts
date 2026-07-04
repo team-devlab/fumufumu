@@ -7,6 +7,8 @@ import { adminGuard } from "@/middlewares/adminGuard.middleware";
 import { injectModerationService } from "@/middlewares/injectService.middleware";
 import {
   moderationTargetParamSchema,
+  moderationTargetTypeParamSchema,
+  hideReasonsQuerySchema,
   hideModerationSchema,
   unhideModerationSchema,
 } from "@/validators/moderation.validator";
@@ -49,6 +51,23 @@ const unhideHandlers = factory.createHandlers(
   },
 );
 
+const hideReasonsHandlers = factory.createHandlers(
+  zValidator("param", moderationTargetTypeParamSchema, (result) => {
+    if (!result.success) throw result.error;
+  }),
+  zValidator("query", hideReasonsQuerySchema, (result) => {
+    if (!result.success) throw result.error;
+  }),
+  async (c) => {
+    const { targetType } = c.req.valid("param");
+    const { ids } = c.req.valid("query");
+    const service = c.get("moderationService");
+
+    const result = await service.getLatestHideReasons(targetType, ids);
+    return c.json(result, 200);
+  },
+);
+
 const historyHandlers = factory.createHandlers(
   zValidator("param", moderationTargetParamSchema, (result) => {
     if (!result.success) throw result.error;
@@ -69,4 +88,6 @@ export const adminModerationRoute = new Hono<AppBindings>();
 adminModerationRoute.use("/*", authGuard, adminGuard, injectModerationService);
 adminModerationRoute.post("/:targetType/:id/hide", ...hideHandlers);
 adminModerationRoute.post("/:targetType/:id/unhide", ...unhideHandlers);
+// hide-reasons は :id を取らない2セグメントGETのため、3セグメントの :id/history とは衝突しない
+adminModerationRoute.get("/:targetType/hide-reasons", ...hideReasonsHandlers);
 adminModerationRoute.get("/:targetType/:id/history", ...historyHandlers);
