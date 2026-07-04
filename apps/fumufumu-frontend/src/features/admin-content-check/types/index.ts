@@ -75,3 +75,29 @@ export interface PendingAdviceDetailResponse {
   missing_ids: number[];
   non_pending: Array<{ id: number; current_status: string }>;
 }
+
+// ============================================
+// モデレーション (hide/unhide, ADR 011)
+// ============================================
+
+/** URL path 用の複数形。バックエンドの `moderationTargetParamSchema` と一致させる */
+export type ModerationTargetType = "consultations" | "advices";
+
+/** hide/unhide 実行結果 */
+export interface ModerationActionResponse {
+  target_type: "consultation" | "advice";
+  target_id: number;
+  hidden_at: string | null;
+}
+
+export interface ModerationHistoryEntry {
+  id: number;
+  action: "hide" | "unhide";
+  reason: string | null;
+  admin_user_id: number;
+  created_at: string;
+}
+
+export interface ModerationHistoryResponse {
+  history: ModerationHistoryEntry[];
+}

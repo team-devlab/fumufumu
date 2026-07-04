@@ -47,6 +47,15 @@ export interface ConsultationListResponse {
   data: Consultation[];
 }
 
+/**
+ * 相談横断のアドバイス一覧レスポンス
+ * src: apps/fumufumu-backend/src/types/advice.response.ts (AdviceListResponse)
+ */
+export interface AdviceListResponse {
+  pagination: PaginationMeta;
+  data: Advice[];
+}
+
 export interface Tag {
   id: number;
   name: string;
