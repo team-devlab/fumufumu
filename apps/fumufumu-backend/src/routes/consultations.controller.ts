@@ -29,7 +29,7 @@ const factory = createFactory<AppBindings>();
  * includeHidden/hiddenOnlyクエリはadmin権限時のみ有効にする（ADR 011 §3.3, §3.4）
  * 未指定時はDB問い合わせを行わない。role判定は1回のDB問い合わせに集約する
  */
-async function resolveModerationVisibilityFlags(
+export async function resolveModerationVisibilityFlags(
 	db: DbInstance,
 	appUserId: number,
 	requestedIncludeHidden: boolean | undefined,

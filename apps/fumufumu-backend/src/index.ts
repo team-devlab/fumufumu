@@ -15,6 +15,7 @@ import * as moderationActionsSchema from '@/db/schema/moderation-actions';
 
 import { authRouter } from '@/routes/auth.routes';
 import { consultationsRoute } from '@/routes/consultations.controller';
+import { advicesRoute } from '@/routes/advices.controller';
 import { protectedRouter } from '@/routes/protected.routes';
 import { userRoute } from '@/routes/user.controller';
 import { tagsRoute } from '@/routes/tags.controller';
@@ -201,6 +202,9 @@ api.route('/protected', protectedRouter);
 
 // 相談API（/api/consultations）
 api.route('/consultations', consultationsRoute);
+
+// アドバイスAPI（相談横断、/api/advices）
+api.route('/advices', advicesRoute);
 
 // ユーザーAPI（/api/users）
 api.route('/users', userRoute);
