@@ -1,3 +1,4 @@
+import { redirect } from "next/navigation";
 import {
   fetchPendingAdvicesApi,
   fetchPendingConsultationsApi,
@@ -12,8 +13,8 @@ import {
 import { HiddenAdviceList } from "@/features/admin-content-check/components/HiddenAdviceList";
 import { HiddenConsultationList } from "@/features/admin-content-check/components/HiddenConsultationList";
 import {
-  ModerationTabs,
   type ModerationTabKey,
+  ModerationTabs,
 } from "@/features/admin-content-check/components/ModerationTabs";
 import { PendingAdviceList } from "@/features/admin-content-check/components/PendingAdviceList";
 import { PendingConsultationList } from "@/features/admin-content-check/components/PendingConsultationList";
@@ -124,24 +125,71 @@ async function PendingTab() {
   );
 }
 
-async function PublishedTab({ page, baseHref }: { page: number; baseHref: string }) {
+/**
+ * ページ末尾の項目を全て hide/unhide して current_page が範囲外(空)になったとき、
+ * 1ページ目に戻す。放置すると ModerationPagination が total_pages<=1 でナビ自体を
+ * 消すため、admin が「前のページ」に戻れず空画面に取り残される (page.tsx の toPage は
+ * 下限しかクランプしないため URL の page がそのまま残る)。
+ * 相談・アドバイスは1つの page パラメータを共有するので、両方が空のときだけ戻す
+ * (片方にデータがあるページ番号を巻き添えにしない)。取得失敗(rejected)時は
+ * エラー表示を優先し、リダイレクトしない。
+ */
+function redirectIfPageOutOfRange(
+  page: number,
+  baseHref: string,
+  results: Array<PromiseSettledResult<{ data: unknown[] }>>,
+): void {
+  if (page <= 1) return;
+  const allFulfilledEmpty = results.every(
+    (r) => r.status === "fulfilled" && r.value.data.length === 0,
+  );
+  if (allFulfilledEmpty) {
+    redirect(baseHref); // baseHref は page を含まないため 1 ページ目へ戻る
+  }
+}
+
+async function PublishedTab({
+  page,
+  baseHref,
+}: {
+  page: number;
+  baseHref: string;
+}) {
   const [consultationsResult, advicesResult] = await Promise.allSettled([
     fetchPublishedConsultationsApi(page, PAGE_SIZE),
     fetchPublishedAdvicesApi(page, PAGE_SIZE),
   ]);
 
+  redirectIfPageOutOfRange(page, baseHref, [
+    consultationsResult,
+    advicesResult,
+  ]);
+
   return (
     <>
-      <PublishedConsultationList {...toPublishedListProps(consultationsResult, baseHref)} />
+      <PublishedConsultationList
+        {...toPublishedListProps(consultationsResult, baseHref)}
+      />
       <PublishedAdviceList {...toPublishedListProps(advicesResult, baseHref)} />
     </>
   );
 }
 
-async function HiddenTab({ page, baseHref }: { page: number; baseHref: string }) {
+async function HiddenTab({
+  page,
+  baseHref,
+}: {
+  page: number;
+  baseHref: string;
+}) {
   const [consultationsResult, advicesResult] = await Promise.allSettled([
     fetchHiddenConsultationsApi(page, PAGE_SIZE),
     fetchHiddenAdvicesApi(page, PAGE_SIZE),
+  ]);
+
+  redirectIfPageOutOfRange(page, baseHref, [
+    consultationsResult,
+    advicesResult,
   ]);
 
   const [consultationsProps, advicesProps] = await Promise.all([
@@ -175,15 +223,21 @@ export default async function AdminPage({ searchParams }: PageProps) {
     <div className="mx-auto w-full max-w-4xl space-y-6">
       <header>
         <h1 className="text-2xl font-bold text-gray-900">投稿チェック</h1>
-        <p className="mt-1 text-sm text-gray-600">{TAB_DESCRIPTIONS[activeTab]}</p>
+        <p className="mt-1 text-sm text-gray-600">
+          {TAB_DESCRIPTIONS[activeTab]}
+        </p>
       </header>
 
       <ModerationTabs activeTab={activeTab} />
 
       <div className="space-y-6">
         {activeTab === "pending" && <PendingTab />}
-        {activeTab === "published" && <PublishedTab page={page} baseHref={baseHref} />}
-        {activeTab === "hidden" && <HiddenTab page={page} baseHref={baseHref} />}
+        {activeTab === "published" && (
+          <PublishedTab page={page} baseHref={baseHref} />
+        )}
+        {activeTab === "hidden" && (
+          <HiddenTab page={page} baseHref={baseHref} />
+        )}
       </div>
     </div>
   );
