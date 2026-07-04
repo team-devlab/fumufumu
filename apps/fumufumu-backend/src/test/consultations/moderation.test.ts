@@ -123,6 +123,21 @@ describe("Admin Moderation API - hide/unhide", () => {
     expect(detailRes.status).toBe(404);
   });
 
+  it("hide: 投稿者本人にも効く(adviceのhideと挙動を揃えるため、著者例外は設けない)", async () => {
+    const consultation = await createApprovedConsultation("moderation-hide-blocks-author-consultation");
+
+    const hideRes = await hide("consultations", consultation.id, { reason: "著者にも非表示にする" });
+    expect(hideRes.status).toBe(200);
+
+    const detailReq = createApiRequest(`/api/consultations/${consultation.id}`, "GET", { cookie: author.cookie });
+    const detailRes = await app.fetch(detailReq, env);
+    expect(detailRes.status).toBe(404);
+
+    const advicesReq = createApiRequest(`/api/consultations/${consultation.id}/advices`, "GET", { cookie: author.cookie });
+    const advicesRes = await app.fetch(advicesReq, env);
+    expect(advicesRes.status).toBe(404);
+  });
+
   it("unhide: hideした相談をunhideすると復活する", async () => {
     const consultation = await createApprovedConsultation("moderation-unhide-consultation");
     const hideRes = await hide("consultations", consultation.id, { reason: "一時非表示" });

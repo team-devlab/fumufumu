@@ -209,10 +209,13 @@ export class ConsultationService {
 		includeHidden?: boolean,
 	): Promise<void> {
 		const contentCheck = await this.repository.findConsultationContentCheckByConsultationId(consultationId);
-		// includeHidden(admin限定・コントローラ層でrole検証済み)はhidden_atによる404のみバイパスする。draft/未承認は対象外
-		const isHiddenConsultation = consultation.draft || (consultation.hiddenAt !== null && !includeHidden);
+		// draftは著者本人のみ閲覧可能（自分の下書き編集のため）
+		const isDraftAndNotOwner = consultation.draft && consultation.authorId !== requestUserId;
+		// モデレーションによるhiddenは著者本人にも効かせる（advice hideと挙動を揃える）。
+		// includeHidden(admin限定・コントローラ層でrole検証済み)の場合のみバイパスする
+		const isHiddenByModeration = consultation.hiddenAt !== null && !includeHidden;
 		const isNotApproved = contentCheck !== undefined && contentCheck.status !== "approved";
-		if ((isHiddenConsultation && consultation.authorId !== requestUserId) || isNotApproved) {
+		if (isDraftAndNotOwner || isHiddenByModeration || isNotApproved) {
 			throw new NotFoundError(`相談が見つかりません: id=${consultationId}`);
 		}
 	}
