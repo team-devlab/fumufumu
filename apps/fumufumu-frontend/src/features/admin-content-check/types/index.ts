@@ -90,14 +90,10 @@ export interface ModerationActionResponse {
   hidden_at: string | null;
 }
 
-export interface ModerationHistoryEntry {
-  id: number;
-  action: "hide" | "unhide";
-  reason: string | null;
-  admin_user_id: number;
-  created_at: string;
-}
-
-export interface ModerationHistoryResponse {
-  history: ModerationHistoryEntry[];
+/**
+ * バッチ理由取得 (GET /:targetType/hide-reasons) のレスポンス。
+ * target_id (文字列キー) -> 現在の非表示理由 (理由なし/履歴なしは null)。
+ */
+export interface HideReasonsResponse {
+  reasons: Record<string, string | null>;
 }

@@ -1,14 +1,11 @@
 import "server-only";
 import { cookies } from "next/headers";
-import { apiClient } from "@/lib/api/client";
 import type {
   AdviceListResponse,
   ConsultationListResponse,
 } from "@/features/consultation/types";
-import type {
-  ModerationHistoryResponse,
-  ModerationTargetType,
-} from "../types";
+import { apiClient } from "@/lib/api/client";
+import type { HideReasonsResponse, ModerationTargetType } from "../types";
 
 /**
  * 公開中の相談を取得する (server-only)
@@ -89,43 +86,38 @@ export async function fetchHiddenAdvicesApi(
 }
 
 /**
- * 対象の hide/unhide 履歴を新しい順に取得する (server-only)
- */
-export async function fetchModerationHistoryApi(
-  targetType: ModerationTargetType,
-  id: number,
-): Promise<ModerationHistoryResponse> {
-  const cookieStore = await cookies();
-  return apiClient<ModerationHistoryResponse>(
-    `/api/admin/moderation/${targetType}/${id}/history`,
-    {
-      method: "GET",
-      headers: { Cookie: cookieStore.toString() },
-      cache: "no-store",
-    },
-  );
-}
-
-/**
- * 「非表示中」タブに現在の hide 理由を併記するため、対象IDごとに履歴を取得し
- * 直近の hide アクションの reason を引き当てる (server-only)
+ * 「非表示中」タブに現在の hide 理由を併記するため、対象IDぶんの最新hide理由を
+ * バッチ endpoint で1回にまとめて取得する (server-only)
  *
- * 【設計メモ】履歴の一覧表示UI自体はADR 011 §6.1によりPhase 2送りだが、
- * 「非表示中タブに現在の理由を併記する」要件(§5.1)は本PRのスコープのため、
- * historyの先頭(新しい順)から直近のhideアクションだけを抜き出して使う。
- * 対象が現在hidden状態である前提のため、履歴の先頭は通常hideアクションになる。
+ * 【設計メモ】
+ * - 対象ごとに /history を叩くとN+1(1ページ表示で最大件数ぶんのDB往復)になるため、
+ *   backendの GET /:targetType/hide-reasons(1クエリで解決)を使う。
+ * - 理由併記はADR 011 §5.1の補助情報。履歴一覧UI自体は§6.1でPhase 2送り。
+ * - 取得失敗時は例外を伝播させず空Mapに縮退する。理由が付かないだけで、非表示中リスト本体や
+ *   unhide操作は表示され続けるべきで、補助情報の失敗でタブ全体を落とさないため。
  */
 export async function fetchLatestHideReasonsApi(
   targetType: ModerationTargetType,
   ids: number[],
 ): Promise<Map<number, string | null>> {
-  const entries = await Promise.all(
-    ids.map(async (id) => {
-      const { history } = await fetchModerationHistoryApi(targetType, id);
-      const latestHide = history.find((entry) => entry.action === "hide");
-      return [id, latestHide?.reason ?? null] as const;
-    }),
-  );
+  if (ids.length === 0) {
+    return new Map();
+  }
 
-  return new Map(entries);
+  try {
+    const cookieStore = await cookies();
+    const { reasons } = await apiClient<HideReasonsResponse>(
+      `/api/admin/moderation/${targetType}/hide-reasons?ids=${ids.join(",")}`,
+      {
+        method: "GET",
+        headers: { Cookie: cookieStore.toString() },
+        cache: "no-store",
+      },
+    );
+
+    return new Map(ids.map((id) => [id, reasons[String(id)] ?? null]));
+  } catch {
+    // 補助情報のため、取得失敗はログに委ね空Mapで縮退する(併記が消えるだけで一覧は維持)
+    return new Map();
+  }
 }
