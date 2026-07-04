@@ -1,3 +1,4 @@
+import { fetchUserAdvicesApi } from "@/features/user/api/userAdviceApi";
 import { fetchCurrentUserApi } from "@/features/user/api/userApi";
 import { fetchUserConsultationsApi } from "@/features/user/api/userConsultationApi";
 import { UserContentTabs } from "@/features/user/components/UserContentTabs";
@@ -22,7 +23,10 @@ export default async function UserPage() {
     );
   }
 
-  const consultationResponse = await fetchUserConsultationsApi(user.id);
+  const [consultationResponse, adviceResponse] = await Promise.all([
+    fetchUserConsultationsApi(user.id),
+    fetchUserAdvicesApi(user.id),
+  ]);
 
   return (
     <div className="max-w-3xl mx-auto w-full">
@@ -32,7 +36,10 @@ export default async function UserPage() {
         <h2 id="user-content-heading" className="sr-only">
           ユーザー投稿一覧
         </h2>
-        <UserContentTabs consultations={consultationResponse.data} />
+        <UserContentTabs
+          consultations={consultationResponse.data}
+          advices={adviceResponse.data}
+        />
       </section>
     </div>
   );
