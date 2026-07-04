@@ -4,6 +4,8 @@ import { ConsultationRepository } from "@/repositories/consultation.repository";
 import { ConsultationService } from "@/services/consultation.service";
 import { ContentCheckRepository } from "@/repositories/content-check.repository";
 import { ConsultationContentCheckService } from "@/services/consultation-content-check.service";
+import { ModerationRepository } from "@/repositories/moderation.repository";
+import { ModerationService } from "@/services/moderation.service";
 import { UserRepository } from "@/repositories/user.repository";
 import { UserService } from "@/services/user.service";
 import { TagRepository } from "@/repositories/tag.repository";
@@ -42,6 +44,18 @@ export function createConsultationService(db: DbInstance): ConsultationService {
 export function createConsultationContentCheckService(db: DbInstance): ConsultationContentCheckService {
 	const repository = new ContentCheckRepository(db);
 	return new ConsultationContentCheckService(repository);
+}
+
+/**
+ * ModerationServiceのファクトリー関数
+ * DBインスタンスから依存関係を解決してServiceを生成する
+ *
+ * @param db - データベースインスタンス（リクエストごとに異なる）
+ * @returns 依存関係が解決されたModerationServiceインスタンス
+ */
+export function createModerationService(db: DbInstance): ModerationService {
+	const repository = new ModerationRepository(db);
+	return new ModerationService(repository);
 }
 
 /**
