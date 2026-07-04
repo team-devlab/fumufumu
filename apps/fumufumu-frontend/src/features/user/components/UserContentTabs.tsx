@@ -4,7 +4,7 @@ import Link from "next/link";
 import type React from "react";
 import { useState } from "react";
 import { ROUTES } from "@/config/routes";
-import type { Consultation } from "@/features/consultation/types";
+import type { Advice, Consultation } from "@/features/consultation/types";
 
 type TabId = "consultations" | "advices" | "drafts";
 
@@ -19,11 +19,60 @@ const TABS: Tab[] = [
   { id: "drafts", label: "下書き" },
 ];
 
-type Props = {
-  consultations: Consultation[];
+/**
+ * アドバイスタブの状態。取得失敗を「アドバイス0件」と区別するため、
+ * 成功(空を含む)と失敗を判別ユニオンで表す (admin モデレーション一覧と同じ status パターン)。
+ */
+export type AdviceTabState =
+  | { status: "success"; advices: Advice[] }
+  | { status: "error" };
+
+const AdviceTabContent: React.FC<{ state: AdviceTabState }> = ({ state }) => {
+  if (state.status === "error") {
+    return (
+      <p role="alert" className="text-gray-500 text-sm py-8 text-center">
+        アドバイスの取得に失敗しました
+      </p>
+    );
+  }
+
+  if (state.advices.length === 0) {
+    return (
+      <p className="text-gray-500 text-sm py-8 text-center">
+        まだアドバイスがありません
+      </p>
+    );
+  }
+
+  return (
+    <div className="space-y-3">
+      {state.advices.map((advice) => (
+        // アドバイス単独の詳細画面は無いため、所属相談(consultation_id)の詳細へ誘導する
+        <Link
+          key={advice.id}
+          href={ROUTES.CONSULTATION.DETAIL(advice.consultation_id)}
+          className="block"
+        >
+          <div className="bg-white rounded-xl border border-gray-100 shadow-sm p-5 hover:shadow-md transition-shadow duration-200">
+            <p className="text-sm text-gray-700 leading-relaxed line-clamp-3 whitespace-pre-wrap">
+              {advice.body}
+            </p>
+          </div>
+        </Link>
+      ))}
+    </div>
+  );
 };
 
-export const UserContentTabs: React.FC<Props> = ({ consultations }) => {
+type Props = {
+  consultations: Consultation[];
+  adviceState: AdviceTabState;
+};
+
+export const UserContentTabs: React.FC<Props> = ({
+  consultations,
+  adviceState,
+}) => {
   const [activeTab, setActiveTab] = useState<TabId>("consultations");
 
   return (
@@ -74,13 +123,7 @@ export const UserContentTabs: React.FC<Props> = ({ consultations }) => {
         </div>
       )}
 
-      {activeTab === "advices" && (
-        <div className="py-8 text-center">
-          <p className="text-gray-500 text-sm">
-            アドバイス一覧は現在準備中です
-          </p>
-        </div>
-      )}
+      {activeTab === "advices" && <AdviceTabContent state={adviceState} />}
 
       {activeTab === "drafts" && (
         <div className="py-8 text-center">
