@@ -103,6 +103,14 @@ describe("Admin Moderation API - hide/unhide", () => {
     return app.fetch(req, env);
   };
 
+  const getHideReasons = async (targetType: "consultations" | "advices", ids: number[], cookie = admin.cookie) => {
+    const req = createApiRequest(`/api/admin/moderation/${targetType}/hide-reasons`, "GET", {
+      cookie,
+      queryParams: { ids: ids.join(",") },
+    });
+    return app.fetch(req, env);
+  };
+
   it("hide: 相談をhideすると公開一覧・詳細から消える", async () => {
     const consultation = await createApprovedConsultation("moderation-hide-consultation");
 
@@ -394,5 +402,81 @@ describe("Admin Moderation API - hide/unhide", () => {
     const adminAdvicesData = await adminAdvicesRes.json() as { data: Array<{ id: number }> };
     expect(adminAdvicesData.data.some((item) => item.id === hiddenAdvice.id)).toBe(true);
     expect(adminAdvicesData.data.some((item) => item.id === publishedAdvice.id)).toBe(false);
+  });
+
+  it("hide-reasons: 複数対象の現在の非表示理由を1回でまとめて取得できる", async () => {
+    const first = await createApprovedConsultation("moderation-hide-reasons-first");
+    const second = await createApprovedConsultation("moderation-hide-reasons-second");
+    await hide("consultations", first.id, { reason: "1件目の理由" });
+    await hide("consultations", second.id, { reason: "2件目の理由" });
+
+    const res = await getHideReasons("consultations", [first.id, second.id]);
+    expect(res.status).toBe(200);
+    const data = await res.json() as { reasons: Record<string, string | null> };
+    expect(data.reasons[String(first.id)]).toBe("1件目の理由");
+    expect(data.reasons[String(second.id)]).toBe("2件目の理由");
+  });
+
+  it("hide-reasons: 理由なしhide・hide履歴なしの対象はnullを返す", async () => {
+    const noReason = await createApprovedConsultation("moderation-hide-reasons-no-reason");
+    const neverHidden = await createApprovedConsultation("moderation-hide-reasons-never-hidden");
+    await hide("consultations", noReason.id, {}); // reason未指定
+
+    const res = await getHideReasons("consultations", [noReason.id, neverHidden.id]);
+    expect(res.status).toBe(200);
+    const data = await res.json() as { reasons: Record<string, string | null> };
+    expect(data.reasons[String(noReason.id)]).toBeNull();
+    expect(data.reasons[String(neverHidden.id)]).toBeNull();
+  });
+
+  it("hide-reasons: unhide後に再hideすると最新hideの理由を返す", async () => {
+    const target = await createApprovedConsultation("moderation-hide-reasons-rehide");
+    await hide("consultations", target.id, { reason: "古い理由" });
+    await unhide("consultations", target.id);
+    await hide("consultations", target.id, { reason: "新しい理由" });
+
+    const res = await getHideReasons("consultations", [target.id]);
+    const data = await res.json() as { reasons: Record<string, string | null> };
+    expect(data.reasons[String(target.id)]).toBe("新しい理由");
+  });
+
+  it("hide-reasons: 非adminは404", async () => {
+    const target = await createApprovedConsultation("moderation-hide-reasons-forbidden");
+    await hide("consultations", target.id, { reason: "理由" });
+
+    const res = await getHideReasons("consultations", [target.id], author.cookie);
+    expect(res.status).toBe(404);
+  });
+
+  it("hide-reasons: idsが不正(非整数)なら400", async () => {
+    const req = createApiRequest("/api/admin/moderation/consultations/hide-reasons", "GET", {
+      cookie: admin.cookie,
+      queryParams: { ids: "abc" },
+    });
+    const res = await app.fetch(req, env);
+    expect(res.status).toBe(400);
+    assertValidationError(await res.json());
+  });
+
+  it("includeHidden(相談横断advices): 非adminが指定してもhidden adviceは漏れない(否定パス)", async () => {
+    const consultation = await createApprovedConsultation("moderation-global-advices-nonadmin-leak");
+    const hiddenAdvice = await createApprovedAdvice(consultation.id, "非admin漏洩検証用の非表示アドバイス本文です。");
+    const hideRes = await hide("advices", hiddenAdvice.id, { reason: "漏洩検証" });
+    expect(hideRes.status).toBe(200);
+
+    // 非adminがincludeHidden/hiddenOnlyを付けても、roleゲートで無視されhidden adviceは返らない
+    const includeHiddenRes = await app.fetch(
+      createApiRequest("/api/advices", "GET", { cookie: viewer.cookie, queryParams: { includeHidden: true } }),
+      env,
+    );
+    const includeHiddenData = await includeHiddenRes.json() as { data: Array<{ id: number }> };
+    expect(includeHiddenData.data.some((item) => item.id === hiddenAdvice.id)).toBe(false);
+
+    const hiddenOnlyRes = await app.fetch(
+      createApiRequest("/api/advices", "GET", { cookie: viewer.cookie, queryParams: { hiddenOnly: true } }),
+      env,
+    );
+    const hiddenOnlyData = await hiddenOnlyRes.json() as { data: Array<{ id: number }> };
+    expect(hiddenOnlyData.data.some((item) => item.id === hiddenAdvice.id)).toBe(false);
   });
 });
