@@ -11,6 +11,7 @@ import * as consultationsSchema from '@/db/schema/consultations';
 import * as advicesSchema from '@/db/schema/advices';
 import * as tagsSchema from '@/db/schema/tags';
 import * as contentChecksSchema from '@/db/schema/content-checks';
+import * as moderationActionsSchema from '@/db/schema/moderation-actions';
 
 import { authRouter } from '@/routes/auth.routes';
 import { consultationsRoute } from '@/routes/consultations.controller';
@@ -32,6 +33,7 @@ const schema = {
   ...advicesSchema,
   ...tagsSchema,
   ...contentChecksSchema,
+  ...moderationActionsSchema,
 }
 
 export type DbInstance = DrizzleD1Database<typeof schema>;
