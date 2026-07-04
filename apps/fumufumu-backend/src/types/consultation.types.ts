@@ -14,6 +14,8 @@ export type ConsultationFilters = {
 	solved?: boolean;
 	// サービス層でのみ使う内部フラグ（本人の一覧取得時のみ未承認を含める）
 	includeUnapprovedForOwn?: boolean;
+	// admin権限時のみ有効（コントローラ層でrole検証済みの値を渡す想定）。hidden_atが設定された投稿も含める
+	includeHidden?: boolean;
 };
 
 export type ConsultationListVisibilityScope = "public" | "own";
