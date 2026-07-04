@@ -39,10 +39,13 @@ describe("UserContentTabs アドバイスタブ", () => {
     render(
       <UserContentTabs
         consultations={[sampleConsultation()]}
-        advices={[
-          sampleAdvice({ id: 1, consultation_id: 42, body: "アドバイスA" }),
-          sampleAdvice({ id: 2, consultation_id: 7, body: "アドバイスB" }),
-        ]}
+        adviceState={{
+          status: "success",
+          advices: [
+            sampleAdvice({ id: 1, consultation_id: 42, body: "アドバイスA" }),
+            sampleAdvice({ id: 2, consultation_id: 7, body: "アドバイスB" }),
+          ],
+        }}
       />,
     );
 
@@ -56,7 +59,10 @@ describe("UserContentTabs アドバイスタブ", () => {
 
   it("アドバイスが空だと空状態メッセージが出る", () => {
     render(
-      <UserContentTabs consultations={[sampleConsultation()]} advices={[]} />,
+      <UserContentTabs
+        consultations={[sampleConsultation()]}
+        adviceState={{ status: "success", advices: [] }}
+      />,
     );
 
     clickAdviceTab();
@@ -64,11 +70,33 @@ describe("UserContentTabs アドバイスタブ", () => {
     expect(screen.getByText("まだアドバイスがありません")).toBeInTheDocument();
   });
 
+  it("アドバイス取得失敗時はエラー表示になり、空状態とは区別される", () => {
+    render(
+      <UserContentTabs
+        consultations={[sampleConsultation()]}
+        adviceState={{ status: "error" }}
+      />,
+    );
+
+    clickAdviceTab();
+
+    expect(screen.getByRole("alert")).toHaveTextContent(
+      "アドバイスの取得に失敗しました",
+    );
+    // 障害時に「0件」と誤読させないため、空状態メッセージは出さない
+    expect(
+      screen.queryByText("まだアドバイスがありません"),
+    ).not.toBeInTheDocument();
+  });
+
   it("初期表示は相談タブで、アドバイス本文は出ない", () => {
     render(
       <UserContentTabs
         consultations={[sampleConsultation({ title: "相談タイトル" })]}
-        advices={[sampleAdvice({ body: "アドバイス本文" })]}
+        adviceState={{
+          status: "success",
+          advices: [sampleAdvice({ body: "アドバイス本文" })],
+        }}
       />,
     );
 
@@ -77,7 +105,12 @@ describe("UserContentTabs アドバイスタブ", () => {
   });
 
   it("相談・アドバイスが両方空でもタブ切替で各空状態を出し分ける", () => {
-    render(<UserContentTabs consultations={[]} advices={[]} />);
+    render(
+      <UserContentTabs
+        consultations={[]}
+        adviceState={{ status: "success", advices: [] }}
+      />,
+    );
 
     expect(screen.getByText("まだ相談がありません")).toBeInTheDocument();
 
