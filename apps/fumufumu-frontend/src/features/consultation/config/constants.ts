@@ -31,6 +31,9 @@ export const CONSULTATION_LABELS = {
 export const STORAGE_KEYS = {
   // 相談投稿フォームの一時保存用 (SessionStorage)
   CONSULTATION_FORM: "consultation-form-storage",
+  // 相談編集フォームの一時保存用 (SessionStorage)
+  // 作成用(CONSULTATION_FORM)とはキーを分け、作成中の下書きと混線させない
+  CONSULTATION_EDIT_FORM: "consultation-edit-form-storage",
   // アドバイス投稿フォームの一時保存用 (SessionStorage)
   ADVICE_FORM: "advice-form-storage",
 } as const;
