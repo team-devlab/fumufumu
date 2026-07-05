@@ -82,8 +82,13 @@ export const useConsultationEdit = (
   const { setTitle, setBody, setTags, hydrateForConsultation, reset } =
     useConsultationEditActions();
 
-  // rehydration 完了後、別の相談を開いた時だけサーバ値で seed する
+  const [isProcessing, setIsProcessing] = useState(false);
+
+  // rehydration 完了後、別の相談を開いた時だけサーバ値で seed する。
+  // 送信中(isProcessing)は seed しない: 保存成功時の reset() 直後、遷移が完了するまでの間に
+  // 古い prop で再 seed され、編集前の値に戻ってしまうのを防ぐため。
   useSeededDraftEdit({
+    enabled: !isProcessing,
     hasHydrated,
     editingId,
     targetId: consultation.id,
@@ -98,8 +103,6 @@ export const useConsultationEdit = (
 
   // このストアが対象の相談を保持している（seed 済み）か。フォーム描画のゲートに使う
   const isReady = hasHydrated && editingId === consultation.id;
-
-  const [isProcessing, setIsProcessing] = useState(false);
 
   const selectedTags = reconcileSelectedTagsWithAvailableTags(
     tags,

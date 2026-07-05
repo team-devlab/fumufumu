@@ -12,17 +12,23 @@
  * seed する。seed（サーバ値の投入）は冪等なので、Strict Mode の二重 render でも同じ結果に
  * なり安全。seed 後は editingId === targetId となりガードで再実行されない。
  *
+ * enabled=false の間は seed しない。保存/公開の成功時に reset() すると editingId が一旦 null に
+ * なるが、遷移完了までコンポーネントはマウントされたままのため、その隙に古い prop で再 seed
+ * してしまう。送信中は enabled=false にして再 seed を止め、reset() を素直に効かせる
+ * (再オープン時に最新のサーバ値で seed される)。
+ *
  * 相談編集・アドバイス編集の双方から利用する想定。
  */
 export const useSeededDraftEdit = (params: {
+  enabled?: boolean;
   hasHydrated: boolean;
   editingId: number | null;
   targetId: number;
   seed: () => void;
 }): void => {
-  const { hasHydrated, editingId, targetId, seed } = params;
+  const { enabled = true, hasHydrated, editingId, targetId, seed } = params;
 
-  if (hasHydrated && editingId !== targetId) {
+  if (enabled && hasHydrated && editingId !== targetId) {
     seed();
   }
 };

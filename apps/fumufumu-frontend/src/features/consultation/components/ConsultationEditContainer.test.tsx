@@ -129,6 +129,11 @@ describe("ConsultationEditContainer", () => {
     expect(pushMock).toHaveBeenCalledWith(ROUTES.USER);
     // Router Cache 無効化(遷移先プロフィール一覧を最新化)まで担保する
     expect(refreshMock).toHaveBeenCalled();
+    // reset() 後に古い prop で再 seed されず、ストアがクリアされたままであること
+    // (再 seed されると編集前の値が復活し、保存内容が画面に反映されなくなる回帰の防止)
+    await waitFor(() => {
+      expect(useConsultationEditFormStore.getState().editingId).toBeNull();
+    });
   });
 
   it("確認画面へは編集確認ルートへ遷移する", async () => {
