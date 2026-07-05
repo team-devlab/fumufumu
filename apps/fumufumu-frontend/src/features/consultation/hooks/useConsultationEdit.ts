@@ -161,7 +161,10 @@ export const useConsultationEdit = (
 
       reset();
       toast.success("下書きを保存しました");
+      // 遷移先プロフィールの下書き一覧は Router Cache に古い RSC が残るため、
+      // refresh でキャッシュを無効化して更新を反映させる(無いと一覧が古いまま)。
       router.push(ROUTES.USER);
+      router.refresh();
     } catch (error) {
       console.error(error);
       toast.error("保存に失敗しました。時間をおいて再度お試しください。");

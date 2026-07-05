@@ -67,7 +67,10 @@ export const useConsultationEditConfirm = (consultationId: number) => {
           ? "下書きを保存しました"
           : "公開しました。チェック完了後に表示されます。",
       );
+      // 遷移先プロフィールの一覧は Router Cache に古い RSC が残るため、
+      // refresh でキャッシュを無効化して更新を反映させる(無いと一覧が古いまま)。
       router.push(ROUTES.USER);
+      router.refresh();
     } catch (error) {
       console.error(error);
       toast.error("エラーが発生しました。もう一度お試しください。");

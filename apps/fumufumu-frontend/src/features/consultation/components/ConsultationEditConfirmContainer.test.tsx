@@ -16,9 +16,10 @@ vi.mock("react-hot-toast", () => ({
   default: { success: vi.fn(), error: vi.fn() },
 }));
 
-const { pushMock, replaceMock } = vi.hoisted(() => ({
+const { pushMock, replaceMock, refreshMock } = vi.hoisted(() => ({
   pushMock: vi.fn(),
   replaceMock: vi.fn(),
+  refreshMock: vi.fn(),
 }));
 vi.mock("next/navigation", () => ({
   useRouter: () => ({
@@ -26,7 +27,7 @@ vi.mock("next/navigation", () => ({
     replace: replaceMock,
     back: vi.fn(),
     forward: vi.fn(),
-    refresh: vi.fn(),
+    refresh: refreshMock,
     prefetch: vi.fn(),
   }),
   usePathname: () => "/",
@@ -95,6 +96,8 @@ describe("ConsultationEditConfirmContainer", () => {
     });
     // ADR 007 / #155: 公開直後は pending のため一覧ではなくプロフィールへ
     expect(pushMock).toHaveBeenCalledWith(ROUTES.USER);
+    // Router Cache 無効化(遷移先プロフィール一覧を最新化)まで担保する
+    expect(refreshMock).toHaveBeenCalled();
   });
 
   it("ストアが対象の相談を保持していない時は公開せず編集画面へ戻す(誤爆防止)", async () => {

@@ -18,14 +18,17 @@ vi.mock("react-hot-toast", () => ({
 
 // vitest.setup.ts の useRouter は呼び出しごとに新しい fn を返し push を観測できないため、
 // このファイル限定で安定参照の push を掴めるよう再モックする。
-const { pushMock } = vi.hoisted(() => ({ pushMock: vi.fn() }));
+const { pushMock, refreshMock } = vi.hoisted(() => ({
+  pushMock: vi.fn(),
+  refreshMock: vi.fn(),
+}));
 vi.mock("next/navigation", () => ({
   useRouter: () => ({
     push: pushMock,
     replace: vi.fn(),
     back: vi.fn(),
     forward: vi.fn(),
-    refresh: vi.fn(),
+    refresh: refreshMock,
     prefetch: vi.fn(),
   }),
   usePathname: () => "/",
@@ -124,6 +127,8 @@ describe("ConsultationEditContainer", () => {
       });
     });
     expect(pushMock).toHaveBeenCalledWith(ROUTES.USER);
+    // Router Cache 無効化(遷移先プロフィール一覧を最新化)まで担保する
+    expect(refreshMock).toHaveBeenCalled();
   });
 
   it("確認画面へは編集確認ルートへ遷移する", async () => {
