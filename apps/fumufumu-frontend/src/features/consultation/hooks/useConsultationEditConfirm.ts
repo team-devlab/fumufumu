@@ -60,9 +60,14 @@ export const useConsultationEditConfirm = (consultationId: number) => {
       // 更新成功時は編集ストアを破棄する(次に別の下書きを開いた時に再 seed させる)
       reset();
 
-      toast.success(draft ? "下書きを保存しました" : "相談を公開しました");
-      // 下書き保存はプロフィール(下書き一覧)へ、公開は相談一覧へ
-      router.push(draft ? ROUTES.USER : ROUTES.CONSULTATION.LIST);
+      // ADR 007: 公開直後は content_check が pending で一般画面(一覧)に出ないため、
+      // 著者本人のプロフィールへ遷移し「審査中」であることを伝える。作成側 #155 と同方針。
+      toast.success(
+        draft
+          ? "下書きを保存しました"
+          : "公開しました。チェック完了後に表示されます。",
+      );
+      router.push(ROUTES.USER);
     } catch (error) {
       console.error(error);
       toast.error("エラーが発生しました。もう一度お試しください。");

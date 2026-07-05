@@ -3,6 +3,7 @@ import userEvent from "@testing-library/user-event";
 import { beforeEach, describe, expect, it, vi } from "vitest";
 import { ROUTES } from "@/config/routes";
 import { updateConsultation } from "@/features/consultation/api/consultationClientApi";
+import { useConsultationEditFormStore } from "@/features/consultation/stores/useConsultationEditFormStore";
 import type { ConsultationDetail, Tag } from "@/features/consultation/types";
 import { ConsultationEditConfirmContainer } from "./ConsultationEditConfirmContainer";
 import { ConsultationEditContainer } from "./ConsultationEditContainer";
@@ -65,11 +66,14 @@ const seedStore = (id: number) => {
 
 beforeEach(() => {
   vi.clearAllMocks();
+  // 編集ストアは sessionStorage 永続かつ in-memory singleton。sessionStorage.clear だけでは
+  // メモリ上の editingId 等が残るため、ストア本体も明示的に初期化してテスト間の持ち越しを防ぐ。
   sessionStorage.clear();
+  useConsultationEditFormStore.getState().reset();
 });
 
 describe("ConsultationEditConfirmContainer", () => {
-  it("公開すると updateConsultation を draft:false とタグで呼び、相談一覧へ遷移する", async () => {
+  it("公開すると updateConsultation を draft:false とタグで呼び、プロフィールへ遷移する(審査中導線)", async () => {
     const user = userEvent.setup();
     vi.mocked(updateConsultation).mockResolvedValue({
       id: 31,
@@ -89,7 +93,8 @@ describe("ConsultationEditConfirmContainer", () => {
         tagIds: [2],
       });
     });
-    expect(pushMock).toHaveBeenCalledWith(ROUTES.CONSULTATION.LIST);
+    // ADR 007 / #155: 公開直後は pending のため一覧ではなくプロフィールへ
+    expect(pushMock).toHaveBeenCalledWith(ROUTES.USER);
   });
 
   it("ストアが対象の相談を保持していない時は公開せず編集画面へ戻す(誤爆防止)", async () => {
