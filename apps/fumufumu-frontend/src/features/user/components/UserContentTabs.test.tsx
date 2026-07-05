@@ -141,7 +141,7 @@ const clickDraftsTab = () => {
 };
 
 describe("UserContentTabs 下書きタブ", () => {
-  it("相談とアドバイスの下書きを更新日時の新しい順に混在表示し、種別バッジとリンクを付ける", () => {
+  it("相談とアドバイスの下書きを更新日時の新しい順に混在表示し、種別バッジを付ける(再開ルート未実装のためリンクはしない)", () => {
     render(
       <UserContentTabs
         consultations={[sampleConsultation()]}
@@ -184,19 +184,19 @@ describe("UserContentTabs 下書きタブ", () => {
         Node.DOCUMENT_POSITION_FOLLOWING,
     ).toBeTruthy();
 
-    // リンク先(アドバイス単独の詳細は無いため所属相談へ誘導)
-    const consultationCard = consultationText.closest("a");
-    const adviceCard = adviceText.closest("a");
-    expect(consultationCard).toHaveAttribute("href", "/consultations/5");
-    expect(adviceCard).toHaveAttribute("href", "/consultations/99");
-
     // 種別バッジ(タブ名と文字列が重複するため各カード内にスコープして検証)
+    const consultationCard = consultationText.closest("div");
+    const adviceCard = adviceText.closest("div");
     expect(
       within(consultationCard as HTMLElement).getByText("相談"),
     ).toBeInTheDocument();
     expect(
       within(adviceCard as HTMLElement).getByText("アドバイス"),
     ).toBeInTheDocument();
+
+    // 再開ルートが未実装のため、下書きカードはまだリンクにしない
+    expect(consultationText.closest("a")).toBeNull();
+    expect(adviceText.closest("a")).toBeNull();
   });
 
   it("相談の下書き取得だけ失敗すると、通知を出しつつアドバイスの下書きは表示する", () => {

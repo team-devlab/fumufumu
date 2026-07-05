@@ -46,18 +46,16 @@ export type DraftTabState = {
 
 /**
  * 相談とアドバイスの下書きを1リストに混在させるための判別ユニオン。
- * 種別ごとに表示内容とリンク先が異なるため kind で分岐する。
+ * 種別ごとに表示内容が異なるため kind で分岐する。
  */
 type MergedDraft =
   | { kind: "consultation"; data: Consultation }
   | { kind: "advice"; data: Advice };
 
+// 下書きの「再開(編集/公開)」ルートは未実装のため、現状はあえてリンクしない。
+// クリックしても再開できず、特にアドバイス下書きは着地先(相談詳細)に自分の下書きが
+// 表示されず「消えた」ように見えて誤解を招くため、導線が用意できるまで表示専用にする。
 const DraftCard: React.FC<{ item: MergedDraft }> = ({ item }) => {
-  // アドバイス単独の詳細画面は無いため、いずれも所属相談の詳細へ誘導する
-  const href =
-    item.kind === "consultation"
-      ? ROUTES.CONSULTATION.DETAIL(item.data.id)
-      : ROUTES.CONSULTATION.DETAIL(item.data.consultation_id);
   const label = item.kind === "consultation" ? "相談" : "アドバイス";
   const text = item.kind === "consultation" ? item.data.title : item.data.body;
   const badgeClass =
@@ -66,18 +64,16 @@ const DraftCard: React.FC<{ item: MergedDraft }> = ({ item }) => {
       : "bg-amber-50 text-amber-700";
 
   return (
-    <Link href={href} className="block">
-      <div className="bg-white rounded-xl border border-gray-100 shadow-sm p-5 hover:shadow-md transition-shadow duration-200">
-        <span
-          className={`inline-block rounded-full px-2.5 py-0.5 text-xs font-medium ${badgeClass}`}
-        >
-          {label}
-        </span>
-        <p className="mt-2 text-sm text-gray-700 leading-relaxed line-clamp-3 whitespace-pre-wrap">
-          {text}
-        </p>
-      </div>
-    </Link>
+    <div className="bg-white rounded-xl border border-gray-100 shadow-sm p-5">
+      <span
+        className={`inline-block rounded-full px-2.5 py-0.5 text-xs font-medium ${badgeClass}`}
+      >
+        {label}
+      </span>
+      <p className="mt-2 text-sm text-gray-700 leading-relaxed line-clamp-3 whitespace-pre-wrap">
+        {text}
+      </p>
+    </div>
   );
 };
 
