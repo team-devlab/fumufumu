@@ -198,6 +198,12 @@ export const consultationIdParamSchema = z.object({
   id: z.coerce.number().int().positive(),
 });
 
+// アドバイス単体を id で特定するルート(下書き更新など)のパラメータ。
+// 相談横断でアドバイスを一意に指すため consultationId ではなく adviceId で引き当てる。
+export const adviceIdParamSchema = z.object({
+  id: z.coerce.number().int().positive(),
+});
+
 export type ListConsultationsQuery = z.infer<typeof listConsultationsQuerySchema>;
 export type GetConsultationQuery = z.infer<typeof getConsultationQuerySchema>;
 export type ListAdvicesQuery = z.infer<typeof listAdvicesQuerySchema>;
