@@ -36,6 +36,9 @@ export const STORAGE_KEYS = {
   CONSULTATION_EDIT_FORM: "consultation-edit-form-storage",
   // アドバイス投稿フォームの一時保存用 (SessionStorage)
   ADVICE_FORM: "advice-form-storage",
+  // アドバイス編集フォームの一時保存用 (SessionStorage)
+  // 作成用(ADVICE_FORM)とはキーを分け、作成中の下書きと混線させない
+  ADVICE_EDIT_FORM: "advice-edit-form-storage",
 } as const;
 
 export const CONSULTATION_PAGINATION = {
