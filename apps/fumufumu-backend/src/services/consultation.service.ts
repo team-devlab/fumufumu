@@ -71,6 +71,8 @@ export class ConsultationService {
             //    あえて同一のレスポンス型定義を使用し、一覧時はここを空にする運用としている。
             //    詳細取得APIで呼び出す場合に限り、上位メソッドで正しいデータに上書きされる。
            	response.advices = [];
+           	// tags も advices と同様、詳細取得時のみ上位メソッド(getConsultation)で実データに上書きする。
+           	response.tags = [];
         }
 
         return response;
@@ -230,7 +232,7 @@ export class ConsultationService {
 		const consultation = await this.repository.findFirstById(id);
 		await this.assertConsultationReadableOrThrow(id, consultation, requestUserId);
 
-		const [adviceList, adviceTotalCount] = await Promise.all([
+		const [adviceList, adviceTotalCount, tagList] = await Promise.all([
 			this.repository.findAdvicesByConsultationId(
 				id,
 				{ page, limit },
@@ -238,6 +240,7 @@ export class ConsultationService {
 				"asc",
 			),
 			this.repository.countAdvicesByConsultationId(id),
+			this.repository.findTagsByConsultationId(id),
 		]);
 
 		const baseResponse = this.toConsultationResponse(consultation, true);
@@ -246,6 +249,7 @@ export class ConsultationService {
 			...baseResponse,
 			advices: adviceList.map(advice => this.toAdviceResponse(advice)),
 			advice_pagination: this.calculatePagination({ page, limit }, adviceTotalCount),
+			tags: tagList.map((tag) => ({ id: tag.id, name: tag.name })),
 		};
 	}
 
