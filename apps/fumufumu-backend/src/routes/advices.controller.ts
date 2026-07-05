@@ -35,6 +35,7 @@ export const listAllAdvicesHandlers = factory.createHandlers(
 
 		const filters: AdviceFilters = {
 			userId: validatedQuery.userId,
+			draft: validatedQuery.draft,
 			includeHidden,
 			hiddenOnly,
 		};
@@ -44,12 +45,15 @@ export const listAllAdvicesHandlers = factory.createHandlers(
 			limit: validatedQuery.limit,
 		};
 
-		const result = await service.listAllAdvices(filters, pagination);
+		// 下書きは本人限定の非公開データのため、認証ユーザー(appUserId)を渡して
+		// Service層で userId を本人へ強制させる（他人の下書きを取得不可にする）
+		const result = await service.listAllAdvices(filters, pagination, appUserId);
 
 		// NOTE: キャッシュ制御 (D1課金対策 & セキュリティ)
-		// includeHidden/hiddenOnly(admin限定)、userIdフィルタ(個人に紐づく一覧)は
-		// 共有キャッシュに乗せると非表示投稿や個人の一覧が他ユーザーに漏れるため禁止する。
-		if (!filters.includeHidden && !filters.hiddenOnly && filters.userId === undefined) {
+		// includeHidden/hiddenOnly(admin限定)、userIdフィルタ(個人に紐づく一覧)、
+		// draft(本人限定の非公開データ)は共有キャッシュに乗せると非表示投稿や個人の
+		// 一覧が他ユーザーに漏れるため禁止する。
+		if (!filters.includeHidden && !filters.hiddenOnly && !filters.draft && filters.userId === undefined) {
 			c.header("Cache-Control", "public, max-age=60");
 		} else {
 			c.header("Cache-Control", "no-store, max-age=0");
