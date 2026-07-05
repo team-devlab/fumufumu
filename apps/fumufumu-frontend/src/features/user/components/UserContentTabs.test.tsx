@@ -135,3 +135,162 @@ describe("UserContentTabs アドバイスタブ", () => {
     ).not.toBeInTheDocument();
   });
 });
+
+const clickDraftsTab = () => {
+  fireEvent.click(screen.getByRole("button", { name: "下書き" }));
+};
+
+describe("UserContentTabs 下書きタブ", () => {
+  it("相談とアドバイスの下書きを更新日時の新しい順に混在表示し、種別バッジとリンクを付ける", () => {
+    render(
+      <UserContentTabs
+        consultations={[sampleConsultation()]}
+        adviceState={{ status: "success", advices: [] }}
+        draftState={{
+          consultations: {
+            status: "success",
+            items: [
+              sampleConsultation({
+                id: 5,
+                title: "相談下書きA",
+                draft: true,
+                updated_at: "2026-02-01T10:00:00Z",
+              }),
+            ],
+          },
+          advices: {
+            status: "success",
+            items: [
+              sampleAdvice({
+                id: 8,
+                consultation_id: 99,
+                body: "アドバイス下書きB",
+                draft: true,
+                updated_at: "2026-03-01T10:00:00Z",
+              }),
+            ],
+          },
+        }}
+      />,
+    );
+
+    clickDraftsTab();
+
+    // 更新日時の新しい順: アドバイス下書きB(3月) → 相談下書きA(2月)
+    const consultationText = screen.getByText("相談下書きA");
+    const adviceText = screen.getByText("アドバイス下書きB");
+    expect(
+      adviceText.compareDocumentPosition(consultationText) &
+        Node.DOCUMENT_POSITION_FOLLOWING,
+    ).toBeTruthy();
+
+    // リンク先(アドバイス単独の詳細は無いため所属相談へ誘導)
+    const consultationCard = consultationText.closest("a");
+    const adviceCard = adviceText.closest("a");
+    expect(consultationCard).toHaveAttribute("href", "/consultations/5");
+    expect(adviceCard).toHaveAttribute("href", "/consultations/99");
+
+    // 種別バッジ(タブ名と文字列が重複するため各カード内にスコープして検証)
+    expect(
+      within(consultationCard as HTMLElement).getByText("相談"),
+    ).toBeInTheDocument();
+    expect(
+      within(adviceCard as HTMLElement).getByText("アドバイス"),
+    ).toBeInTheDocument();
+  });
+
+  it("相談の下書き取得だけ失敗すると、通知を出しつつアドバイスの下書きは表示する", () => {
+    render(
+      <UserContentTabs
+        consultations={[sampleConsultation()]}
+        adviceState={{ status: "success", advices: [] }}
+        draftState={{
+          consultations: { status: "error" },
+          advices: {
+            status: "success",
+            items: [
+              sampleAdvice({
+                id: 8,
+                body: "生存アドバイス下書き",
+                draft: true,
+              }),
+            ],
+          },
+        }}
+      />,
+    );
+
+    clickDraftsTab();
+
+    expect(screen.getByRole("alert")).toHaveTextContent(
+      "相談の下書きの取得に失敗しました",
+    );
+    expect(screen.getByText("生存アドバイス下書き")).toBeInTheDocument();
+    // 片方成功しているため全体エラーには倒さない
+    expect(
+      screen.queryByText("下書きはまだありません"),
+    ).not.toBeInTheDocument();
+  });
+
+  it("アドバイスの下書き取得だけ失敗すると、通知を出しつつ相談の下書きは表示する", () => {
+    render(
+      <UserContentTabs
+        consultations={[sampleConsultation()]}
+        adviceState={{ status: "success", advices: [] }}
+        draftState={{
+          consultations: {
+            status: "success",
+            items: [
+              sampleConsultation({
+                id: 5,
+                title: "生存相談下書き",
+                draft: true,
+              }),
+            ],
+          },
+          advices: { status: "error" },
+        }}
+      />,
+    );
+
+    clickDraftsTab();
+
+    expect(screen.getByRole("alert")).toHaveTextContent(
+      "アドバイスの下書きの取得に失敗しました",
+    );
+    expect(screen.getByText("生存相談下書き")).toBeInTheDocument();
+  });
+
+  it("相談・アドバイスの下書き取得が両方失敗するとタブ全体をエラー表示にする", () => {
+    render(
+      <UserContentTabs
+        consultations={[sampleConsultation()]}
+        adviceState={{ status: "success", advices: [] }}
+        draftState={{
+          consultations: { status: "error" },
+          advices: { status: "error" },
+        }}
+      />,
+    );
+
+    clickDraftsTab();
+
+    expect(screen.getByRole("alert")).toHaveTextContent(
+      "下書きの取得に失敗しました",
+    );
+  });
+
+  it("下書きが両方空だと空状態メッセージを出す", () => {
+    render(
+      <UserContentTabs
+        consultations={[sampleConsultation()]}
+        adviceState={{ status: "success", advices: [] }}
+        draftState={emptyDraftState}
+      />,
+    );
+
+    clickDraftsTab();
+
+    expect(screen.getByText("下書きはまだありません")).toBeInTheDocument();
+  });
+});
