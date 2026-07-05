@@ -79,6 +79,28 @@ export interface CreateConsultationParams {
   tagIds?: number[];
 }
 
+/**
+ * 相談更新(PUT /api/consultations/:id)のリクエスト。
+ * tagIds の扱いに注意: 省略(undefined)で既存タグを保持、配列指定で総入れ替え(空配列は全削除)。
+ * 公開(draft:false)にはタグが1件以上必要。
+ */
+export interface UpdateConsultationParams {
+  title: string;
+  body: string;
+  draft: boolean;
+  tagIds?: number[];
+}
+
+/**
+ * 相談の作成/更新後に返る保存結果(全文は含まない)。
+ * src: apps/fumufumu-backend/src/types/consultation.response.ts (ConsultationSavedResponse)
+ */
+export interface ConsultationSavedResponse {
+  id: number;
+  draft: boolean;
+  updated_at: string;
+}
+
 export interface CreateAdviceParams {
   consultationId: number;
   body: string;
@@ -119,4 +141,10 @@ export interface ConsultationDetail extends Consultation {
    * ※API改修前は空配列が入ります
    */
   advices: Advice[];
+
+  /**
+   * 相談に紐づくタグ（下書き編集画面でのプリロード用）。
+   * 詳細取得時のみ付与され、タグ未設定なら空配列。
+   */
+  tags: ConsultationFormTag[];
 }
