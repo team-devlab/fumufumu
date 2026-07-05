@@ -324,6 +324,24 @@ export class ConsultationRepository {
 	}
 
 	/**
+	 * 相談に紐づくタグ一覧を取得する。
+	 * 一覧(findAll)には含めず、詳細取得の合成でのみ利用する（advices と同じ流儀）。
+	 * 並び順はタグマスタと揃えるため sortOrder 昇順（同値は id 昇順で安定化）。
+	 */
+	async findTagsByConsultationId(consultationId: number) {
+		return await this.db
+			.select({
+				id: tags.id,
+				name: tags.name,
+				sortOrder: tags.sortOrder,
+			})
+			.from(consultationTaggings)
+			.innerJoin(tags, eq(consultationTaggings.tagId, tags.id))
+			.where(eq(consultationTaggings.consultationId, consultationId))
+			.orderBy(tags.sortOrder, tags.id);
+	}
+
+	/**
 	 * 相談一覧を取得する（RQB使用）
 	 * 
 	 * @param filters - フィルタ条件（オプショナル）

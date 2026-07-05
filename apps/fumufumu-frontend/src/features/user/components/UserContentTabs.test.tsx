@@ -141,7 +141,7 @@ const clickDraftsTab = () => {
 };
 
 describe("UserContentTabs 下書きタブ", () => {
-  it("相談とアドバイスの下書きを更新日時の新しい順に混在表示し、種別バッジを付ける(再開ルート未実装のためリンクはしない)", () => {
+  it("相談とアドバイスの下書きを更新日時の新しい順に混在表示し、種別バッジを付ける(相談は編集へリンク、アドバイスは表示専用)", () => {
     render(
       <UserContentTabs
         consultations={[sampleConsultation()]}
@@ -194,8 +194,11 @@ describe("UserContentTabs 下書きタブ", () => {
       within(adviceCard as HTMLElement).getByText("アドバイス"),
     ).toBeInTheDocument();
 
-    // 再開ルートが未実装のため、下書きカードはまだリンクにしない
-    expect(consultationText.closest("a")).toBeNull();
+    // 相談の下書きは編集画面へリンクする。アドバイスは編集ルート未実装のため表示専用のまま
+    expect(consultationText.closest("a")).toHaveAttribute(
+      "href",
+      "/consultations/5/edit",
+    );
     expect(adviceText.closest("a")).toBeNull();
   });
 

@@ -476,4 +476,115 @@ describe('Consultations API - Detail (GET /:id)', () => {
     expect(newerIndex).toBeGreaterThanOrEqual(0);
     expect(olderIndex).toBeLessThan(newerIndex);
   });
+
+  // --- タグのプリロード（下書き再開で編集画面に既存タグを復元するための contract）---
+
+  const createTag = async (name: string) => {
+    await env.DB.prepare('INSERT INTO tags (name) VALUES (?)').bind(name).run();
+    const row = await env.DB
+      .prepare('SELECT id FROM tags WHERE name = ?')
+      .bind(name)
+      .first() as { id: number } | null;
+    expect(row?.id).toBeDefined();
+    return { id: row!.id, name };
+  };
+
+  it('相談詳細取得: 紐づくタグを id/name で返す', async () => {
+    const tagA = await createTag(`detail-tags-a-${Date.now()}`);
+    const tagB = await createTag(`detail-tags-b-${Date.now()}`);
+
+    const createRes = await app.fetch(createApiRequest('/api/consultations', 'POST', {
+      cookie: user.cookie,
+      body: {
+        title: 'タグ付き相談',
+        body: 'タグをプリロードするための本文です。10文字以上必要です。',
+        draft: false,
+        tagIds: [tagA.id, tagB.id],
+      },
+    }), env);
+    expect(createRes.status).toBe(201);
+    const created = await createRes.json() as any;
+    await approveConsultation(created.id);
+
+    const detailRes = await app.fetch(createApiRequest(`/api/consultations/${created.id}`, 'GET', {
+      cookie: user.cookie,
+    }), env);
+    expect(detailRes.status).toBe(200);
+    const detail = await detailRes.json() as any;
+
+    expect(Array.isArray(detail.tags)).toBe(true);
+    const returnedIds = detail.tags.map((t: any) => t.id).sort((a: number, b: number) => a - b);
+    expect(returnedIds).toEqual([tagA.id, tagB.id].sort((a, b) => a - b));
+
+    const returnedA = detail.tags.find((t: any) => t.id === tagA.id);
+    expect(returnedA).toBeDefined();
+    expect(returnedA.name).toBe(tagA.name);
+    // プリロードに必要な id/name のみ。count 等は露出しない最小 shape
+    expect(returnedA).not.toHaveProperty('count');
+  });
+
+  it('相談詳細取得: タグ未設定の下書きは tags を空配列で返す', async () => {
+    const createRes = await app.fetch(createApiRequest('/api/consultations', 'POST', {
+      cookie: user.cookie,
+      body: {
+        title: 'タグ無し下書き',
+        body: 'タグを付けていない下書きの本文です。10文字以上必要です。',
+        draft: true,
+      },
+    }), env);
+    expect(createRes.status).toBe(201);
+    const created = await createRes.json() as any;
+
+    const detailRes = await app.fetch(createApiRequest(`/api/consultations/${created.id}`, 'GET', {
+      cookie: user.cookie,
+    }), env);
+    expect(detailRes.status).toBe(200);
+    const detail = await detailRes.json() as any;
+    expect(detail.tags).toEqual([]);
+  });
+
+  it('相談詳細取得: 下書きのタグは所有者には返るが、他人には404で漏れない（IDOR）', async () => {
+    const secretTag = await createTag(`draft-secret-tag-${Date.now()}`);
+
+    const createRes = await app.fetch(createApiRequest('/api/consultations', 'POST', {
+      cookie: user.cookie,
+      body: {
+        title: '下書き（タグ付き）',
+        body: '他人に見えてはいけない下書きの本文です。10文字以上必要です。',
+        draft: true,
+        tagIds: [secretTag.id],
+      },
+    }), env);
+    expect(createRes.status).toBe(201);
+    const created = await createRes.json() as any;
+
+    // 所有者: tags を含めて取得できる（編集画面プリロードの前提）
+    const ownerRes = await app.fetch(createApiRequest(`/api/consultations/${created.id}`, 'GET', {
+      cookie: user.cookie,
+    }), env);
+    expect(ownerRes.status).toBe(200);
+    const ownerDetail = await ownerRes.json() as any;
+    expect(ownerDetail.tags.map((t: any) => t.id)).toContain(secretTag.id);
+
+    // 他人: 相談ごと404。tags も当然漏れない
+    const attackerRes = await app.fetch(createApiRequest(`/api/consultations/${created.id}`, 'GET', {
+      cookie: attacker.cookie,
+    }), env);
+    expect(attackerRes.status).toBe(404);
+    const attackerBody = await attackerRes.json() as any;
+    expect(attackerBody).not.toHaveProperty('tags');
+  });
+
+  it('相談一覧取得: 一覧では tags を付与しない（詳細取得のみ）', async () => {
+    const listRes = await app.fetch(createApiRequest('/api/consultations', 'GET', {
+      cookie: user.cookie,
+    }), env);
+    expect(listRes.status).toBe(200);
+    const list = await listRes.json() as any;
+    expect(Array.isArray(list.data)).toBe(true);
+    expect(list.data.length).toBeGreaterThan(0);
+    for (const item of list.data) {
+      expect(item.tags).toBeUndefined();
+    }
+  });
 });

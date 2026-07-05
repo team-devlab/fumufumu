@@ -2,14 +2,31 @@ import type {
   Advice,
   Consultation,
   ConsultationListResponse,
+  ConsultationSavedResponse,
   CreateAdviceParams,
   CreateConsultationParams,
+  UpdateConsultationParams,
 } from "@/features/consultation/types";
 import { apiClient } from "@/lib/api/client";
 
 export const createConsultation = (params: CreateConsultationParams) => {
   return apiClient<Consultation>("/api/consultations", {
     method: "POST",
+    body: JSON.stringify(params),
+  });
+};
+
+/**
+ * 相談を更新する（下書きの編集・公開）。
+ * tagIds を省略すると既存タグを保持、配列指定で総入れ替え（公開にはタグ1件以上が必要）。
+ * 作成と異なり保存結果のみ（全文なし）を返す点に注意。
+ */
+export const updateConsultation = (
+  id: number,
+  params: UpdateConsultationParams,
+) => {
+  return apiClient<ConsultationSavedResponse>(`/api/consultations/${id}`, {
+    method: "PUT",
     body: JSON.stringify(params),
   });
 };
