@@ -42,8 +42,9 @@ const INITIAL_STATE = {
   isDirty: false,
 };
 
-// store 自体は export しない（利用側は下部の selector / action フックを使う）
-const useConsultationEditFormStore = create<ConsultationEditFormState>()(
+// コンポーネント等の利用側は下部の selector / action フックを使う。
+// ストア本体の直接参照は、テストでの状態リセット等の用途に限る。
+export const useConsultationEditFormStore = create<ConsultationEditFormState>()(
   persist(
     (set) => ({
       ...INITIAL_STATE,

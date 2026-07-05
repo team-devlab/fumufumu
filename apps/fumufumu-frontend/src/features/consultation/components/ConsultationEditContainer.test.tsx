@@ -4,6 +4,7 @@ import toast from "react-hot-toast";
 import { beforeEach, describe, expect, it, vi } from "vitest";
 import { ROUTES } from "@/config/routes";
 import { updateConsultation } from "@/features/consultation/api/consultationClientApi";
+import { useConsultationEditFormStore } from "@/features/consultation/stores/useConsultationEditFormStore";
 import type { ConsultationDetail, Tag } from "@/features/consultation/types";
 import { ConsultationEditContainer } from "./ConsultationEditContainer";
 
@@ -56,8 +57,10 @@ const availableTags: Tag[] = [
 
 beforeEach(() => {
   vi.clearAllMocks();
-  // 編集ストアは sessionStorage 永続。テスト間で状態を持ち越さない
+  // 編集ストアは sessionStorage 永続かつ in-memory singleton。sessionStorage.clear だけでは
+  // メモリ上の editingId 等が残るため、ストア本体も明示的に初期化してテスト間の持ち越しを防ぐ。
   sessionStorage.clear();
+  useConsultationEditFormStore.getState().reset();
 });
 
 describe("ConsultationEditContainer", () => {
