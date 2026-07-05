@@ -230,6 +230,26 @@ export class ConsultationRepository {
 	 * @param filters.consultationId - 指定時は特定の相談配下に絞り込む（未指定時は相談横断の一覧になる）
 	 */
 	private buildAdviceWhereConditions(filters?: AdviceFilters & { consultationId?: number }): SQL {
+		// 下書きは本人限定の非公開データ。公開可視性(承認)や親相談の可視性は適用せず、
+		// 著者スコープ(呼び出し元ServiceでuserIdを本人へ強制)とhidden除外のみで絞る。
+		// 相談の下書き(buildWhereConditions の draft 分岐)と同じ扱い。
+		if (filters?.draft === true) {
+			const draftConditions: SQL[] = [
+				eq(advices.draft, true),
+				isNull(advices.hiddenAt),
+			];
+
+			if (filters?.consultationId !== undefined) {
+				draftConditions.push(eq(advices.consultationId, filters.consultationId));
+			}
+
+			if (filters?.userId !== undefined) {
+				draftConditions.push(eq(advices.authorId, filters.userId));
+			}
+
+			return and(...draftConditions) as SQL;
+		}
+
 		const conditions: SQL[] = [
 			eq(advices.draft, false),
 			this.buildAdvicePublicVisibilityCondition(),
