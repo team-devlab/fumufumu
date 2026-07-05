@@ -180,6 +180,12 @@ export class ConsultationRepository {
 		}
 
 		if (filters?.draft === true) {
+			// fail-closed: userIdが無いまま下書きを引くと全ユーザー分が露出する。
+			// Serviceガードをすり抜けた直叩きでも漏らさないよう、常に0件になる条件を返す。
+			if (filters?.userId === undefined) {
+				return sql`1 = 0`;
+			}
+
 			conditions.push(eq(consultations.draft, true));
 			conditions.push(isNull(consultations.hiddenAt));
 		} else {
@@ -234,6 +240,12 @@ export class ConsultationRepository {
 		// 著者スコープ(呼び出し元ServiceでuserIdを本人へ強制)とhidden除外のみで絞る。
 		// 相談の下書き(buildWhereConditions の draft 分岐)と同じ扱い。
 		if (filters?.draft === true) {
+			// fail-closed: userIdが無いまま下書きを引くと全ユーザー分が露出する。
+			// Serviceガードをすり抜けた直叩きでも漏らさないよう、常に0件になる条件を返す。
+			if (filters?.userId === undefined) {
+				return sql`1 = 0`;
+			}
+
 			const draftConditions: SQL[] = [
 				eq(advices.draft, true),
 				isNull(advices.hiddenAt),
