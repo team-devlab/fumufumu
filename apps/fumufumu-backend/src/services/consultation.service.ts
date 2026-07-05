@@ -334,12 +334,34 @@ export class ConsultationService {
 	async listAllAdvices(
 		filters?: AdviceFilters,
 		pagination?: PaginationParams,
+		requestUserId?: number,
 	): Promise<AdviceListResponse> {
 		const { page = 1, limit = 20 } = pagination || {};
 
+		// NOTE: 元の引数を変更しないようシャローコピーを作成
+		const secureFilters = { ...filters };
+
+		// NOTE(【ポリシー】 Secure by Default): 明示的な指定がない限り、機密性の高い下書きは除外する
+		if (secureFilters.draft === undefined) {
+			secureFilters.draft = false;
+		}
+
+		// NOTE(ビジネスロジック): 下書き取得時は、強制的に「自分のデータ」に絞り込む
+		if (secureFilters.draft === true) {
+			// セキュリティガード: requestUserIdが未定義の場合、Repository側で全件露出するリスクを防ぐため、即時空配列を返す
+			// 認証必須のエンドポイントなら本来あり得ないが、安全のため
+			if (requestUserId === undefined) {
+				return {
+					data: [],
+					pagination: this.calculatePagination({ page, limit }, 0),
+				};
+			}
+			secureFilters.userId = requestUserId;
+		}
+
 		const [adviceList, totalCount] = await Promise.all([
-			this.repository.findAllAdvices(filters, { page, limit }),
-			this.repository.countAdvices(filters),
+			this.repository.findAllAdvices(secureFilters, { page, limit }),
+			this.repository.countAdvices(secureFilters),
 		]);
 
 		return {

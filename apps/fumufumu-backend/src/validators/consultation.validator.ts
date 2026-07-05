@@ -127,6 +127,13 @@ export const listAdvicesQuerySchema = paginationQuerySchema.extend({
 	userId: positiveIntegerStringSchema.optional(),
 
 	/**
+	 * 下書き状態でフィルタリング（オプショナル）
+	 * - "true" または "false" の文字列をbooleanに変換
+	 * - 下書きは本人限定の非公開データのため、Service層で userId を本人へ強制する
+	 */
+	draft: booleanStringSchema.optional(),
+
+	/**
 	 * 非表示(hidden_at設定済み)の回答も含めるか（オプショナル）
 	 * - admin権限時のみ有効。コントローラ層でrole検証を行う
 	 */

@@ -1,8 +1,15 @@
-import { fetchUserAdvicesApi } from "@/features/user/api/userAdviceApi";
+import {
+  fetchUserAdviceDraftsApi,
+  fetchUserAdvicesApi,
+} from "@/features/user/api/userAdviceApi";
 import { fetchCurrentUserApi } from "@/features/user/api/userApi";
-import { fetchUserConsultationsApi } from "@/features/user/api/userConsultationApi";
+import {
+  fetchUserConsultationDraftsApi,
+  fetchUserConsultationsApi,
+} from "@/features/user/api/userConsultationApi";
 import {
   type AdviceTabState,
+  type DraftTabState,
   UserContentTabs,
 } from "@/features/user/components/UserContentTabs";
 import { UserProfile } from "@/features/user/components/UserProfile";
@@ -27,9 +34,15 @@ export default async function UserPage() {
   }
 
   // 相談は主要情報のため従来どおり取得失敗で画面全体をエラーにする。
-  // アドバイスは副次情報なので、失敗してもプロフィール本体・相談タブを巻き添えにせず、
-  // アドバイスタブ内のエラー表示に縮退させる (取得は相談と並行する)。
-  const [consultationResponse, adviceState] = await Promise.all([
+  // アドバイス・下書きは副次情報なので、失敗してもプロフィール本体・相談タブを巻き添えに
+  // せず、各タブ内のエラー表示に縮退させる (取得はすべて相談と並行する)。
+  // 下書きは相談・アドバイスで別APIのため、ソース単位で個別に縮退させる。
+  const [
+    consultationResponse,
+    adviceState,
+    consultationDraftResult,
+    adviceDraftResult,
+  ] = await Promise.all([
     fetchUserConsultationsApi(user.id),
     fetchUserAdvicesApi(user.id)
       .then(
@@ -41,7 +54,39 @@ export default async function UserPage() {
         console.error("Failed to fetch advices for user profile:", error);
         return { status: "error" } as AdviceTabState;
       }),
+    fetchUserConsultationDraftsApi()
+      .then(
+        (response) =>
+          ({
+            status: "success",
+            items: response.data,
+          }) as DraftTabState["consultations"],
+      )
+      .catch((error) => {
+        console.error(
+          "Failed to fetch consultation drafts for user profile:",
+          error,
+        );
+        return { status: "error" } as DraftTabState["consultations"];
+      }),
+    fetchUserAdviceDraftsApi()
+      .then(
+        (response) =>
+          ({
+            status: "success",
+            items: response.data,
+          }) as DraftTabState["advices"],
+      )
+      .catch((error) => {
+        console.error("Failed to fetch advice drafts for user profile:", error);
+        return { status: "error" } as DraftTabState["advices"];
+      }),
   ]);
+
+  const draftState: DraftTabState = {
+    consultations: consultationDraftResult,
+    advices: adviceDraftResult,
+  };
 
   return (
     <div className="max-w-3xl mx-auto w-full">
@@ -54,6 +99,7 @@ export default async function UserPage() {
         <UserContentTabs
           consultations={consultationResponse.data}
           adviceState={adviceState}
+          draftState={draftState}
         />
       </section>
     </div>
