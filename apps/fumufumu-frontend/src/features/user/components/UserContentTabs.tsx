@@ -52,10 +52,9 @@ type MergedDraft =
   | { kind: "consultation"; data: Consultation }
   | { kind: "advice"; data: Advice };
 
-// 下書きの「再開」導線:
-// - 相談の下書きは編集画面へリンクする(ADR 012)。
-// - アドバイスの下書きは編集ルートが未実装のため当面は表示専用のまま。着地先の相談詳細に
-//   自分の下書きは表示されず「消えた」ように誤解させるのを避けるため、導線が整うまでリンクしない。
+// 下書きの「再開」導線: 相談・アドバイスとも編集画面へリンクする(ADR 012)。
+// アドバイスの下書きは adviceId 単位の編集ルートで本文を更新する
+// (同一相談に本人の複数下書きが併存し得るため consultationId では一意に特定できない)。
 const DraftCard: React.FC<{ item: MergedDraft }> = ({ item }) => {
   const label = item.kind === "consultation" ? "相談" : "アドバイス";
   const text = item.kind === "consultation" ? item.data.title : item.data.body;
@@ -63,34 +62,24 @@ const DraftCard: React.FC<{ item: MergedDraft }> = ({ item }) => {
     item.kind === "consultation"
       ? "bg-teal-50 text-teal-700"
       : "bg-amber-50 text-amber-700";
-
-  const cardBody = (
-    <>
-      <span
-        className={`inline-block rounded-full px-2.5 py-0.5 text-xs font-medium ${badgeClass}`}
-      >
-        {label}
-      </span>
-      <p className="mt-2 text-sm text-gray-700 leading-relaxed line-clamp-3 whitespace-pre-wrap">
-        {text}
-      </p>
-    </>
-  );
-
-  if (item.kind === "consultation") {
-    return (
-      <Link href={ROUTES.CONSULTATION.EDIT(item.data.id)} className="block">
-        <div className="bg-white rounded-xl border border-gray-100 shadow-sm p-5 hover:shadow-md transition-shadow duration-200">
-          {cardBody}
-        </div>
-      </Link>
-    );
-  }
+  const href =
+    item.kind === "consultation"
+      ? ROUTES.CONSULTATION.EDIT(item.data.id)
+      : ROUTES.ADVICE.DRAFT_EDIT(item.data.id);
 
   return (
-    <div className="bg-white rounded-xl border border-gray-100 shadow-sm p-5">
-      {cardBody}
-    </div>
+    <Link href={href} className="block">
+      <div className="bg-white rounded-xl border border-gray-100 shadow-sm p-5 hover:shadow-md transition-shadow duration-200">
+        <span
+          className={`inline-block rounded-full px-2.5 py-0.5 text-xs font-medium ${badgeClass}`}
+        >
+          {label}
+        </span>
+        <p className="mt-2 text-sm text-gray-700 leading-relaxed line-clamp-3 whitespace-pre-wrap">
+          {text}
+        </p>
+      </div>
+    </Link>
   );
 };
 
