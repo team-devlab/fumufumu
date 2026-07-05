@@ -77,7 +77,6 @@ const DraftCard: React.FC<{ item: MergedDraft }> = ({ item }) => {
     </>
   );
 
-  // 相談の下書きは編集画面へ遷移できる
   if (item.kind === "consultation") {
     return (
       <Link href={ROUTES.CONSULTATION.EDIT(item.data.id)} className="block">
@@ -88,7 +87,6 @@ const DraftCard: React.FC<{ item: MergedDraft }> = ({ item }) => {
     );
   }
 
-  // アドバイスの下書きは編集ルート実装(後続)まで表示専用
   return (
     <div className="bg-white rounded-xl border border-gray-100 shadow-sm p-5">
       {cardBody}
