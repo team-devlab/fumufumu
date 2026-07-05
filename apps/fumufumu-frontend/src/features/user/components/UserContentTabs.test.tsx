@@ -1,7 +1,13 @@
 import { fireEvent, render, screen, within } from "@testing-library/react";
 import { describe, expect, it } from "vitest";
 import type { Advice, Consultation } from "@/features/consultation/types";
-import { UserContentTabs } from "./UserContentTabs";
+import { type DraftTabState, UserContentTabs } from "./UserContentTabs";
+
+// 下書きタブを検証しないケース用の、両ソースとも空の下書き状態
+const emptyDraftState: DraftTabState = {
+  consultations: { status: "success", items: [] },
+  advices: { status: "success", items: [] },
+};
 
 const sampleConsultation = (
   overrides?: Partial<Consultation>,
@@ -46,6 +52,7 @@ describe("UserContentTabs アドバイスタブ", () => {
             sampleAdvice({ id: 2, consultation_id: 7, body: "アドバイスB" }),
           ],
         }}
+        draftState={emptyDraftState}
       />,
     );
 
@@ -62,6 +69,7 @@ describe("UserContentTabs アドバイスタブ", () => {
       <UserContentTabs
         consultations={[sampleConsultation()]}
         adviceState={{ status: "success", advices: [] }}
+        draftState={emptyDraftState}
       />,
     );
 
@@ -75,6 +83,7 @@ describe("UserContentTabs アドバイスタブ", () => {
       <UserContentTabs
         consultations={[sampleConsultation()]}
         adviceState={{ status: "error" }}
+        draftState={emptyDraftState}
       />,
     );
 
@@ -97,6 +106,7 @@ describe("UserContentTabs アドバイスタブ", () => {
           status: "success",
           advices: [sampleAdvice({ body: "アドバイス本文" })],
         }}
+        draftState={emptyDraftState}
       />,
     );
 
@@ -109,6 +119,7 @@ describe("UserContentTabs アドバイスタブ", () => {
       <UserContentTabs
         consultations={[]}
         adviceState={{ status: "success", advices: [] }}
+        draftState={emptyDraftState}
       />,
     );
 

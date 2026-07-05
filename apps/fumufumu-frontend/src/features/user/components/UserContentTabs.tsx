@@ -27,6 +27,115 @@ export type AdviceTabState =
   | { status: "success"; advices: Advice[] }
   | { status: "error" };
 
+/**
+ * 下書きソース1つ分の取得結果。取得失敗を「0件」と区別する判別ユニオン。
+ */
+export type DraftSourceResult<T> =
+  | { status: "success"; items: T[] }
+  | { status: "error" };
+
+/**
+ * 下書きタブの状態。相談・アドバイスの下書きは別々のAPIから取得するため、
+ * ソース単位で success|error を持つ複合状態にする。片方が失敗しても
+ * もう片方は表示できるよう、縮退はソース単位で行う。
+ */
+export type DraftTabState = {
+  consultations: DraftSourceResult<Consultation>;
+  advices: DraftSourceResult<Advice>;
+};
+
+/**
+ * 相談とアドバイスの下書きを1リストに混在させるための判別ユニオン。
+ * 種別ごとに表示内容とリンク先が異なるため kind で分岐する。
+ */
+type MergedDraft =
+  | { kind: "consultation"; data: Consultation }
+  | { kind: "advice"; data: Advice };
+
+const DraftCard: React.FC<{ item: MergedDraft }> = ({ item }) => {
+  // アドバイス単独の詳細画面は無いため、いずれも所属相談の詳細へ誘導する
+  const href =
+    item.kind === "consultation"
+      ? ROUTES.CONSULTATION.DETAIL(item.data.id)
+      : ROUTES.CONSULTATION.DETAIL(item.data.consultation_id);
+  const label = item.kind === "consultation" ? "相談" : "アドバイス";
+  const text = item.kind === "consultation" ? item.data.title : item.data.body;
+  const badgeClass =
+    item.kind === "consultation"
+      ? "bg-teal-50 text-teal-700"
+      : "bg-amber-50 text-amber-700";
+
+  return (
+    <Link href={href} className="block">
+      <div className="bg-white rounded-xl border border-gray-100 shadow-sm p-5 hover:shadow-md transition-shadow duration-200">
+        <span
+          className={`inline-block rounded-full px-2.5 py-0.5 text-xs font-medium ${badgeClass}`}
+        >
+          {label}
+        </span>
+        <p className="mt-2 text-sm text-gray-700 leading-relaxed line-clamp-3 whitespace-pre-wrap">
+          {text}
+        </p>
+      </div>
+    </Link>
+  );
+};
+
+const DraftsTabContent: React.FC<{ state: DraftTabState }> = ({ state }) => {
+  const { consultations, advices } = state;
+
+  // 両ソースとも取得失敗したときだけ全体エラーに倒す(片方成功なら表示を優先)
+  if (consultations.status === "error" && advices.status === "error") {
+    return (
+      <p role="alert" className="text-gray-500 text-sm py-8 text-center">
+        下書きの取得に失敗しました
+      </p>
+    );
+  }
+
+  // 成功したソースのみをマージし、更新日時の新しい順に並べる(「続きから」の導線)
+  const merged: MergedDraft[] = [
+    ...(consultations.status === "success"
+      ? consultations.items.map(
+          (data): MergedDraft => ({ kind: "consultation", data }),
+        )
+      : []),
+    ...(advices.status === "success"
+      ? advices.items.map((data): MergedDraft => ({ kind: "advice", data }))
+      : []),
+  ].sort(
+    (a, b) =>
+      new Date(b.data.updated_at).getTime() -
+      new Date(a.data.updated_at).getTime(),
+  );
+
+  const hasPartialError =
+    consultations.status === "error" || advices.status === "error";
+
+  return (
+    <div className="space-y-3">
+      {hasPartialError && (
+        <p role="alert" className="text-amber-600 text-sm py-2 text-center">
+          {consultations.status === "error"
+            ? "相談の下書きの取得に失敗しました"
+            : "アドバイスの下書きの取得に失敗しました"}
+        </p>
+      )}
+
+      {merged.length > 0 &&
+        merged.map((item) => (
+          <DraftCard key={`${item.kind}-${item.data.id}`} item={item} />
+        ))}
+
+      {merged.length === 0 && !hasPartialError && (
+        <p className="text-gray-500 text-sm py-8 text-center">
+          下書きはまだありません
+        </p>
+      )}
+    </div>
+  );
+};
+
 const AdviceTabContent: React.FC<{ state: AdviceTabState }> = ({ state }) => {
   if (state.status === "error") {
     return (
@@ -67,11 +176,13 @@ const AdviceTabContent: React.FC<{ state: AdviceTabState }> = ({ state }) => {
 type Props = {
   consultations: Consultation[];
   adviceState: AdviceTabState;
+  draftState: DraftTabState;
 };
 
 export const UserContentTabs: React.FC<Props> = ({
   consultations,
   adviceState,
+  draftState,
 }) => {
   const [activeTab, setActiveTab] = useState<TabId>("consultations");
 
@@ -125,11 +236,7 @@ export const UserContentTabs: React.FC<Props> = ({
 
       {activeTab === "advices" && <AdviceTabContent state={adviceState} />}
 
-      {activeTab === "drafts" && (
-        <div className="py-8 text-center">
-          <p className="text-gray-500 text-sm">下書き一覧は現在準備中です</p>
-        </div>
-      )}
+      {activeTab === "drafts" && <DraftsTabContent state={draftState} />}
     </div>
   );
 };
