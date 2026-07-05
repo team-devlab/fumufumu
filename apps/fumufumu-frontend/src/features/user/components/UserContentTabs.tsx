@@ -52,9 +52,10 @@ type MergedDraft =
   | { kind: "consultation"; data: Consultation }
   | { kind: "advice"; data: Advice };
 
-// 下書きの「再開(編集/公開)」ルートは未実装のため、現状はあえてリンクしない。
-// クリックしても再開できず、特にアドバイス下書きは着地先(相談詳細)に自分の下書きが
-// 表示されず「消えた」ように見えて誤解を招くため、導線が用意できるまで表示専用にする。
+// 下書きの「再開」導線:
+// - 相談の下書きは編集画面へリンクする(ADR 012)。
+// - アドバイスの下書きは編集ルートが未実装のため当面は表示専用のまま。着地先の相談詳細に
+//   自分の下書きは表示されず「消えた」ように誤解させるのを避けるため、導線が整うまでリンクしない。
 const DraftCard: React.FC<{ item: MergedDraft }> = ({ item }) => {
   const label = item.kind === "consultation" ? "相談" : "アドバイス";
   const text = item.kind === "consultation" ? item.data.title : item.data.body;
@@ -63,8 +64,8 @@ const DraftCard: React.FC<{ item: MergedDraft }> = ({ item }) => {
       ? "bg-teal-50 text-teal-700"
       : "bg-amber-50 text-amber-700";
 
-  return (
-    <div className="bg-white rounded-xl border border-gray-100 shadow-sm p-5">
+  const cardBody = (
+    <>
       <span
         className={`inline-block rounded-full px-2.5 py-0.5 text-xs font-medium ${badgeClass}`}
       >
@@ -73,6 +74,24 @@ const DraftCard: React.FC<{ item: MergedDraft }> = ({ item }) => {
       <p className="mt-2 text-sm text-gray-700 leading-relaxed line-clamp-3 whitespace-pre-wrap">
         {text}
       </p>
+    </>
+  );
+
+  // 相談の下書きは編集画面へ遷移できる
+  if (item.kind === "consultation") {
+    return (
+      <Link href={ROUTES.CONSULTATION.EDIT(item.data.id)} className="block">
+        <div className="bg-white rounded-xl border border-gray-100 shadow-sm p-5 hover:shadow-md transition-shadow duration-200">
+          {cardBody}
+        </div>
+      </Link>
+    );
+  }
+
+  // アドバイスの下書きは編集ルート実装(後続)まで表示専用
+  return (
+    <div className="bg-white rounded-xl border border-gray-100 shadow-sm p-5">
+      {cardBody}
     </div>
   );
 };
