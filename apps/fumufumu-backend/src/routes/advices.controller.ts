@@ -67,9 +67,7 @@ export const listAllAdvicesHandlers = factory.createHandlers(
 	},
 );
 
-// アドバイス下書きの更新(本文のみ・draft維持)。
-// 同一相談に本人の複数アドバイスが併存し得るため、consultationId ではなく adviceId で
-// 更新対象を一意に特定する。本人以外の id は引き当たらず404(IDOR: fail-closed)。
+// アドバイス下書きの更新(本文のみ・draft維持)。adviceId で更新対象を一意に特定する(経緯は ADR 012)。
 export const updateDraftAdviceHandlers = factory.createHandlers(
 	zValidator("param", adviceIdParamSchema, (result) => {
 		if (!result.success) throw result.error;

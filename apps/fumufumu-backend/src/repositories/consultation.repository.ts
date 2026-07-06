@@ -787,7 +787,8 @@ export class ConsultationRepository {
 	 */
 	// 下書きアドバイスを id で更新する。
 	// 同一相談に本人の複数アドバイス(公開/下書き)が併存し得るため、consultationId では
-	// 更新対象を一意に特定できない。id + 本人 + draft=true で下書き1件に厳密に引き当てる。
+	// 更新対象を一意に特定できない。id + 本人 + draft=true で下書き1件に厳密に引き当てる(ADR 012)。
+	// draft=true を条件に含めることで、read 後に公開へ変わっても公開済みを上書きしない(fail-closed)。
 	async updateDraftAdviceById(data: {
 		adviceId: number;
 		authorId: number;

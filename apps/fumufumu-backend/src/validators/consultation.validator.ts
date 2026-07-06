@@ -199,7 +199,7 @@ export const consultationIdParamSchema = z.object({
 });
 
 // アドバイス単体を id で特定するルート(下書き更新など)のパラメータ。
-// 相談横断でアドバイスを一意に指すため consultationId ではなく adviceId で引き当てる。
+// consultationIdParamSchema と同型だが、用途(相談 vs アドバイス)が異なるため分けている。
 export const adviceIdParamSchema = z.object({
   id: z.coerce.number().int().positive(),
 });

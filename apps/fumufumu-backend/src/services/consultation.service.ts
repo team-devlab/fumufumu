@@ -516,10 +516,8 @@ export class ConsultationService {
 	}
 
 	/**
-	 * アドバイスの下書きを更新する
-	 *
-	 * 同一相談に本人の複数アドバイス(公開/下書き)が併存し得るため、adviceId で更新対象を
-	 * 一意に特定する。本人以外の id は引き当たらず404(IDOR: fail-closed)、公開済みは更新拒否。
+	 * アドバイスの下書きを adviceId で更新する（引き当てを adviceId にした経緯は ADR 012）。
+	 * 本人以外の id は引き当たらず404(IDOR: fail-closed)、公開済みは更新拒否。
 	 *
 	 * @param adviceId - アドバイスID
 	 * @param data.body - アドバイス本文
