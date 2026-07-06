@@ -44,8 +44,7 @@ export const createAdvice = ({
 };
 
 /**
- * アドバイスの下書きを更新する(本文のみ・draft維持)。
- * 同一相談に本人の複数アドバイスが併存し得るため、adviceId で更新対象を一意に特定する。
+ * アドバイスの下書きを adviceId で更新する(本文のみ・draft維持)。
  * 作成と異なり保存結果のみ(全文なし)を返す。公開済み/他人の下書きは backend が 404 で拒否する。
  */
 export const updateDraftAdvice = (adviceId: number, body: string) => {

@@ -53,8 +53,7 @@ type MergedDraft =
   | { kind: "advice"; data: Advice };
 
 // 下書きの「再開」導線: 相談・アドバイスとも編集画面へリンクする(ADR 012)。
-// アドバイスの下書きは adviceId 単位の編集ルートで本文を更新する
-// (同一相談に本人の複数下書きが併存し得るため consultationId では一意に特定できない)。
+// アドバイスは adviceId 単位の編集ルートへ。
 const DraftCard: React.FC<{ item: MergedDraft }> = ({ item }) => {
   const label = item.kind === "consultation" ? "相談" : "アドバイス";
   const text = item.kind === "consultation" ? item.data.title : item.data.body;

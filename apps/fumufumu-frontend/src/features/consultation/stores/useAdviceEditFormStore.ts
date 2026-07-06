@@ -3,7 +3,7 @@ import { createJSONStorage, persist } from "zustand/middleware";
 import { STORAGE_KEYS } from "@/features/consultation/config/constants";
 
 // サーバから取得した下書きでストアを初期化するためのペイロード。
-// 同一相談に本人の複数アドバイスが併存し得るため、編集対象キーは adviceId で持つ。
+// 編集対象キーは adviceId（複数併存し得る事情は ADR 012）。
 type HydratePayload = {
   adviceId: number;
   body: string;
