@@ -20,8 +20,8 @@ const countCharacters = (text: string) => text.replace(/\s/g, "").length;
 
 /**
  * アドバイスの下書きを編集する entry 画面のロジック（ADR 012）。
- * サーバ取得した下書き本文を編集専用ストアに seed し、下書き保存(更新)を担う。
- * 更新対象は adviceId で一意に特定する。公開(C)は最終形で確認画面を挟むが本 PR では扱わない。
+ * サーバ取得した下書き本文を編集専用ストアに seed し、下書き保存(更新)と確認画面への遷移を担う。
+ * 更新対象は adviceId で一意に特定する。公開は確認画面(DRAFT_EDIT_CONFIRM)で行う(相談編集 A と同型)。
  */
 export const useAdviceDraftEdit = (adviceId: number, initialBody: string) => {
   const router = useRouter();
@@ -81,6 +81,18 @@ export const useAdviceDraftEdit = (adviceId: number, initialBody: string) => {
     }
   };
 
+  // 公開は確認画面で行う。本文の最小長を満たしていれば確認画面へ進む(未保存の編集は
+  // seeded persist ストアが保持しているため、確認画面は本文を再取得せずそのまま公開できる)。
+  const handleConfirm = () => {
+    if (!validateBody()) {
+      toast.error(
+        `アドバイス内容は${CONSULTATION_RULES.BODY_MIN_LENGTH}文字以上入力してください`,
+      );
+      return;
+    }
+    router.push(ROUTES.ADVICE.DRAFT_EDIT_CONFIRM(adviceId));
+  };
+
   const handleBack = () => {
     if (isDirty && !isProcessing) {
       const ok = window.confirm(
@@ -98,6 +110,7 @@ export const useAdviceDraftEdit = (adviceId: number, initialBody: string) => {
     isProcessing,
     characterCount,
     handleSaveDraft,
+    handleConfirm,
     handleBack,
   };
 };

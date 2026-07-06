@@ -22,6 +22,7 @@ export const AdviceDraftEditContainer = ({
     isProcessing,
     characterCount,
     handleSaveDraft,
+    handleConfirm,
     handleBack,
   } = useAdviceDraftEdit(adviceId, initialBody);
 
@@ -52,6 +53,7 @@ export const AdviceDraftEditContainer = ({
         isProcessing={isProcessing}
         onBack={handleBack}
         onSaveDraft={handleSaveDraft}
+        onConfirm={handleConfirm}
       />
     </div>
   );

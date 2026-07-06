@@ -12,13 +12,14 @@ type Props = {
   isProcessing: boolean;
   onBack: () => void;
   onSaveDraft: () => void;
+  onConfirm: () => void;
 };
 
 /**
  * アドバイス下書きの編集フォーム（本文のみ）。
  * 作成フォーム(AdviceForm)は useAdviceEntry と密結合のため流用せず、
  * 編集専用の presentational を新設して作成フローへの回帰を避ける。
- * 公開(C)は最終形で確認画面を挟むが、本 PR では「下書きを更新」のみ。
+ * 相談編集(A)と同じく「下書きを更新」と「確認画面へ(公開)」の両導線を持つ。
  */
 export const AdviceDraftEditForm = ({
   consultation,
@@ -28,6 +29,7 @@ export const AdviceDraftEditForm = ({
   isProcessing,
   onBack,
   onSaveDraft,
+  onConfirm,
 }: Props) => {
   return (
     <div className="bg-white p-8 rounded-xl shadow-sm border border-gray-100 space-y-8">
@@ -85,14 +87,24 @@ export const AdviceDraftEditForm = ({
           キャンセル
         </button>
 
-        {/* 右側: 下書きを更新 */}
-        <Button
-          onClick={onSaveDraft}
-          disabled={isProcessing}
-          className="px-8 py-3 bg-teal-600 hover:bg-teal-700 text-white font-bold rounded-xl shadow-md"
-        >
-          下書きを更新
-        </Button>
+        {/* 右側: 下書きを更新(下書き維持) と 確認画面へ(公開導線) */}
+        <div className="flex items-center gap-4">
+          <button
+            type="button"
+            onClick={onSaveDraft}
+            disabled={isProcessing}
+            className="rounded-xl border border-amber-200 bg-amber-50 px-6 py-3 font-bold text-amber-600 transition-colors hover:bg-amber-100 disabled:cursor-not-allowed disabled:opacity-50"
+          >
+            下書きを更新
+          </button>
+          <Button
+            onClick={onConfirm}
+            disabled={isProcessing}
+            className="px-8 py-3 bg-teal-600 hover:bg-teal-700 text-white font-bold rounded-xl shadow-md"
+          >
+            確認画面へ
+          </Button>
+        </div>
       </div>
     </div>
   );
