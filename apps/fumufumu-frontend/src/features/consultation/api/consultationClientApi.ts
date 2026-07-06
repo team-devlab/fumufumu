@@ -55,6 +55,18 @@ export const updateDraftAdvice = (adviceId: number, body: string) => {
 };
 
 /**
+ * アドバイスの下書きを adviceId で公開する(draft:false化＋審査待ち content_check 作成)。
+ * 確認画面で仕上げた本文を送る。/draft と分離した additive な公開専用エンドポイント。
+ * 公開済み/他人の下書き/親相談が非可視な場合は backend が 404 で拒否する(fail-closed)。
+ */
+export const publishAdvice = (adviceId: number, body: string) => {
+  return apiClient<AdviceSavedResponse>(`/api/advices/${adviceId}/publish`, {
+    method: "PUT",
+    body: JSON.stringify({ body }),
+  });
+};
+
+/**
  * 相談一覧をクライアントサイドから取得する（無限スクロール用）
  * - skipAuthRedirect: true → 401 は ApiError としてスロー（hook 側で処理）
  * - signal: AbortController で in-flight リクエストを中断可能

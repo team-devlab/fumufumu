@@ -19,5 +19,7 @@ export const ROUTES = {
   // アドバイス単体を対象とするルート。編集は adviceId で一意特定する(経緯は ADR 012)。
   ADVICE: {
     DRAFT_EDIT: (adviceId: string | number) => `/advices/${adviceId}/edit`,
+    DRAFT_EDIT_CONFIRM: (adviceId: string | number) =>
+      `/advices/${adviceId}/edit/confirm`,
   },
 } as const;
