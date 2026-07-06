@@ -542,4 +542,33 @@ export class ConsultationService {
 			});
 		}
 
+	/**
+	 * アドバイスの下書きを公開へ昇格する（ADR 012 追補: C）。
+	 * 本人以外の id は引き当たらず404(IDOR: fail-closed)、公開済みは再公開不可。
+	 * 公開可否は可視な親相談に限る（repository の findVisibleConsultationOrThrow）。
+	 *
+	 * @param adviceId - アドバイスID
+	 * @param data.body - アドバイス本文（entry で未保存の編集も確認画面から公開反映するため受け取る）
+	 * @param authorId - アドバイス者ID（認証ユーザー）
+	 * @returns 公開された相談アドバイスのレスポンス
+	 */
+	async publishDraftAdvice(adviceId: number, data: UpdateDraftAdviceContentSchema, authorId: number): Promise<AdviceSavedResponse> {
+		const existingAdvice = await this.repository.findAdviceByIdForAuthor(adviceId, authorId);
+		if (existingAdvice.draft === false) {
+			throw new NotFoundError('相談アドバイスは既に公開されているため、公開できません。');
+		}
+		const publishedAdvice = await this.repository.publishDraftAdviceById({
+			adviceId,
+			authorId,
+			consultationId: existingAdvice.consultationId,
+			body: data.body,
+		});
+		return this.toAdviceSavedResponse({
+			id: publishedAdvice.id,
+			draft: publishedAdvice.draft,
+			updated_at: publishedAdvice.updatedAt.toISOString(),
+			created_at: publishedAdvice.createdAt.toISOString(),
+		});
+	}
+
 }
