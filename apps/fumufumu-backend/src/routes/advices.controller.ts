@@ -85,8 +85,29 @@ export const updateDraftAdviceHandlers = factory.createHandlers(
 	},
 );
 
+// アドバイス下書きの公開(draft:false化 + 審査待ち content_check 作成 + 親相談 updatedAt 更新)。
+// adviceId で公開対象を一意に特定する(経緯は ADR 012)。本文は確認画面から受け取り、entry の
+// 未保存編集も公開へ反映する。認可・可視性は Service/Repository 層で強制(本人の可視親の下書き以外は404)。
+export const publishDraftAdviceHandlers = factory.createHandlers(
+	zValidator("param", adviceIdParamSchema, (result) => {
+		if (!result.success) throw result.error;
+	}),
+	zValidator("json", updateDraftAdviceContentSchema, (result) => {
+		if (!result.success) throw result.error;
+	}),
+	async (c) => {
+		const { id } = c.req.valid("param");
+		const validatedBody = c.req.valid("json");
+		const authorId = c.get("appUserId");
+		const service = c.get("consultationService");
+		const result = await service.publishDraftAdvice(id, validatedBody, authorId);
+		return c.json(result, 200);
+	},
+);
+
 export const advicesRoute = new Hono<AppBindings>();
 
 advicesRoute.use("/*", authGuard, injectConsultationService);
 advicesRoute.get("/", ...listAllAdvicesHandlers);
 advicesRoute.put("/:id/draft", ...updateDraftAdviceHandlers);
+advicesRoute.put("/:id/publish", ...publishDraftAdviceHandlers);
