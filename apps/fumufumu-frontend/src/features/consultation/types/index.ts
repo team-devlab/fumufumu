@@ -107,6 +107,18 @@ export interface CreateAdviceParams {
   draft: boolean;
 }
 
+/**
+ * アドバイスの下書き更新後に返る保存結果(全文は含まない)。
+ * 作成と異なり body/author を返さない点に注意。
+ * src: apps/fumufumu-backend/src/types/consultation.response.ts (AdviceSavedResponse)
+ */
+export interface AdviceSavedResponse {
+  id: number;
+  draft: boolean;
+  updated_at: string;
+  created_at: string;
+}
+
 export interface Advice {
   id: number;
   /**

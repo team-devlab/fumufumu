@@ -1,5 +1,6 @@
 import type {
   Advice,
+  AdviceSavedResponse,
   Consultation,
   ConsultationListResponse,
   ConsultationSavedResponse,
@@ -39,6 +40,17 @@ export const createAdvice = ({
   return apiClient<Advice>(`/api/consultations/${consultationId}/advice`, {
     method: "POST",
     body: JSON.stringify({ body, draft }),
+  });
+};
+
+/**
+ * アドバイスの下書きを adviceId で更新する(本文のみ・draft維持)。
+ * 作成と異なり保存結果のみ(全文なし)を返す。公開済み/他人の下書きは backend が 404 で拒否する。
+ */
+export const updateDraftAdvice = (adviceId: number, body: string) => {
+  return apiClient<AdviceSavedResponse>(`/api/advices/${adviceId}/draft`, {
+    method: "PUT",
+    body: JSON.stringify({ body }),
   });
 };
 

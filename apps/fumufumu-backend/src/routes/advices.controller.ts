@@ -11,7 +11,11 @@ import { authGuard } from "@/middlewares/authGuard.middleware";
 import { injectConsultationService } from "@/middlewares/injectService.middleware";
 import type { AdviceFilters } from "@/types/advice.types";
 import type { PaginationParams } from "@/types/consultation.types";
-import { listAdvicesQuerySchema } from "@/validators/consultation.validator";
+import {
+	listAdvicesQuerySchema,
+	adviceIdParamSchema,
+	updateDraftAdviceContentSchema,
+} from "@/validators/consultation.validator";
 import { resolveModerationVisibilityFlags } from "@/routes/consultations.controller";
 
 const factory = createFactory<AppBindings>();
@@ -63,7 +67,26 @@ export const listAllAdvicesHandlers = factory.createHandlers(
 	},
 );
 
+// アドバイス下書きの更新(本文のみ・draft維持)。adviceId で更新対象を一意に特定する(経緯は ADR 012)。
+export const updateDraftAdviceHandlers = factory.createHandlers(
+	zValidator("param", adviceIdParamSchema, (result) => {
+		if (!result.success) throw result.error;
+	}),
+	zValidator("json", updateDraftAdviceContentSchema, (result) => {
+		if (!result.success) throw result.error;
+	}),
+	async (c) => {
+		const { id } = c.req.valid("param");
+		const validatedBody = c.req.valid("json");
+		const authorId = c.get("appUserId");
+		const service = c.get("consultationService");
+		const result = await service.updateDraftAdvice(id, validatedBody, authorId);
+		return c.json(result, 200);
+	},
+);
+
 export const advicesRoute = new Hono<AppBindings>();
 
 advicesRoute.use("/*", authGuard, injectConsultationService);
 advicesRoute.get("/", ...listAllAdvicesHandlers);
+advicesRoute.put("/:id/draft", ...updateDraftAdviceHandlers);

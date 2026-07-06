@@ -15,7 +15,6 @@ import {
 	createConsultationSchema,
 	updateConsultationSchema,
 	adviceContentSchema,
-	updateDraftAdviceContentSchema,
 	consultationIdParamSchema,
 } from "@/validators/consultation.validator";
 
@@ -221,23 +220,6 @@ export const listAdvicesHandlers = factory.createHandlers(
 	}
 );
 
-export const updateDraftAdviceHandlers = factory.createHandlers(
-	zValidator("param", consultationIdParamSchema, (result) => {
-		if (!result.success) throw result.error;
-	}),
-	zValidator("json", updateDraftAdviceContentSchema, (result) => {
-		if (!result.success) throw result.error;
-	}),
-	async (c) => {
-		const { id } = c.req.valid("param");
-		const validatedBody = c.req.valid("json");
-		const authorId = c.get("appUserId");
-		const service = c.get("consultationService");
-		const result = await service.updateDraftAdvice(id, validatedBody, authorId);
-		return c.json(result, 200);
-	}
-);
-
 // ============================================
 // ルーター設定
 // ============================================
@@ -254,4 +236,3 @@ consultationsRoute.post("/", ...createConsultationHandlers);
 consultationsRoute.put("/:id", ...updateConsultationHandlers);
 consultationsRoute.post("/:id/advice", ...createAdviceHandlers);
 consultationsRoute.get("/:id/advices", ...listAdvicesHandlers);
-consultationsRoute.put("/:id/advice/draft", ...updateDraftAdviceHandlers);

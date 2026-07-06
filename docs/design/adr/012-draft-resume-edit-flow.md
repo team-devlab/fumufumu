@@ -83,4 +83,15 @@ Issue #166 で、プロフィールの下書き一覧から下書きを「再開
 - 相談編集ストア: `apps/fumufumu-frontend/src/features/consultation/stores/useConsultationEditFormStore.ts`
 - seed 共有ヘルパ: `apps/fumufumu-frontend/src/features/consultation/hooks/`（編集ページ実装時に導入）
 - 相談編集ページ: `apps/fumufumu-frontend/src/app/(main)/consultations/[id]/edit/`（`page.tsx` と `confirm/page.tsx`）
-- アドバイス編集（B。本PRは entry のみ）: `apps/fumufumu-frontend/src/app/(main)/consultations/[id]/advice/` 配下。編集ストアは同じ seeded persist 機構で後続導入する。
+- アドバイス編集（B。本PRは entry のみ）: `apps/fumufumu-frontend/src/app/(main)/advices/[id]/edit/`（`[id]` は adviceId）。編集ストアは相談編集と同じ seeded persist 機構を踏襲する。
+
+## 追補 (2026-07-05): アドバイス下書き更新のキーは consultationId ではなく adviceId
+
+B の実装中、当初は「相談1件につき本人の下書きは1件」を前提に更新を `consultationId` で引き当てる設計（`PUT /api/consultations/:id/advice/draft`、`findFirstAdviceByConsultation(consultationId, authorId)`）だったが、実データで破綻することが判明した。
+
+- `advices` に `(consultationId, authorId)` のユニーク制約は無く、`createAdvice` も重複を許すため、**同一ユーザーが同一相談に複数のアドバイス（公開・下書きの併存を含む）を持てる**。
+- この状態では `consultationId+authorId` で下書きを一意に特定できず、公開済みを掴んで「公開されているため更新できません」で誤って弾いてしまう（手動スモークで 404 を確認）。
+
+**決定**: 下書き更新は `adviceId` で一意に引き当てる。エンドポイントを `PUT /api/advices/:id/draft` に移し、フロントの編集ルート・下書きカードのリンクも adviceId 基準（`/advices/[id]/edit`）に統一する。フロントは下書き一覧(`GET /api/advices?draft=true`)から adviceId を既に保持しているため追加取得は不要。
+
+**根拠**: 複数下書きが併存しても一意に編集でき、C（公開）も同じ adviceId キーで無改造に差し込める（最終形からの逆算）。「1相談1下書き」を不変条件として `createAdvice` 側で強制する案は create フロー変更・既存データ移行を伴うため本PRの範囲外とし、後続で検討する。

@@ -516,26 +516,23 @@ export class ConsultationService {
 	}
 
 	/**
-	 * アドバイスの下書きを更新する
-	 * 
-	 * @param id - 相談ID
+	 * アドバイスの下書きを adviceId で更新する（引き当てを adviceId にした経緯は ADR 012）。
+	 * 本人以外の id は引き当たらず404(IDOR: fail-closed)、公開済みは更新拒否。
+	 *
+	 * @param adviceId - アドバイスID
 	 * @param data.body - アドバイス本文
 	 * @param authorId - アドバイス者ID（認証ユーザー）
 	 * @returns 更新された相談アドバイスのレスポンス
 	 */
-		async updateDraftAdvice(id: number, data: UpdateDraftAdviceContentSchema, authorId: number): Promise<AdviceSavedResponse> {
-			const existingAdvice = await this.repository.findFirstAdviceByConsultation(id, authorId);
-			if (!existingAdvice) {
-				throw new NotFoundError(`指定された相談アドバイス(consultationId:${id})は見つかりませんでした`);
-			}
+		async updateDraftAdvice(adviceId: number, data: UpdateDraftAdviceContentSchema, authorId: number): Promise<AdviceSavedResponse> {
+			const existingAdvice = await this.repository.findAdviceByIdForAuthor(adviceId, authorId);
 			if (existingAdvice.draft === false) {
 				throw new NotFoundError('相談アドバイスは公開されているため、更新できません。');
 			}
-			const updatedAdvice = await this.repository.updateDraftAdvice({
-				consultationId: id,
-				authorId: authorId,
+			const updatedAdvice = await this.repository.updateDraftAdviceById({
+				adviceId,
+				authorId,
 				body: data.body,
-				draft: true,
 			});
 			return this.toAdviceSavedResponse({
 				id: updatedAdvice.id,

@@ -785,38 +785,42 @@ export class ConsultationRepository {
 	 * @param data.draft - 下書きフラグ（true: 下書き, false: 公開）
 	 * @returns 更新された相談アドバイスデータ
 	 */
-	async updateDraftAdvice(data: {
-		consultationId: number;
+	// 下書きアドバイスを id で更新する。
+	// 同一相談に本人の複数アドバイス(公開/下書き)が併存し得るため、consultationId では
+	// 更新対象を一意に特定できない。id + 本人 + draft=true で下書き1件に厳密に引き当てる(ADR 012)。
+	// draft=true を条件に含めることで、read 後に公開へ変わっても公開済みを上書きしない(fail-closed)。
+	async updateDraftAdviceById(data: {
+		adviceId: number;
 		authorId: number;
 		body: string;
-		draft: boolean;
 	}) {
 		const [updated] = await this.db.update(advices)
 			.set({
 				body: data.body,
-				draft: data.draft,
 				updatedAt: new Date(),
 			})
 			.where(
 				and(
-					eq(advices.consultationId, data.consultationId),
+					eq(advices.id, data.adviceId),
 					eq(advices.authorId, data.authorId),
+					eq(advices.draft, true),
 				)
 			)
 			.returning();
 		if (!updated) {
-			throw new NotFoundError(`指定された相談アドバイス(consultationId:${data.consultationId}, authorId:${data.authorId})は見つかりませんでした`);
+			throw new NotFoundError(`更新対象の下書きアドバイス(id:${data.adviceId})は見つかりませんでした`);
 		}
 
 		return updated;
 	}
 
-	async findFirstAdviceByConsultation(consultationId: number, authorId: number) {
+	// アドバイスを id + 本人で引き当てる。本人以外の id は見つからず(IDOR: fail-closed)。
+	async findAdviceByIdForAuthor(adviceId: number, authorId: number) {
 		const advice = await this.db.query.advices.findFirst({
-			where: and(eq(advices.consultationId, consultationId), eq(advices.authorId, authorId)),
+			where: and(eq(advices.id, adviceId), eq(advices.authorId, authorId)),
 		});
 		if (!advice) {
-			throw new NotFoundError(`指定された相談アドバイス(consultationId:${consultationId}, authorId:${authorId})は見つかりませんでした`);
+			throw new NotFoundError(`指定されたアドバイス(id:${adviceId})は見つかりませんでした`);
 		}
 		return advice;
 	}
