@@ -149,4 +149,42 @@ describe("AdviceDraftEditContainer", () => {
     expect(updateDraftAdvice).not.toHaveBeenCalled();
     expect(toast.error).toHaveBeenCalled();
   });
+
+  it("『確認画面へ』は本文が十分なら確認ルートへ遷移し、下書き更新 API は叩かない", async () => {
+    const user = userEvent.setup();
+
+    render(
+      <AdviceDraftEditContainer
+        consultation={buildDetail()}
+        adviceId={22}
+        initialBody={initialBody}
+      />,
+    );
+
+    await user.click(screen.getByRole("button", { name: "確認画面へ" }));
+
+    expect(pushMock).toHaveBeenCalledWith(ROUTES.ADVICE.DRAFT_EDIT_CONFIRM(22));
+    expect(updateDraftAdvice).not.toHaveBeenCalled();
+  });
+
+  it("『確認画面へ』は本文が短すぎる場合は遷移せずエラーを出す", async () => {
+    const user = userEvent.setup();
+
+    render(
+      <AdviceDraftEditContainer
+        consultation={buildDetail()}
+        adviceId={23}
+        initialBody={initialBody}
+      />,
+    );
+
+    const textarea = screen.getByLabelText("アドバイス内容");
+    await user.clear(textarea);
+    await user.type(textarea, "短い");
+
+    await user.click(screen.getByRole("button", { name: "確認画面へ" }));
+
+    expect(pushMock).not.toHaveBeenCalled();
+    expect(toast.error).toHaveBeenCalled();
+  });
 });
