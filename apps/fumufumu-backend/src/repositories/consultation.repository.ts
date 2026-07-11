@@ -821,87 +821,80 @@ export class ConsultationRepository {
 	// 引き当ては id + 本人 + draft=true に厳密化し(fail-closed)、read 後に公開へ変わっても
 	// 公開済みを上書きしない。親相談は公開可視なものに限る(createAdvice と同じ findVisibleConsultationOrThrow)。
 	// 非表示相談に紐づく下書きの閲覧/編集体験の改善は別issue(#175)で扱う。
+	// 想定外エラーは握り潰さずグローバルハンドラへ委ねる(そこで 5xx のログ/メッセージ統一を行う。#177)。
+	// createAdvice と違い前提チェック済みで FK 正規化も不要なため、ここでは try/catch しない。
 	async publishDraftAdviceById(data: {
 		adviceId: number;
 		authorId: number;
 		consultationId: number;
 		body: string;
 	}) {
-		try {
-			// 公開は公開可視な相談に対してのみ許可する(createAdvice と同じルール・fail-closed)
-			await this.findVisibleConsultationOrThrow(data.consultationId);
+		// 公開は公開可視な相談に対してのみ許可する(createAdvice と同じルール・fail-closed)
+		await this.findVisibleConsultationOrThrow(data.consultationId);
 
-			const now = new Date();
+		const now = new Date();
 
-			const publishAdviceQuery = this.db
-				.update(advices)
-				.set({
-					body: data.body,
-					draft: false,
-					updatedAt: now,
-				})
-				.where(
-					and(
-						eq(advices.id, data.adviceId),
-						eq(advices.authorId, data.authorId),
-						eq(advices.draft, true),
-					),
-				)
-				.returning();
+		const publishAdviceQuery = this.db
+			.update(advices)
+			.set({
+				body: data.body,
+				draft: false,
+				updatedAt: now,
+			})
+			.where(
+				and(
+					eq(advices.id, data.adviceId),
+					eq(advices.authorId, data.authorId),
+					eq(advices.draft, true),
+				),
+			)
+			.returning();
 
-			// 公開時のみ親相談の updatedAt を更新する(下書き更新では触らない。createAdvice と同じ扱い)
-			const touchConsultationQuery = this.db
-				.update(consultations)
-				.set({ updatedAt: now })
-				.where(and(eq(consultations.id, data.consultationId), isNull(consultations.hiddenAt)))
-				.returning({ id: consultations.id });
+		// 公開時のみ親相談の updatedAt を更新する(下書き更新では触らない。createAdvice と同じ扱い)
+		const touchConsultationQuery = this.db
+			.update(consultations)
+			.set({ updatedAt: now })
+			.where(and(eq(consultations.id, data.consultationId), isNull(consultations.hiddenAt)))
+			.returning({ id: consultations.id });
 
-			const upsertPendingContentCheckQuery = this.db
-				.insert(contentChecks)
-				.values({
-					targetType: "advice",
-					targetId: data.adviceId,
+		const upsertPendingContentCheckQuery = this.db
+			.insert(contentChecks)
+			.values({
+				targetType: "advice",
+				targetId: data.adviceId,
+				status: "pending",
+				reason: null,
+				checkedAt: null,
+				updatedAt: now,
+			})
+			.onConflictDoUpdate({
+				target: [contentChecks.targetType, contentChecks.targetId],
+				set: {
 					status: "pending",
 					reason: null,
 					checkedAt: null,
 					updatedAt: now,
-				})
-				.onConflictDoUpdate({
-					target: [contentChecks.targetType, contentChecks.targetId],
-					set: {
-						status: "pending",
-						reason: null,
-						checkedAt: null,
-						updatedAt: now,
-					},
-				});
+				},
+			});
 
-			const [publishResult, touchResult] = await this.db.batch([
-				publishAdviceQuery,
-				touchConsultationQuery,
-				upsertPendingContentCheckQuery,
-			]);
+		const [publishResult, touchResult] = await this.db.batch([
+			publishAdviceQuery,
+			touchConsultationQuery,
+			upsertPendingContentCheckQuery,
+		]);
 
-			const [published] = publishResult;
-			if (!published) {
-				// 本人の下書きでない/既に公開済み(fail-closed)
-				throw new NotFoundError(`公開対象の下書きアドバイス(id:${data.adviceId})は見つかりませんでした`);
-			}
-
-			if (touchResult.length === 0) {
-				// findVisibleConsultationOrThrow 後に親が非表示化した競合に対する防御
-				throw new NotFoundError(`指定された相談(id:${data.consultationId})は見つかりませんでした`);
-			}
-
-			return published;
-		} catch (error) {
-			if (error instanceof DatabaseError || error instanceof NotFoundError) {
-				throw error;
-			}
-
-			const errorMessage = (error as Error).message || String(error);
-			throw new DatabaseError(`アドバイス公開処理でデータベースエラーが発生しました: ${errorMessage}`);
+		const [published] = publishResult;
+		if (!published) {
+			// 本人の下書きでない/既に公開済み(fail-closed)
+			throw new NotFoundError(`公開対象の下書きアドバイス(id:${data.adviceId})は見つかりませんでした`);
 		}
+
+		if (touchResult.length === 0) {
+			// findVisibleConsultationOrThrow 後に親が非表示化した競合に対する防御
+			throw new NotFoundError(`指定された相談(id:${data.consultationId})は見つかりませんでした`);
+		}
+
+		return published;
 	}
 
 	// アドバイスを id + 本人で引き当てる。本人以外の id は見つからず(IDOR: fail-closed)。
