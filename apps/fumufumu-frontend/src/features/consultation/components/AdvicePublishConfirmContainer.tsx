@@ -1,7 +1,7 @@
 "use client";
 
-import { AdviceDraftEditForm } from "@/features/consultation/components/AdviceDraftEditForm";
-import { useAdviceDraftEdit } from "@/features/consultation/hooks/useAdviceDraftEdit";
+import { AdvicePublishConfirm } from "@/features/consultation/components/AdvicePublishConfirm";
+import { useAdvicePublishConfirm } from "@/features/consultation/hooks/useAdvicePublishConfirm";
 import type { ConsultationDetail } from "@/features/consultation/types";
 
 type Props = {
@@ -10,7 +10,7 @@ type Props = {
   initialBody: string;
 };
 
-export const AdviceDraftEditContainer = ({
+export const AdvicePublishConfirmContainer = ({
   consultation,
   adviceId,
   initialBody,
@@ -18,15 +18,13 @@ export const AdviceDraftEditContainer = ({
   const {
     isReady,
     body,
-    setBody,
     isProcessing,
-    characterCount,
-    handleSaveDraft,
-    handleConfirm,
     handleBack,
-  } = useAdviceDraftEdit(adviceId, initialBody);
+    handleSaveDraft,
+    handlePublish,
+  } = useAdvicePublishConfirm(adviceId, initialBody);
 
-  // persist の rehydration 完了 + サーバ値の seed 完了までは、空フォームのちらつきを避けて待つ
+  // persist の rehydration 完了までは、未保存編集がある場合にサーバ値がちらつくのを避けて待つ
   if (!isReady) {
     return (
       <div className="max-w-4xl mx-auto w-full py-20 text-center">
@@ -41,19 +39,16 @@ export const AdviceDraftEditContainer = ({
     <div className="max-w-4xl mx-auto w-full pb-20">
       <header className="mb-5">
         <h1 className="text-2xl font-bold tracking-tight text-slate-700">
-          アドバイスを編集
+          公開内容の確認
         </h1>
       </header>
-
-      <AdviceDraftEditForm
+      <AdvicePublishConfirm
         consultation={consultation}
         body={body}
-        onChangeBody={setBody}
-        characterCount={characterCount}
         isProcessing={isProcessing}
         onBack={handleBack}
         onSaveDraft={handleSaveDraft}
-        onConfirm={handleConfirm}
+        onPublish={handlePublish}
       />
     </div>
   );

@@ -95,3 +95,21 @@ B の実装中、当初は「相談1件につき本人の下書きは1件」を�
 **決定**: 下書き更新は `adviceId` で一意に引き当てる。エンドポイントを `PUT /api/advices/:id/draft` に移し、フロントの編集ルート・下書きカードのリンクも adviceId 基準（`/advices/[id]/edit`）に統一する。フロントは下書き一覧(`GET /api/advices?draft=true`)から adviceId を既に保持しているため追加取得は不要。
 
 **根拠**: 複数下書きが併存しても一意に編集でき、C（公開）も同じ adviceId キーで無改造に差し込める（最終形からの逆算）。「1相談1下書き」を不変条件として `createAdvice` 側で強制する案は create フロー変更・既存データ移行を伴うため本PRの範囲外とし、後続で検討する。
+
+## 追補 (2026-07-07): アドバイス下書きの公開 (C)
+
+C（アドバイス下書き→公開）を実装した。B の seeded persist ストア機構に確認/公開ページを無改造で差し込む方針（決定事項 #6）に従う。
+
+**エンドポイント（additive / non-breaking）**: `PUT /api/advices/:id/publish` を新設する。既存の `PUT /api/advices/:id/draft`（下書き維持）は変更しない。公開を `/draft` の拡張ではなく別ルートに分離することで、各エンドポイントの前提（下書き維持 vs 公開昇格）を単純に保つ。本文（`{ body }`）を受け取り、確認画面で仕上げた（entry で未保存の）編集も公開へ反映する（相談公開 `PUT /api/consultations/:id` が全文を送るのと同型）。レスポンスは既存の `AdviceSavedResponse`（新 shape なし）。
+
+**公開処理は atomic batch**: 本文更新・`draft:false` 化・審査待ち `content_check(target_type:'advice')` 作成・親相談 `updatedAt` 更新を単一 `db.batch`（atomic）で行う。`content_check` は `(target_type, target_id)` の一意制約に対し `onConflictDoUpdate` で冪等化する（相談公開 `update` の `queueContentCheck` と同型）。`createAdvice` 非下書き分岐の「別 insert + 補償削除」方式より失敗経路が少ないため、こちらを採用した。
+
+**認可・fail-closed**: 引き当ては `adviceId + 本人 + draft=true` に厳密化し、read 後に公開へ変わっても公開済みを上書きしない。本人以外・存在しない・既に公開済みは 404。確認ルート（`/advices/[id]/edit/confirm`）にも entry と同じ本人下書き・親可視性のサーバ側ガードを敷き defense-in-depth とする。
+
+**親相談の可視性ルール（未解決論点の決定）**: 公開は `createAdvice` と同じ `findVisibleConsultationOrThrow` で可視な親相談に限定する（`draft:false` かつ 非表示でない かつ approved/no-check）。親が非公開/非表示/未承認(pending)なら 404（fail-closed）。B の編集も親が `hidden`/`draft` なら 404 のままで整合させる。
+
+- **別issueへ委譲**: 「親が非表示化した後、本人が自分の下書きに一切アクセスできない（編集も公開も 404、下書きカードのリンク先が 404）」という UX 課題は、公開可否とは別レイヤの問題として #175 で扱う。C の fail-closed は維持したまま、閲覧/編集の導線だけを後から緩める前提。
+
+**確認画面のアクション**: A の相談確認画面に揃え、確認画面（2ページ目）からも「下書き保存」（`/draft`）と「公開」（`/publish`）の両方を行える。entry（編集）画面には「確認画面へ」導線を追加した（従来は「下書きを更新」のみ）。
+
+**確認画面の本文ソース（直リンク/リロード対応）**: 確認画面は本文を「編集ストア（当該 adviceId の未保存編集）優先、無ければサーバ取得の下書き本文へフォールバック」で解決する。当初は A に倣いストアのみから読んでいたが、entry を経由しない直リンク/リロードで本文が空表示になり公開もできなかった（手動スモークで確認）。確認ページは下書き一覧取得で本文を既に持つため、これを `initialBody` として渡すだけで解消できる（本文単体取得エンドポイントの新設は不要）。rehydration 完了までフォーム描画を待つゲートは entry と同機構。
