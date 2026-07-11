@@ -15,9 +15,10 @@ import {
   useEditingAdviceId,
 } from "@/features/consultation/stores/useAdviceEditFormStore";
 
-// NOTE: A の useConsultationEditConfirm と同型。データが無い場合の自動リダイレクト(useEffect)は
-// 行わない。persist の rehydration は非同期で、リロード直後は一瞬空になるため、自動遷移させると
-// 復元前に飛ばされる。送信ボタン押下時に検証する。
+// NOTE: A の useConsultationEditConfirm を参考にしつつ、本文はストア(未保存編集)優先・無ければ
+// サーバ取得の initialBody へフォールバックする点が異なる(直リンク/リロード対応)。データが無い場合の
+// 自動リダイレクト(useEffect)は行わない: persist の rehydration は非同期で、リロード直後は一瞬空に
+// なるため、自動遷移させると復元前に飛ばされる。送信ボタン押下時に検証する。
 export const useAdvicePublishConfirm = (
   adviceId: number,
   initialBody: string,
