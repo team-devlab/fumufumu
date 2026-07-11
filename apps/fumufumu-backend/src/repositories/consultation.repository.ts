@@ -883,6 +883,9 @@ export class ConsultationRepository {
 			upsertPendingContentCheckQuery,
 		]);
 
+		// batch はこの時点で既にコミット済み。以降のガードで throw しても content_check/親 touch は
+		// 取り消されない。稀な競合(同時公開・可視チェック後の親非表示化)では「404 だが公開・pending
+		// 生成済み」になり得る(createAdvice 非下書き分岐と同じ、許容している既存パターン)。
 		const [published] = publishResult;
 		if (!published) {
 			// 本人の下書きでない/既に公開済み(fail-closed)
