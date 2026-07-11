@@ -11,25 +11,39 @@ import {
 import {
   useAdviceEditActions,
   useAdviceEditBody,
+  useAdviceEditHasHydrated,
   useEditingAdviceId,
 } from "@/features/consultation/stores/useAdviceEditFormStore";
 
 // NOTE: A の useConsultationEditConfirm と同型。データが無い場合の自動リダイレクト(useEffect)は
 // 行わない。persist の rehydration は非同期で、リロード直後は一瞬空になるため、自動遷移させると
-// 復元前に飛ばされる。送信ボタン押下時に検証して、誤爆(別/空のアドバイスへの公開)を防ぐ。
-export const useAdvicePublishConfirm = (adviceId: number) => {
+// 復元前に飛ばされる。送信ボタン押下時に検証する。
+export const useAdvicePublishConfirm = (
+  adviceId: number,
+  initialBody: string,
+) => {
   const router = useRouter();
 
-  const body = useAdviceEditBody();
+  const storeBody = useAdviceEditBody();
   const editingId = useEditingAdviceId();
+  const hasHydrated = useAdviceEditHasHydrated();
   const { reset } = useAdviceEditActions();
 
   const [isProcessing, setIsProcessing] = useState(false);
 
+  // ストアがこのアドバイスの未保存編集を保持していればそれを、無ければサーバ取得の本文
+  // (initialBody)を使う。entry を経由しない直リンク/リロードで store が空でも、確認画面に
+  // 本文を表示してそのまま公開できる(確認ページが既に取得済みの本文を渡すだけ・追加取得は不要)。
+  const body = editingId === adviceId ? storeBody : initialBody;
+
+  // persist の rehydration 完了までは store の値が使えず、未保存編集がある場合に一瞬サーバ値へ
+  // フォールバックして見えてしまう。完了までフォーム描画を待つゲートに使う(entry と同機構)。
+  const isReady = hasHydrated;
+
   const submit = async (draft: boolean) => {
-    // ストアがこのアドバイスの編集内容を保持していない場合(直リンク/リロード直後/別アドバイス保持)は、
-    // 誤ったアドバイスへの公開・保存を防ぐため編集画面へ戻す。編集画面側で本人下書きの認可(404)も行う。
-    if (editingId !== adviceId || !body.trim()) {
+    // 通常は initialBody が本人の有効な下書き本文のため空にならないが、万一空なら誤った
+    // 保存/公開を防いで編集画面へ戻す(編集画面側で本人下書きの認可(404)も行う)。
+    if (!body.trim()) {
       toast.error("編集内容が見つかりません。もう一度お試しください。");
       router.replace(ROUTES.ADVICE.DRAFT_EDIT(adviceId));
       return;
@@ -67,6 +81,7 @@ export const useAdvicePublishConfirm = (adviceId: number) => {
   };
 
   return {
+    isReady,
     body,
     isProcessing,
     handleBack: () => router.back(), // ブラウザバックで編集画面に戻る(データは維持される)

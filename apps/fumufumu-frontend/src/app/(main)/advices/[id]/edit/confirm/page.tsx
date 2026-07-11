@@ -22,7 +22,8 @@ export default async function PublishAdviceConfirmPage({ params }: PageProps) {
 
   // 公開できるのは「本人の下書きアドバイス」のみ(ADR 012)。entry と同じく本人限定・IDOR 安全な
   // 下書き一覧から id 一致を引き当てる。無ければ本人の下書きでない/存在しない → 404(fail-closed)。
-  // 実際の公開は編集ストアの本文で行うが、確認ルートにもサーバ側ガードを敷いて defense-in-depth とする。
+  // 公開する本文は編集ストア(未保存編集)を優先し、無ければここで取得した本文へフォールバックする。
+  // 確認ルートにもサーバ側ガードを敷いて defense-in-depth とする。
   let adviceDraft: Advice | null = null;
   try {
     const drafts = await fetchUserAdviceDraftsApi();
@@ -57,6 +58,7 @@ export default async function PublishAdviceConfirmPage({ params }: PageProps) {
     <AdvicePublishConfirmContainer
       consultation={consultation}
       adviceId={adviceId}
+      initialBody={adviceDraft.body}
     />
   );
 }

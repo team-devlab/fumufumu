@@ -53,17 +53,19 @@ const buildDetail = (): ConsultationDetail => ({
   tags: [],
 });
 
-const initialBody =
-  "確認画面で公開するアドバイス本文です。10文字以上あります。";
+// サーバ取得の下書き本文(確認ページが initialBody として渡す)
+const serverBody = "サーバ取得の下書き本文です。10文字以上あります。";
+// entry で編集されストアに載った本文(未保存編集)
+const storeBody = "entryで編集した未保存の本文です。10文字以上あります。";
 
-// 編集ストアにサーバ値を seed する。ストアは非公開のため、実際の seed 経路である
-// entry コンテナのレンダーで注入し、確認画面がそれを読める状態を作る(A のテストと同型)。
-const seedStore = (adviceId: number) => {
+// 編集ストアにサーバ値を seed する。実際の seed 経路である entry コンテナのレンダーで注入し、
+// 確認画面がそれを読める状態を作る(A のテストと同型)。
+const seedStore = (adviceId: number, body: string) => {
   const { unmount } = render(
     <AdviceDraftEditContainer
       consultation={buildDetail()}
       adviceId={adviceId}
-      initialBody={initialBody}
+      initialBody={body}
     />,
   );
   unmount();
@@ -78,7 +80,7 @@ beforeEach(() => {
 });
 
 describe("AdvicePublishConfirmContainer", () => {
-  it("公開すると publishAdvice を adviceId・本文で呼び、プロフィールへ遷移する(審査中導線)", async () => {
+  it("直リンク(ストア未保持)でもサーバ取得の本文を表示し、その本文で公開できる", async () => {
     const user = userEvent.setup();
     vi.mocked(publishAdvice).mockResolvedValue({
       id: 31,
@@ -86,18 +88,23 @@ describe("AdvicePublishConfirmContainer", () => {
       updated_at: "2026-07-07T00:00:00Z",
       created_at: "2026-07-01T00:00:00Z",
     });
-    seedStore(31);
+    // seed しない(entry を経由しない直リンク相当)
 
     render(
       <AdvicePublishConfirmContainer
         consultation={buildDetail()}
         adviceId={31}
+        initialBody={serverBody}
       />,
     );
+
+    // 空表示にならず、サーバ取得の本文が確認画面に出ること(直リンク時の空表示の回帰防止)
+    expect(screen.getByText(serverBody)).toBeInTheDocument();
+
     await user.click(screen.getByRole("button", { name: "公開する" }));
 
     await waitFor(() => {
-      expect(publishAdvice).toHaveBeenCalledWith(31, initialBody);
+      expect(publishAdvice).toHaveBeenCalledWith(31, serverBody);
     });
     // ADR 007: 公開直後は pending のため一覧ではなくプロフィールへ
     expect(pushMock).toHaveBeenCalledWith(ROUTES.USER);
@@ -109,45 +116,58 @@ describe("AdvicePublishConfirmContainer", () => {
     });
   });
 
-  it("下書き保存すると updateDraftAdvice を呼び、公開はしない", async () => {
+  it("entry の未保存編集がある場合は、サーバ本文で上書きせずストアの本文で公開する", async () => {
     const user = userEvent.setup();
-    vi.mocked(updateDraftAdvice).mockResolvedValue({
+    vi.mocked(publishAdvice).mockResolvedValue({
       id: 32,
-      draft: true,
+      draft: false,
       updated_at: "2026-07-07T00:00:00Z",
       created_at: "2026-07-01T00:00:00Z",
     });
-    seedStore(32);
+    seedStore(32, storeBody);
 
     render(
       <AdvicePublishConfirmContainer
         consultation={buildDetail()}
         adviceId={32}
+        initialBody={serverBody}
+      />,
+    );
+
+    // ストア(未保存編集)が優先され、サーバ本文は表示・公開に使われない
+    expect(screen.getByText(storeBody)).toBeInTheDocument();
+    expect(screen.queryByText(serverBody)).not.toBeInTheDocument();
+
+    await user.click(screen.getByRole("button", { name: "公開する" }));
+
+    await waitFor(() => {
+      expect(publishAdvice).toHaveBeenCalledWith(32, storeBody);
+    });
+  });
+
+  it("下書き保存すると updateDraftAdvice を呼び、公開はしない", async () => {
+    const user = userEvent.setup();
+    vi.mocked(updateDraftAdvice).mockResolvedValue({
+      id: 33,
+      draft: true,
+      updated_at: "2026-07-07T00:00:00Z",
+      created_at: "2026-07-01T00:00:00Z",
+    });
+
+    render(
+      <AdvicePublishConfirmContainer
+        consultation={buildDetail()}
+        adviceId={33}
+        initialBody={serverBody}
       />,
     );
     await user.click(screen.getByRole("button", { name: "下書き保存" }));
 
     await waitFor(() => {
-      expect(updateDraftAdvice).toHaveBeenCalledWith(32, initialBody);
+      expect(updateDraftAdvice).toHaveBeenCalledWith(33, serverBody);
     });
     expect(publishAdvice).not.toHaveBeenCalled();
     expect(pushMock).toHaveBeenCalledWith(ROUTES.USER);
     expect(refreshMock).toHaveBeenCalled();
-  });
-
-  it("ストアが対象のアドバイスを保持していない時は公開せず編集画面へ戻す(誤爆防止)", async () => {
-    const user = userEvent.setup();
-    // seed しない → ストアの editingId は対象 id と不一致
-
-    render(
-      <AdvicePublishConfirmContainer
-        consultation={buildDetail()}
-        adviceId={40}
-      />,
-    );
-    await user.click(screen.getByRole("button", { name: "公開する" }));
-
-    expect(publishAdvice).not.toHaveBeenCalled();
-    expect(replaceMock).toHaveBeenCalledWith(ROUTES.ADVICE.DRAFT_EDIT(40));
   });
 });
