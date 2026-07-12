@@ -21,6 +21,9 @@ type ConsultationEntity = Awaited<ReturnType<ConsultationRepository["findAll"]>>
 type ConsultationEntityById = Awaited<ReturnType<ConsultationRepository["findFirstById"]>>;
 type AdviceEntity = Awaited<ReturnType<ConsultationRepository["createAdvice"]>>;
 type AdviceEntityFromList = Awaited<ReturnType<ConsultationRepository["findAdvicesByConsultationId"]>>[number];
+// 相談横断の一覧(findAllAdvices)だけは reviewStatus を持つ(own-view の審査状態表示, #179)。
+// findAdvicesByConsultationId(相談スコープ)には付かないため型を分ける。
+type AdviceEntityFromGlobalList = Awaited<ReturnType<ConsultationRepository["findAllAdvices"]>>[number];
 
 export class ConsultationService {
 	private static readonly BODY_PREVIEW_LENGTH = 100;
@@ -105,8 +108,8 @@ export class ConsultationService {
 	 * * @param advice - Repository層から取得した相談アドバイスデータ（作成時 or 詳細取得時）
 	 * @returns API レスポンス形式の相談アドバイスデータ
 	 */
-	private toAdviceResponse(advice: AdviceEntity | AdviceEntityFromList): AdviceResponse {
-		return {
+	private toAdviceResponse(advice: AdviceEntity | AdviceEntityFromList | AdviceEntityFromGlobalList): AdviceResponse {
+		const response: AdviceResponse = {
 			id: advice.id,
 			consultation_id: advice.consultationId,
 			body: advice.body,
@@ -120,6 +123,16 @@ export class ConsultationService {
 				disabled: advice.author.disabled,
 			} : null
 		};
+
+		// 相談横断の own-view 一覧(findAllAdvices)経由のエンティティのみ reviewStatus を持つ(#179)。
+		// 承認済みのみ返る一覧やチェック未登録の既存データは NULL → "approved" に寄せ、相談側と対称に扱う。
+		// 相談スコープ(findAdvicesByConsultationId)や作成レスポンスには付与しない(Phase2で別途)。
+		if ("reviewStatus" in advice) {
+			const reviewStatus: ContentCheckStatus | null = advice.reviewStatus;
+			response.review_status = reviewStatus ?? "approved";
+		}
+
+		return response;
 	}
 
 	private toAdviceSavedResponse(advice: {
@@ -371,6 +384,17 @@ export class ConsultationService {
 				};
 			}
 			secureFilters.userId = requestUserId;
+		}
+
+		// 本人が自分のuserIdで一覧を引く場合のみ、未承認(pending/rejected)の自分のアドバイスも含める(#179)。
+		// 相談側 listConsultations と対称。他人のuserId指定では立てないため、他人の未承認は露出しない。
+		if (
+			secureFilters.draft !== true &&
+			secureFilters.userId !== undefined &&
+			requestUserId !== undefined &&
+			secureFilters.userId === requestUserId
+		) {
+			secureFilters.includeUnapprovedForOwn = true;
 		}
 
 		const [adviceList, totalCount] = await Promise.all([

@@ -291,10 +291,18 @@ export class ConsultationRepository {
 			return and(...draftConditions) as SQL;
 		}
 
-		const conditions: SQL[] = [
-			eq(advices.draft, false),
-			this.buildAdvicePublicVisibilityCondition(),
-		];
+		// 本人の own-view(userId===本人 のとき Service が includeUnapprovedForOwn を立てる)では
+		// アドバイス自身の承認済みonly条件を外し、本人の pending/rejected も一覧に含める(#179、相談側と対称)。
+		// fail-closed: userId 未指定のまま緩めると他人の未承認まで露出するため、userId が伴う場合に限る
+		// (advices.controller.ts が懸念していた「他人userId指定時に未承認が混入しない」の担保)。
+		const includeOwnUnapproved =
+			filters?.includeUnapprovedForOwn === true && filters?.userId !== undefined;
+
+		const conditions: SQL[] = [eq(advices.draft, false)];
+
+		if (!includeOwnUnapproved) {
+			conditions.push(this.buildAdvicePublicVisibilityCondition());
+		}
 
 		if (filters?.consultationId !== undefined) {
 			conditions.push(eq(advices.consultationId, filters.consultationId));
@@ -457,7 +465,7 @@ export class ConsultationRepository {
 		const { page = PAGINATION_CONFIG.DEFAULT_PAGE, limit = PAGINATION_CONFIG.DEFAULT_LIMIT } = pagination || {};
 		const offset = (page - 1) * limit;
 
-		return await this.db.query.advices.findMany({
+		const rows = await this.db.query.advices.findMany({
 			where: this.buildAdviceWhereConditions(filters),
 			orderBy: (fields, { desc }) => [desc(fields.createdAt), desc(fields.id)],
 			limit,
@@ -466,6 +474,8 @@ export class ConsultationRepository {
 				author: true,
 			},
 		});
+
+		return await this.attachReviewStatus(rows, "advice");
 	}
 
 	/**
