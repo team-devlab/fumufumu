@@ -1,22 +1,20 @@
 import { Next, Context } from 'hono';
 
 import { type Env, type Variables } from '../index';
-import { getUserRole } from '@/lib/user-role';
 
 type AppContext = Context<{ Bindings: Env, Variables: Variables }>;
 
 /**
  * 管理者権限ガード: users.role === 'admin' のみ通過させる
  *
- * 前提: 直前で authGuard が実行され、c.get('appUserId') が確定していること。
- * 未認可時は 403 ではなく 404 を返す（admin API の存在自体を露出させないため）。
- * 詳細は ADR 010 §4 を参照。
+ * 前提: 直前で authGuard が実行され、c.get('appUserId') / c.get('userRole') が確定していること。
+ * role は authGuard が disabled チェックと同じ 1 往復で取得済みのため、ここでは再クエリしない (#136)。
+ * disabled な admin は authGuard が先に 403 で弾くため、ここには到達しない。
+ * 未認可時は 403 ではなく 404 を返す（admin API の存在自体を露出させないため）。詳細は ADR 010 §4 を参照。
  */
 export const adminGuard = async (c: AppContext, next: Next) => {
   const appUserId = c.get('appUserId');
-  const db = c.get('db');
-
-  const role = await getUserRole(db, appUserId);
+  const role = c.get('userRole');
 
   if (role !== 'admin') {
     // クライアントには 404 を返しつつ、サーバーログでは「権限不足」を区別可能にする。
