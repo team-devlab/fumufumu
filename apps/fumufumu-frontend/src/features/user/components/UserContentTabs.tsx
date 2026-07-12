@@ -165,6 +165,8 @@ const AdviceTabContent: React.FC<{ state: AdviceTabState }> = ({ state }) => {
           className="block"
         >
           <div className="bg-white rounded-xl border border-gray-100 shadow-sm p-5 hover:shadow-md transition-shadow duration-200">
+            {/* ReviewStatusBadge は承認済み/未指定で null を返す。empty:hidden で空ラッパーごと畳み、
+                バッジ非表示時に余白(mb-2)が残らないようにする(この div を「冗長」と外すと余白が崩れる) */}
             <div className="mb-2 empty:hidden">
               <ReviewStatusBadge status={advice.review_status} />
             </div>
@@ -228,6 +230,8 @@ export const UserContentTabs: React.FC<Props> = ({
                   className="block"
                 >
                   <div className="bg-white rounded-xl border border-gray-100 shadow-sm p-5 hover:shadow-md transition-shadow duration-200">
+                    {/* ReviewStatusBadge は承認済み/未指定で null を返す。empty:hidden で空ラッパーごと畳み、
+                        バッジ非表示時に余白(mb-2)が残らないようにする(この div を「冗長」と外すと余白が崩れる) */}
                     <div className="mb-2 empty:hidden">
                       <ReviewStatusBadge status={consultation.review_status} />
                     </div>
