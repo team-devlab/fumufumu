@@ -4,6 +4,7 @@ import { authUsers } from '../db/schema/auth';
 import { eq } from 'drizzle-orm';
 
 import { type Env, type Variables } from '../index';
+import { accountDisabledBody } from '../lib/account-status';
 
 // 認証ルーターのHonoインスタンスを定義
 export const authRouter = new Hono<{ Bindings: Env, Variables: Variables }>();
@@ -136,14 +137,25 @@ authRouter.post('/signin', async (c) => {
 
   // Better Authのエラー経路でUnhandled Rejectionが発生するケースを避けるため、
   // 未登録メールは事前に401で返す（メッセージは汎用化して情報漏洩を避ける）。
+  // あわせて users.disabled も取得し、無効化ユーザーはこの時点で 403 で弾く。
+  // leftJoin なのは「メール存在チェックは authUsers 基準のまま維持」するため
+  // （マッピング欠落の異常系で 401 に化けさせない。その場合 disabled は null=無効化なし扱い）。
   const existingUser = await db
-    .select({ id: authUsers.id })
+    .select({ id: authUsers.id, disabled: users.disabled })
     .from(authUsers)
+    .leftJoin(authMappings, eq(authMappings.authUserId, authUsers.id))
+    .leftJoin(users, eq(users.id, authMappings.appUserId))
     .where(eq(authUsers.email, email))
     .limit(1);
 
   if (existingUser.length === 0) {
     return c.json({ message: 'Invalid email or password' }, 401);
+  }
+
+  // disabled(BAN) はここで弾く。Better Auth の signInEmail を呼ぶ前に返すことで、
+  // 無効化ユーザーに使えるセッション Cookie を一切発行しない(authGuard の 403 と合わせ多層防御, #136)。
+  if (existingUser[0].disabled) {
+    return c.json(accountDisabledBody, 403);
   }
 
   let authResponse: Response;

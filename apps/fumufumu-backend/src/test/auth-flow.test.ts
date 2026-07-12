@@ -1,7 +1,7 @@
 import { env } from 'cloudflare:test';
 import { describe, it, expect, beforeAll } from 'vitest';
 import app from '../index';
-import { setupIntegrationTest } from './helpers/db-helper';
+import { setupIntegrationTest, forceSetDisabled } from './helpers/db-helper';
 import { createAndLoginUser } from './helpers/auth-helper';
 import { createApiRequest } from './helpers/request-helper';
 import { assertUnauthorizedError } from './helpers/assert-helper';
@@ -111,6 +111,25 @@ describe('Integration Tests', () => {
 			expect(protectedRes.status).toBe(401);
 			const body = await protectedRes.json() as any;
 			assertUnauthorizedError(body);
+		});
+
+		it('disabled ユーザーのサインインは 403 で弾き、セッション Cookie を発行しない', async () => {
+			// signin は authGuard を通らないため、authGuard とは別にここでも disabled を弾く。
+			// Better Auth の signInEmail を呼ぶ前に 403 を返すので、使える Cookie が一切出ないことを担保する(#136)。
+			const email = `disabled-signin-${Date.now()}@example.com`;
+			const user = await createAndLoginUser({ email });
+			await forceSetDisabled(user.appUserId);
+
+			const signinReq = createApiRequest('/api/auth/signin', 'POST', {
+				body: { email, password: 'password123456' },
+			});
+			const signinRes = await app.fetch(signinReq, env);
+
+			expect(signinRes.status).toBe(403);
+			expect(signinRes.headers.get('set-cookie')).toBeFalsy();
+
+			const body = await signinRes.json() as { code: string };
+			expect(body.code).toBe('account_disabled');
 		});
 
 		it('should return a client auth error instead of 500 when the user does not exist', async () => {
