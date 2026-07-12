@@ -321,7 +321,20 @@ export class ConsultationRepository {
 		const conditions: SQL[] = [eq(advices.draft, false)];
 
 		if (!includeOwnUnapproved) {
-			conditions.push(this.buildAdvicePublicVisibilityCondition());
+			// 相談詳細/相談横断の閲覧で viewerId が渡された場合、公開(承認済み)の回答に加え
+			// 閲覧者本人の非下書き回答(投稿チェック中/公開見送り)も可視にする(#179 Phase2、userId絞り込みとは別軸)。
+			// 他者には公開分のみ(fail-closed)。hidden は下の hidden 条件でなお除外され、相談横断時は
+			// buildAdviceParentVisibilityCondition が別途 AND されるため、本人でも非公開相談配下は漏れない。
+			// admin モデレーション(includeHidden/hiddenOnly)は個別 hide 管理のため viewerId の緩和対象外。
+			const viewerId = filters?.viewerId;
+			const isAdminModeration = filters?.includeHidden === true || filters?.hiddenOnly === true;
+			if (viewerId !== undefined && !isAdminModeration) {
+				conditions.push(
+					or(this.buildAdvicePublicVisibilityCondition(), eq(advices.authorId, viewerId)) as SQL,
+				);
+			} else {
+				conditions.push(this.buildAdvicePublicVisibilityCondition());
+			}
 		}
 
 		if (filters?.consultationId !== undefined) {
@@ -455,7 +468,7 @@ export class ConsultationRepository {
 		const { page = PAGINATION_CONFIG.DEFAULT_PAGE, limit = PAGINATION_CONFIG.DEFAULT_LIMIT } = pagination || {};
 		const offset = (page - 1) * limit;
 
-		return await this.db.query.advices.findMany({
+		const rows = await this.db.query.advices.findMany({
 			where: this.buildAdviceWhereConditions({ ...filters, consultationId }),
 			orderBy: (fields, { asc, desc }) =>
 				sortOrder === "asc"
@@ -467,6 +480,13 @@ export class ConsultationRepository {
 				author: true,
 			},
 		});
+
+		// viewerId 指定時(相談詳細の閲覧)は本人の未公開回答が混ざり得るため review_status を付与する(#179 Phase2)。
+		// 非指定時は承認済みのみで常に承認相当のため、追加クエリを撃たず null を置く(findAllAdvices と同じ流儀)。
+		if (filters?.viewerId === undefined) {
+			return this.withNullReviewStatus(rows);
+		}
+		return await this.attachReviewStatus(rows, "advice");
 	}
 
 	async countAdvicesByConsultationId(

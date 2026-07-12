@@ -124,9 +124,9 @@ export class ConsultationService {
 			} : null
 		};
 
-		// 相談横断の own-view 一覧(findAllAdvices)経由のエンティティのみ reviewStatus を持つ(#179)。
-		// 承認済みのみ返る一覧やチェック未登録の既存データは NULL → "approved" に寄せ、相談側と対称に扱う。
-		// 相談スコープ(findAdvicesByConsultationId)や作成レスポンスには付与しない(Phase2で別途)。
+		// reviewStatus を持つエンティティ(相談横断 own-view の findAllAdvices、および相談詳細で viewerId 指定の
+		// findAdvicesByConsultationId)にのみ review_status を付与する(#179)。承認済みのみ返る経路やチェック未登録の
+		// 既存データは NULL → "approved" に寄せ、相談側と対称に扱う。作成レスポンスには付与しない。
 		if ("reviewStatus" in advice) {
 			const reviewStatus: ContentCheckStatus | null = advice.reviewStatus;
 			response.review_status = reviewStatus ?? "approved";
@@ -264,14 +264,17 @@ export class ConsultationService {
 		const consultation = await this.repository.findFirstById(id);
 		const reviewStatus = await this.assertConsultationReadableOrThrow(id, consultation, requestUserId);
 
+		// viewerId=本人 を渡し、承認済み回答に加え本人の未公開回答(投稿チェック中/公開見送り)も
+		// 親相談上に inline 表示する(#179 Phase2)。他者の未公開は Repository 側で漏らさない(fail-closed)。
+		const adviceFilters: AdviceFilters = { viewerId: requestUserId };
 		const [adviceList, adviceTotalCount, tagList] = await Promise.all([
 			this.repository.findAdvicesByConsultationId(
 				id,
 				{ page, limit },
-				undefined,
+				adviceFilters,
 				"asc",
 			),
-			this.repository.countAdvicesByConsultationId(id),
+			this.repository.countAdvicesByConsultationId(id, adviceFilters),
 			this.repository.findTagsByConsultationId(id),
 		]);
 
@@ -349,9 +352,12 @@ export class ConsultationService {
 		const consultation = await this.repository.findConsultationByIdForAccessCheck(consultationId);
 		await this.assertConsultationReadableOrThrow(consultationId, consultation, requestUserId, filters?.includeHidden);
 
+		// 詳細レスポンス埋め込みの advices(getConsultation)と対称に、本人の未公開回答も inline させる(#179 Phase2)。
+		// admin(includeHidden/hiddenOnly)経路では Repository 側で viewerId の緩和は無効化される。
+		const mergedFilters: AdviceFilters = { ...filters, viewerId: requestUserId };
 		const [adviceList, totalCount] = await Promise.all([
-			this.repository.findAdvicesByConsultationId(consultationId, { page, limit }, filters),
-			this.repository.countAdvicesByConsultationId(consultationId, filters),
+			this.repository.findAdvicesByConsultationId(consultationId, { page, limit }, mergedFilters),
+			this.repository.countAdvicesByConsultationId(consultationId, mergedFilters),
 		]);
 
 		return {

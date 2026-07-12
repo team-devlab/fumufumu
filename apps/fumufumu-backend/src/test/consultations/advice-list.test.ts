@@ -582,7 +582,11 @@ describe('Consultations API - Advice List (GET /:id/advices)', () => {
 			expect(pendingAttackerRes.status).toBe(201);
 		});
 
-		it('他者視点では approved な advice のみが一覧に含まれる', async () => {
+		// #179 Phase2: 相談詳細の回答一覧は「公開(承認済み) + 閲覧者本人の非下書き回答」を可視にする。
+		// 他人の未公開は依然として漏らさない(fail-closed)。viewerId ベースの OR 可視性の検証。
+		it('他者視点では approved な advice と「自分の未公開回答」のみが一覧に含まれる(#179 Phase2)', async () => {
+			// attacker は user の相談を閲覧。user の pending/rejected は見えないが、
+			// attacker 自身が投稿した投稿チェック中の回答は本人分として inline 表示される。
 			const req = createApiRequest(`/api/consultations/${visibilityConsultationId}/advices`, 'GET', {
 				cookie: attacker.cookie,
 				queryParams: { limit: 100 },
@@ -592,13 +596,19 @@ describe('Consultations API - Advice List (GET /:id/advices)', () => {
 			const body = await res.json() as any;
 			const bodies = body.data.map((a: any) => a.body);
 			expect(bodies).toContain(approvedAdviceBody);
-			expect(bodies).not.toContain(pendingAdviceBody);
+			expect(bodies).toContain(pendingAttackerBody); // 自分の投稿チェック中回答は見える
+			expect(bodies).not.toContain(pendingAdviceBody); // 他人(user)の未公開は見えない
 			expect(bodies).not.toContain(rejectedAdviceBody);
-			expect(bodies).not.toContain(pendingAttackerBody);
-			expect(body.pagination.total_items).toBe(1);
+			expect(body.pagination.total_items).toBe(2);
+
+			// 自分の未公開回答には review_status が付き、承認済みは approved に寄る
+			const attackerPending = body.data.find((a: any) => a.body === pendingAttackerBody);
+			expect(attackerPending.review_status).toBe('pending');
+			const approved = body.data.find((a: any) => a.body === approvedAdviceBody);
+			expect(approved.review_status).toBe('approved');
 		});
 
-		it('author 本人視点でも自分の pending / rejected advice は相談詳細の一覧に含まれない', async () => {
+		it('author 本人視点では自分の pending / rejected advice も相談詳細の一覧に inline 表示される(#179 Phase2)', async () => {
 			const req = createApiRequest(`/api/consultations/${visibilityConsultationId}/advices`, 'GET', {
 				cookie: user.cookie,
 				queryParams: { limit: 100 },
@@ -608,12 +618,18 @@ describe('Consultations API - Advice List (GET /:id/advices)', () => {
 			const body = await res.json() as any;
 			const bodies = body.data.map((a: any) => a.body);
 			expect(bodies).toContain(approvedAdviceBody);
-			expect(bodies).not.toContain(pendingAdviceBody);
-			expect(bodies).not.toContain(rejectedAdviceBody);
-			expect(body.pagination.total_items).toBe(1);
+			expect(bodies).toContain(pendingAdviceBody);
+			expect(bodies).toContain(rejectedAdviceBody);
+			expect(bodies).not.toContain(pendingAttackerBody); // 他人(attacker)の未公開は見えない
+			expect(body.pagination.total_items).toBe(3);
+
+			const pending = body.data.find((a: any) => a.body === pendingAdviceBody);
+			expect(pending.review_status).toBe('pending');
+			const rejected = body.data.find((a: any) => a.body === rejectedAdviceBody);
+			expect(rejected.review_status).toBe('rejected');
 		});
 
-		it('GET /api/consultations/:id の advices にも同じ可視性フィルタが効く', async () => {
+		it('GET /api/consultations/:id の advices にも同じ viewerId 可視性が効く(#179 Phase2)', async () => {
 			const req = createApiRequest(`/api/consultations/${visibilityConsultationId}`, 'GET', {
 				cookie: attacker.cookie,
 			});
@@ -623,9 +639,9 @@ describe('Consultations API - Advice List (GET /:id/advices)', () => {
 			const advices = body.advices ?? [];
 			const bodies = advices.map((a: any) => a.body);
 			expect(bodies).toContain(approvedAdviceBody);
+			expect(bodies).toContain(pendingAttackerBody); // 閲覧者本人(attacker)の未公開は詳細でも見える
 			expect(bodies).not.toContain(pendingAdviceBody);
 			expect(bodies).not.toContain(rejectedAdviceBody);
-			expect(bodies).not.toContain(pendingAttackerBody);
 		});
 	});
 });
