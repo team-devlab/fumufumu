@@ -481,9 +481,12 @@ export class ConsultationRepository {
 			},
 		});
 
-		// viewerId 指定時(相談詳細の閲覧)は本人の未公開回答が混ざり得るため review_status を付与する(#179 Phase2)。
-		// 非指定時は承認済みのみで常に承認相当のため、追加クエリを撃たず null を置く(findAllAdvices と同じ流儀)。
-		if (filters?.viewerId === undefined) {
+		// review_status が pending/rejected になり得るのは「viewer 本人の未公開回答」だけ(他者には承認済みのみ返す)。
+		// よって当ページに viewer 自身の回答が1件も無ければ内容は必ず承認相当で、content_checks の追加読み取りは不要(#179 Phase2)。
+		// バッジが出得るケース(自分の回答がある詳細)に追加クエリを限定し、最頻の第三者閲覧では撃たず D1 read を節約する
+		// (own-view 以外で追加クエリを撃たない findAll/findAllAdvices と同じ方針)。
+		const viewerId = filters?.viewerId;
+		if (viewerId === undefined || !rows.some((row) => row.authorId === viewerId)) {
 			return this.withNullReviewStatus(rows);
 		}
 		return await this.attachReviewStatus(rows, "advice");
