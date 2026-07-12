@@ -302,6 +302,37 @@ describe('Consultations API - List & Filtering', () => {
     const pendingOwnConsultation = body.data.find((item: any) => item.id === created.id);
     expect(pendingOwnConsultation).toBeDefined();
   });
+
+  describe('Cache-Control境界(#163: own-unapprovedビューの公開キャッシュ露出防止)', () => {
+    it('?userId=自分(own-unapprovedビュー)は共有キャッシュに乗らない(no-store)', async () => {
+      const res = await app.fetch(createApiRequest('/api/consultations', 'GET', {
+        cookie: user.cookie,
+        queryParams: { userId: user.appUserId.toString() },
+      }), env);
+      expect(res.status).toBe(200);
+      expect(res.headers.get('Cache-Control')).toContain('no-store');
+    });
+
+    it('userId無しの公開一覧はpublic, max-age=60のまま(キャッシュ劣化しないこと)', async () => {
+      const res = await app.fetch(createApiRequest('/api/consultations', 'GET', {
+        cookie: user.cookie,
+      }), env);
+      expect(res.status).toBe(200);
+      expect(res.headers.get('Cache-Control')).toBe('public, max-age=60');
+    });
+
+    it('?userId=他人(承認済みのみ返るビュー)はpublicのまま(キャッシュ劣化しないこと)', async () => {
+      const otherUser = await createAndLoginUser({ name: 'Other User For Cache Test' });
+
+      const res = await app.fetch(createApiRequest('/api/consultations', 'GET', {
+        cookie: user.cookie,
+        queryParams: { userId: otherUser.appUserId.toString() },
+      }), env);
+      expect(res.status).toBe(200);
+      expect(res.headers.get('Cache-Control')).toBe('public, max-age=60');
+    });
+  });
+
   it('body_previewは100文字に切り取られている', async () => {
     // 100文字以上の本文で相談を作成
     const longBody = 'A'.repeat(150);
