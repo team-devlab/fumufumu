@@ -475,12 +475,14 @@ describe('Consultations API - Advice List (GET /:id/advices)', () => {
 		expect(body.error).toBe('NotFoundError');
 	});
 
-	it('未承認(pending)の相談の回答一覧は取得できない（404）', async () => {
+	// #179 Phase2: 本人は自分の投稿チェック中/公開見送りの相談の回答一覧にアクセスできる
+	// (getConsultation と同じ assertConsultationReadableOrThrow の本人バイパス)。他人は従来通り404でfail-closed。
+	it('投稿チェック中(pending)の相談の回答一覧は本人なら取得でき、他人は404（#179 Phase2）', async () => {
 		const createRes = await app.fetch(createApiRequest('/api/consultations', 'POST', {
 			cookie: user.cookie,
 			body: {
 				title: 'pending相談',
-				body: '未承認相談は回答一覧も非公開であるべきです。10文字以上あります。',
+				body: '投稿チェック中の相談は本人のみ回答一覧にアクセスできます。10文字以上あります。',
 				draft: false,
 				tagIds: [tagId],
 			},
@@ -488,22 +490,29 @@ describe('Consultations API - Advice List (GET /:id/advices)', () => {
 		expect(createRes.status).toBe(201);
 		const created = await createRes.json() as any;
 
-		const req = createApiRequest(`/api/consultations/${created.id}/advices`, 'GET', {
+		// 本人: 自分の投稿チェック中の相談なら回答一覧にアクセスできる（中身は承認済みのみ）
+		const ownerRes = await app.fetch(createApiRequest(`/api/consultations/${created.id}/advices`, 'GET', {
 			cookie: user.cookie,
-		});
-		const res = await app.fetch(req, env);
-		expect(res.status).toBe(404);
-		const body = await res.json() as any;
-		expect(body.error).toBe('NotFoundError');
-		expect(body.message).toBe(`相談が見つかりません: id=${created.id}`);
+		}), env);
+		expect(ownerRes.status).toBe(200);
+		const ownerBody = await ownerRes.json() as any;
+		expect(Array.isArray(ownerBody.data)).toBe(true);
+
+		// 他人: 公開前のためアクセス不可（fail-closed）
+		const attackerRes = await app.fetch(createApiRequest(`/api/consultations/${created.id}/advices`, 'GET', {
+			cookie: attacker.cookie,
+		}), env);
+		expect(attackerRes.status).toBe(404);
+		const attackerBody = await attackerRes.json() as any;
+		expect(attackerBody.error).toBe('NotFoundError');
 	});
 
-	it('未承認(rejected)の相談の回答一覧は取得できない（404）', async () => {
+	it('公開見送り(rejected)の相談の回答一覧は本人なら取得でき、他人は404（#179 Phase2）', async () => {
 		const createRes = await app.fetch(createApiRequest('/api/consultations', 'POST', {
 			cookie: user.cookie,
 			body: {
 				title: 'rejected相談',
-				body: 'reject済み相談も回答一覧は非公開であるべきです。10文字以上あります。',
+				body: '公開見送りの相談も本人のみ回答一覧にアクセスできます。10文字以上あります。',
 				draft: false,
 				tagIds: [tagId],
 			},
@@ -512,14 +521,15 @@ describe('Consultations API - Advice List (GET /:id/advices)', () => {
 		const created = await createRes.json() as any;
 		await rejectConsultation(created.id);
 
-		const req = createApiRequest(`/api/consultations/${created.id}/advices`, 'GET', {
+		const ownerRes = await app.fetch(createApiRequest(`/api/consultations/${created.id}/advices`, 'GET', {
 			cookie: user.cookie,
-		});
-		const res = await app.fetch(req, env);
-		expect(res.status).toBe(404);
-		const body = await res.json() as any;
-		expect(body.error).toBe('NotFoundError');
-		expect(body.message).toBe(`相談が見つかりません: id=${created.id}`);
+		}), env);
+		expect(ownerRes.status).toBe(200);
+
+		const attackerRes = await app.fetch(createApiRequest(`/api/consultations/${created.id}/advices`, 'GET', {
+			cookie: attacker.cookie,
+		}), env);
+		expect(attackerRes.status).toBe(404);
 	});
 
 	describe('content_check による advice 可視性フィルタ', () => {

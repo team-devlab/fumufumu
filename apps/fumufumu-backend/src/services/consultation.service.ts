@@ -66,10 +66,10 @@ export class ConsultationService {
             } : null,
         };
 
-        // own-view 一覧(findAll)経由のエンティティのみ reviewStatus を持つ(#179)。
+        // reviewStatus を持つエンティティ(own-view 一覧 findAll 経由)にのみ review_status を付与する(#179)。
         // 承認済みのみ返る一覧やチェック未登録の既存データは NULL のため "approved" へ寄せ、
-        // 本人が pending/rejected を判別できるようにする。詳細/作成のレスポンスには付与しない
-        // (審査中詳細の本人向け表示は Phase 2 / 別PRで扱う)。
+        // 本人が pending/rejected(投稿チェック中/公開見送り)を判別できるようにする。
+        // 詳細は getConsultation が本人向けに review_status を後付けする(#179 Phase2)。作成レスポンスには付与しない。
         if ("reviewStatus" in consultation) {
             const reviewStatus: ContentCheckStatus | null = consultation.reviewStatus;
             response.review_status = reviewStatus ?? "approved";
@@ -233,17 +233,26 @@ export class ConsultationService {
 		},
 		requestUserId?: number,
 		includeHidden?: boolean,
-	): Promise<void> {
+	): Promise<ContentCheckStatus | null> {
 		const contentCheck = await this.repository.findConsultationContentCheckByConsultationId(consultationId);
+		// 著者本人か（未認証・作者不明は本人扱いにしない fail-closed）。draft/未承認の緩和はこの isOwner に集約する。
+		const isOwner = requestUserId !== undefined && consultation.authorId === requestUserId;
 		// draftは著者本人のみ閲覧可能（自分の下書き編集のため）
-		const isDraftAndNotOwner = consultation.draft && consultation.authorId !== requestUserId;
+		const isDraftAndNotOwner = consultation.draft && !isOwner;
 		// モデレーションによるhiddenは著者本人にも効かせる（advice hideと挙動を揃える）。
 		// includeHidden(admin限定・コントローラ層でrole検証済み)の場合のみバイパスする
 		const isHiddenByModeration = consultation.hiddenAt !== null && !includeHidden;
-		const isNotApproved = contentCheck !== undefined && contentCheck.status !== "approved";
-		if (isDraftAndNotOwner || isHiddenByModeration || isNotApproved) {
+		// 未承認(pending/rejected=投稿チェック中/公開見送り)は本人にのみ開放する(#179 Phase2)。
+		// 他人は従来通り404でfail-closed。本人が自分の相談詳細で公開前状態を把握できるようにするための緩和。
+		const isNotApprovedAndNotOwner =
+			contentCheck !== undefined && contentCheck.status !== "approved" && !isOwner;
+		if (isDraftAndNotOwner || isHiddenByModeration || isNotApprovedAndNotOwner) {
 			throw new NotFoundError(`相談が見つかりません: id=${consultationId}`);
 		}
+
+		// 呼び出し元(getConsultation)が review_status を返すために content_check の状態を返す。
+		// この判定で引いた結果を使い回し、追加クエリを避ける。未登録(既存データ)は null。
+		return contentCheck?.status ?? null;
 	}
 
 	async getConsultation(
@@ -253,7 +262,7 @@ export class ConsultationService {
 	) :Promise<ConsultationResponse> {
 		const { page = 1, limit = 20 } = pagination || {};
 		const consultation = await this.repository.findFirstById(id);
-		await this.assertConsultationReadableOrThrow(id, consultation, requestUserId);
+		const reviewStatus = await this.assertConsultationReadableOrThrow(id, consultation, requestUserId);
 
 		const [adviceList, adviceTotalCount, tagList] = await Promise.all([
 			this.repository.findAdvicesByConsultationId(
@@ -267,6 +276,9 @@ export class ConsultationService {
 		]);
 
 		const baseResponse = this.toConsultationResponse(consultation, true);
+		// #179 Phase2: 本人が自分の相談詳細で投稿チェック中/公開見送りを把握できるよう review_status を返す。
+		// 本人以外はそもそも未承認に到達できない(404)ため実質 approved のみが返る。null(既存データ)は approved 相当。
+		baseResponse.review_status = reviewStatus ?? "approved";
 
 		return {
 			...baseResponse,
