@@ -17,6 +17,28 @@ describe('Consultations API - List & Filtering', () => {
       .bind(consultationId)
       .run();
   };
+  const rejectConsultation = async (consultationId: number) => {
+    await env.DB
+      .prepare("UPDATE content_checks SET status = 'rejected', reason = 'テスト却下', checked_at = (cast(unixepoch('subsecond') * 1000 as integer)), updated_at = (cast(unixepoch('subsecond') * 1000 as integer)) WHERE target_type = 'consultation' AND target_id = ?")
+      .bind(consultationId)
+      .run();
+  };
+  const createOwnConsultation = async (title: string) => {
+    const res = await app.fetch(createApiRequest('/api/consultations', 'POST', {
+      cookie: user.cookie,
+      body: { title, body: `${title} の本文です（10文字以上）。`, draft: false, tagIds: [tagId] },
+    }), env);
+    expect(res.status).toBe(201);
+    return (await res.json() as { id: number }).id;
+  };
+  const fetchOwnList = async () => {
+    const res = await app.fetch(createApiRequest('/api/consultations', 'GET', {
+      cookie: user.cookie,
+      queryParams: { userId: user.appUserId.toString() },
+    }), env);
+    expect(res.status).toBe(200);
+    return (await res.json() as { data: Array<{ id: number; review_status?: string }> }).data;
+  };
 
   beforeAll(async () => {
     // DBセットアップとテストユーザー作成
@@ -301,6 +323,44 @@ describe('Consultations API - List & Filtering', () => {
 
     const pendingOwnConsultation = body.data.find((item: any) => item.id === created.id);
     expect(pendingOwnConsultation).toBeDefined();
+  });
+
+  describe('審査状態フィールド(review_status, #179: 本人が審査中/却下/承認を判別できる)', () => {
+    it('own-view: 審査中(pending)は review_status="pending" を返す', async () => {
+      const id = await createOwnConsultation('review-status-pending');
+      const item = (await fetchOwnList()).find((c) => c.id === id);
+      expect(item).toBeDefined();
+      expect(item?.review_status).toBe('pending');
+    });
+
+    it('own-view: 承認済み(approved)は review_status="approved" を返す', async () => {
+      const id = await createOwnConsultation('review-status-approved');
+      await approveConsultation(id);
+      const item = (await fetchOwnList()).find((c) => c.id === id);
+      expect(item).toBeDefined();
+      expect(item?.review_status).toBe('approved');
+    });
+
+    it('own-view: 却下(rejected)は一覧に残り review_status="rejected" を返す(黙って消さない)', async () => {
+      const id = await createOwnConsultation('review-status-rejected');
+      await rejectConsultation(id);
+      const item = (await fetchOwnList()).find((c) => c.id === id);
+      // Q1決定: 却下は本人一覧から除外せず、バッジで判別できるよう状態を返す
+      expect(item).toBeDefined();
+      expect(item?.review_status).toBe('rejected');
+    });
+
+    it('公開一覧(userId無し)でも承認済みは review_status="approved" を持つ', async () => {
+      const res = await app.fetch(createApiRequest('/api/consultations', 'GET', {
+        cookie: user.cookie,
+      }), env);
+      expect(res.status).toBe(200);
+      const body = await res.json() as { data: Array<{ review_status?: string }> };
+      expect(body.data.length).toBeGreaterThan(0);
+      body.data.forEach((item) => {
+        expect(item.review_status).toBe('approved');
+      });
+    });
   });
 
   describe('Cache-Control境界(#163: own-unapprovedビューの公開キャッシュ露出防止)', () => {

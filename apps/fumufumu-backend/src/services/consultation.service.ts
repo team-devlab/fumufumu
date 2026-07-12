@@ -10,6 +10,7 @@ import type {
 } from "@/validators/consultation.validator";
 import { CompensationFailedError, ForbiddenError, NotFoundError, ValidationError } from "@/errors/AppError";
 import type { AdviceListResponse, AdviceResponse } from "@/types/advice.response";
+import type { ContentCheckStatus } from "@/db/schema/content-checks";
 import {
 	CONSULTATION_TAG_RULE_MESSAGES,
 	getConsultationTagRuleError,
@@ -61,6 +62,15 @@ export class ConsultationService {
                 disabled: consultation.author.disabled,
             } : null,
         };
+
+        // own-view 一覧(findAll)経由のエンティティのみ reviewStatus を持つ(#179)。
+        // 承認済みのみ返る一覧やチェック未登録の既存データは NULL のため "approved" へ寄せ、
+        // 本人が pending/rejected を判別できるようにする。詳細/作成のレスポンスには付与しない
+        // (審査中詳細の本人向け表示は Phase 2 / 別PRで扱う)。
+        if ("reviewStatus" in consultation) {
+            const reviewStatus: ContentCheckStatus | null = consultation.reviewStatus;
+            response.review_status = reviewStatus ?? "approved";
+        }
 
         // 詳細時のみ body プロパティを追加する
         if (isDetail) {

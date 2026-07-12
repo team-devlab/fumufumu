@@ -8,7 +8,7 @@ import { PAGINATION_CONFIG } from "@/types/consultation.types";
 import type { AdviceFilters } from "@/types/advice.types";
 import { DatabaseError, ConflictError, NotFoundError } from "@/errors/AppError";
 import { advices } from "@/db/schema/advices";
-import { contentChecks } from "@/db/schema/content-checks";
+import { contentChecks, type ContentCheckStatus, type ContentCheckTargetType } from "@/db/schema/content-checks";
 
 
 export class ConsultationRepository {
@@ -121,6 +121,35 @@ export class ConsultationRepository {
 
 		// 既存データ(no-check)は表示を維持しつつ、check付きは approved のみ表示する
 		return or(approvedCheckExists, noCheckExists) as SQL;
+	}
+
+	/**
+	 * own-view 一覧の各アイテムに審査状態(reviewStatus)を付与する(#179)。
+	 * 相関サブクエリを RQB の extras に載せる方式は `with` 併用時に外側行へ相関せず NULL に
+	 * なるため採らず、一覧取得後に対象IDの content_checks を IN で一括取得してマップで引き当てる。
+	 * content_checks は (target_type,target_id) が uq 制約で一意なので targetId → status は1対1。
+	 * チェック未登録(既存データ)は NULL を返し、Service層で "approved" 相当へ寄せる。
+	 * 相談・アドバイスの一覧で対称に使う。
+	 */
+	private async attachReviewStatus<T extends { id: number }>(
+		rows: T[],
+		targetType: ContentCheckTargetType,
+	): Promise<Array<T & { reviewStatus: ContentCheckStatus | null }>> {
+		if (rows.length === 0) {
+			return [];
+		}
+
+		const ids = rows.map((row) => row.id);
+		const checks = await this.db
+			.select({ targetId: contentChecks.targetId, status: contentChecks.status })
+			.from(contentChecks)
+			.where(and(eq(contentChecks.targetType, targetType), inArray(contentChecks.targetId, ids)));
+
+		const statusById = new Map<number, ContentCheckStatus>(
+			checks.map((check) => [check.targetId, check.status]),
+		);
+
+		return rows.map((row) => ({ ...row, reviewStatus: statusById.get(row.id) ?? null }));
 	}
 
 	private buildPublicConsultationCondition(): SQL {
@@ -355,7 +384,7 @@ export class ConsultationRepository {
 		const { page = PAGINATION_CONFIG.DEFAULT_PAGE, limit = PAGINATION_CONFIG.DEFAULT_LIMIT } = pagination || {};
 		const offset = (page - 1) * limit;
 
-		return await this.db.query.consultations.findMany({
+		const rows = await this.db.query.consultations.findMany({
 			where: this.buildWhereConditions(filters),
 			orderBy: (fields, { desc }) => [desc(fields.createdAt), desc(fields.id)],
 			limit: limit,
@@ -364,6 +393,8 @@ export class ConsultationRepository {
 				author: true,
 			},
 		});
+
+		return await this.attachReviewStatus(rows, "consultation");
 	}
 
 	/**
