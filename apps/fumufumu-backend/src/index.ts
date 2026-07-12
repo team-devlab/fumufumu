@@ -7,6 +7,7 @@ import type { D1Database } from '@cloudflare/workers-types';
 
 import * as authSchema from '@/db/schema/auth';
 import * as userSchema from '@/db/schema/user';
+import type { UserRole } from '@/db/schema/user';
 import * as consultationsSchema from '@/db/schema/consultations';
 import * as advicesSchema from '@/db/schema/advices';
 import * as tagsSchema from '@/db/schema/tags';
@@ -59,6 +60,9 @@ export interface Env {
 export interface Variables {
   auth: AuthInstance;
   appUserId: number;
+  // authGuard が確定させる現在ユーザーの role。後段の adminGuard がこれを参照し
+  // users への再クエリを避ける (authGuard で disabled と同時に 1 往復で取得, #136)。
+  userRole: UserRole;
   db: DbInstance;
   consultationService: ConsultationService;
   consultationContentCheckService: ConsultationContentCheckService;

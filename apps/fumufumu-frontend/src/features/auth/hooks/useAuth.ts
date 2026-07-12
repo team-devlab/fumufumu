@@ -33,7 +33,11 @@ export const useAuth = () => {
       await authApi.signin(credentials);
       router.push(resolveReturnTo(returnTo));
     } catch (err) {
-      if (err instanceof ApiError && err.status === 401) {
+      // signin は skipAuthRedirect:true のため apiClient はリダイレクトせず ApiError を投げる。
+      // 無効化(403 account_disabled)はログイン画面に留めて理由を明示する(#136)。
+      if (err instanceof ApiError && err.code === "account_disabled") {
+        setError("このアカウントは無効化されています。");
+      } else if (err instanceof ApiError && err.status === 401) {
         setError(
           "ログインに失敗しました。メールアドレスまたはパスワードをご確認ください。",
         );

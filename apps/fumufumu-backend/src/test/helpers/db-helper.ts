@@ -72,6 +72,16 @@ function getMigrations(): D1Migration[] {
 }
 
 /**
+ * 特定ユーザーを「無効化(BAN)」状態に更新する。
+ * disabled 切り替えの UI/API は本 issue スコープ外(ADR 010 §3)のため、テストでは DB 直更新で状態を作る。
+ */
+export async function forceSetDisabled(appUserId: number) {
+	await env.DB.prepare("UPDATE users SET disabled = 1 WHERE id = ?")
+		.bind(appUserId)
+		.run();
+}
+
+/**
  * 特定の相談レコードを「解決済み」状態に更新する
  */
 export async function forceSetSolved(id: number) {

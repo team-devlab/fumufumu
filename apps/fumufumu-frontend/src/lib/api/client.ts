@@ -14,17 +14,21 @@ type ApiOptions = RequestInit & {
 
 export class ApiError extends Error {
   status: number;
+  // backend が返す機械可読なエラーコード(例: 'account_disabled')。
+  // status だけでは区別できない 403 の種類(無効化 vs 権限不足)を caller が判定するために保持する。
+  code?: string;
 
-  constructor(status: number, message: string) {
+  constructor(status: number, message: string, code?: string) {
     super(message);
     this.name = "ApiError";
     this.status = status;
+    this.code = code;
   }
 }
 
-function buildLoginUrl(returnTo?: string): string {
+function buildLoginUrl(reason: string, returnTo?: string): string {
   const params = new URLSearchParams();
-  params.set("reason", "session_expired");
+  params.set("reason", reason);
   if (returnTo) params.set("returnTo", returnTo);
   return `/login?${params.toString()}`;
 }
@@ -54,10 +58,15 @@ export async function apiClient<T>(
     const response = await fetch(url, config);
 
     if (!response.ok) {
+      const errorData = await response.json().catch(() => ({}));
+      const code =
+        typeof errorData.code === "string" ? errorData.code : undefined;
+
+      // 401: セッション切れ/未認証 → ログイン画面へ戻す(既存導線)。
       if (response.status === 401 && !skipAuthRedirect) {
         if (typeof window !== "undefined") {
           const returnTo = `${window.location.pathname}${window.location.search}`;
-          window.location.href = buildLoginUrl(returnTo);
+          window.location.href = buildLoginUrl("session_expired", returnTo);
           // window.location 代入だけでは処理が止まらないため、caller の catch に流さない。
           return new Promise(() => {});
         } else {
@@ -68,16 +77,40 @@ export async function apiClient<T>(
           //     OpenNext for Cloudflare の Node Middleware 非対応制約への対応として、
           //     別途 layout / page 側で returnTo を構築する設計を後続 issue で扱う。
           const returnTo = headersList.get("x-pathname") || undefined;
-          redirect(buildLoginUrl(returnTo));
+          redirect(buildLoginUrl("session_expired", returnTo));
         }
       }
 
-      const errorData = await response.json().catch(() => ({}));
+      // 403 + account_disabled: アカウント無効化(BAN)。権限不足の 403(ForbiddenError 等)とは
+      // 区別する必要があるため status ではなく code で判定する(人間向け文言の変更にも強い, #136)。
+      // 無効化された旨を伝えるためログイン画面へ戻す。returnTo は無意味なので付けない。
+      if (
+        response.status === 403 &&
+        code === "account_disabled" &&
+        !skipAuthRedirect
+      ) {
+        if (typeof window !== "undefined") {
+          // セッション自体は有効なため、ログイン画面へ戻す前に Cookie を破棄する。
+          // 残すと (main) layout の Cookie 有無ガードを通過し、ページ内 fetch の 403 と
+          // 往復し続けるため。破棄は best-effort(失敗してもリダイレクトは行う)。
+          await fetch(`${API_URL}/api/auth/signout`, {
+            method: "POST",
+            credentials: "include",
+          }).catch(() => {});
+          window.location.href = buildLoginUrl("account_disabled");
+          return new Promise(() => {});
+        } else {
+          // SSR では Cookie 破棄ができないためリダイレクトのみ。
+          // 次に (main) へ遷移した際、ブラウザ側の同経路が Cookie を破棄する。
+          redirect(buildLoginUrl("account_disabled"));
+        }
+      }
+
       const message =
         typeof errorData.error === "string"
           ? errorData.error
           : `API Error: ${response.status}`;
-      throw new ApiError(response.status, message);
+      throw new ApiError(response.status, message, code);
     }
 
     // レスポンスが空の場合はnullを返す等の処理も可能
