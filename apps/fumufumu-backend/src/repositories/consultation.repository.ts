@@ -124,11 +124,12 @@ export class ConsultationRepository {
 	}
 
 	/**
-	 * own-view 一覧の各アイテムに審査状態(reviewStatus)を付与する(#179)。
+	 * own-view(未承認込み)一覧の各アイテムに審査状態(reviewStatus)を付与する(#179)。
 	 * 相関サブクエリを RQB の extras に載せる方式は `with` 併用時に外側行へ相関せず NULL に
 	 * なるため採らず、一覧取得後に対象IDの content_checks を IN で一括取得してマップで引き当てる。
 	 * content_checks は (target_type,target_id) が uq 制約で一意なので targetId → status は1対1。
 	 * チェック未登録(既存データ)は NULL を返し、Service層で "approved" 相当へ寄せる。
+	 * own-view 以外の一覧は withNullReviewStatus を使い、この追加クエリを撃たない(理由はそちらのコメント)。
 	 * 相談・アドバイスの一覧で対称に使う。
 	 */
 	private async attachReviewStatus<T extends { id: number }>(
@@ -150,6 +151,18 @@ export class ConsultationRepository {
 		);
 
 		return rows.map((row) => ({ ...row, reviewStatus: statusById.get(row.id) ?? null }));
+	}
+
+	/**
+	 * own-view 以外の一覧向け: content_checks を引かずに reviewStatus を null で埋める(#179)。
+	 * pending/rejected が現れ得るのは own-view(未承認込み)だけで、公開/他人/下書き/admin 一覧は
+	 * 可視性条件により中身が常に承認相当。そこで追加クエリ(attachReviewStatus)を省き D1 読み取りを節約する。
+	 * null は Service 層で "approved" 相当へ寄せるため、レスポンスは attachReviewStatus 経由と同一になる。
+	 */
+	private withNullReviewStatus<T>(
+		rows: T[],
+	): Array<T & { reviewStatus: ContentCheckStatus | null }> {
+		return rows.map((row) => ({ ...row, reviewStatus: null }));
 	}
 
 	private buildPublicConsultationCondition(): SQL {
@@ -402,6 +415,10 @@ export class ConsultationRepository {
 			},
 		});
 
+		// own-view(未承認込み)以外は中身が常に承認相当のため、追加クエリを撃たず null を置く(#179)。
+		if (!filters?.includeUnapprovedForOwn) {
+			return this.withNullReviewStatus(rows);
+		}
 		return await this.attachReviewStatus(rows, "consultation");
 	}
 
@@ -475,6 +492,10 @@ export class ConsultationRepository {
 			},
 		});
 
+		// own-view(未承認込み)以外は中身が常に承認相当のため、追加クエリを撃たず null を置く(#179)。
+		if (!filters?.includeUnapprovedForOwn) {
+			return this.withNullReviewStatus(rows);
+		}
 		return await this.attachReviewStatus(rows, "advice");
 	}
 
