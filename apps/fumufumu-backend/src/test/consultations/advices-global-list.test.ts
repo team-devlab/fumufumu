@@ -80,6 +80,27 @@ describe("Advices API - 相談横断の一覧", () => {
     return created;
   };
 
+  // 審査未通過(pending)のアドバイスを作る。承認しないため content_check は pending のまま。
+  // 親相談は公開可視である必要がある(createAdvice が可視親を要求する)ため approved 相談上に作る。
+  const createPendingAdvice = async (consultationId: number, body: string) => {
+    const createReq = createApiRequest(`/api/consultations/${consultationId}/advice`, "POST", {
+      cookie: author.cookie,
+      body: { body, draft: false },
+    });
+    const createRes = await app.fetch(createReq, env);
+    expect(createRes.status).toBe(201);
+    return await createRes.json() as { id: number };
+  };
+
+  const rejectAdvice = async (adviceId: number) => {
+    const req = createApiRequest(`/api/admin/content-check/advices/${adviceId}/decision`, "POST", {
+      cookie: admin.cookie,
+      body: { decision: "rejected", reason: "テスト却下" },
+    });
+    const res = await app.fetch(req, env);
+    expect(res.status).toBe(200);
+  };
+
   const hide = async (targetType: "consultations" | "advices", id: number, body: Record<string, unknown> = {}) => {
     const req = createApiRequest(`/api/admin/moderation/${targetType}/${id}/hide`, "POST", { cookie: admin.cookie, body });
     return app.fetch(req, env);
@@ -164,5 +185,107 @@ describe("Advices API - 相談横断の一覧", () => {
     expect(adminRes.status).toBe(200);
     const adminData = await adminRes.json() as { data: Array<{ id: number }> };
     expect(adminData.data.some((item) => item.id === advice.id)).toBe(true);
+  });
+
+  describe("審査状態フィールド(review_status, #179: 本人が審査中/却下/承認を判別できる)", () => {
+    const findItem = (data: { data: Array<{ id: number; review_status?: string }> }, id: number) =>
+      data.data.find((item) => item.id === id);
+
+    it("own-view: 本人の審査中(pending)アドバイスも含まれ review_status=\"pending\" を返す", async () => {
+      const consultation = await createApprovedConsultation("global-advices-own-pending");
+      const advice = await createPendingAdvice(consultation.id, "本人には審査中として見えるべきアドバイス本文です。");
+
+      const res = await listAdvices(author.cookie, { userId: author.appUserId });
+      expect(res.status).toBe(200);
+      const data = await res.json() as { data: Array<{ id: number; review_status?: string }> };
+      const found = findItem(data, advice.id);
+      expect(found).toBeDefined();
+      expect(found?.review_status).toBe("pending");
+    });
+
+    it("own-view: 本人の承認済み(approved)アドバイスは review_status=\"approved\" を返す", async () => {
+      const consultation = await createApprovedConsultation("global-advices-own-approved");
+      const advice = await createApprovedAdvice(consultation.id, "本人の承認済みアドバイス本文です。");
+
+      const res = await listAdvices(author.cookie, { userId: author.appUserId });
+      expect(res.status).toBe(200);
+      const data = await res.json() as { data: Array<{ id: number; review_status?: string }> };
+      const found = findItem(data, advice.id);
+      expect(found).toBeDefined();
+      expect(found?.review_status).toBe("approved");
+    });
+
+    it("own-view: 本人の却下(rejected)アドバイスも一覧に残り review_status=\"rejected\" を返す(黙って消さない)", async () => {
+      const consultation = await createApprovedConsultation("global-advices-own-rejected");
+      const advice = await createPendingAdvice(consultation.id, "却下されるアドバイス本文です。");
+      await rejectAdvice(advice.id);
+
+      const res = await listAdvices(author.cookie, { userId: author.appUserId });
+      expect(res.status).toBe(200);
+      const data = await res.json() as { data: Array<{ id: number; review_status?: string }> };
+      const found = findItem(data, advice.id);
+      // Q1決定: 却下は本人一覧から除外せず、バッジで判別できるよう状態を返す
+      expect(found).toBeDefined();
+      expect(found?.review_status).toBe("rejected");
+    });
+
+    it("セキュリティ: 他人のuserId指定では本人の審査中アドバイスは露出しない(承認済みのみ)", async () => {
+      const consultation = await createApprovedConsultation("global-advices-other-pending-hidden");
+      const pendingAdvice = await createPendingAdvice(consultation.id, "他人には見えてはいけない審査中アドバイス本文です。");
+      const approvedAdvice = await createApprovedAdvice(consultation.id, "他人からも見える承認済みアドバイス本文です。");
+
+      // viewer が author のuserIdで一覧を引く(own-viewではない)
+      const res = await listAdvices(viewer.cookie, { userId: author.appUserId });
+      expect(res.status).toBe(200);
+      const data = await res.json() as { data: Array<{ id: number }> };
+      expect(data.data.some((item) => item.id === pendingAdvice.id)).toBe(false);
+      expect(data.data.some((item) => item.id === approvedAdvice.id)).toBe(true);
+    });
+
+    it("own-view: 親相談がhideされると本人の審査中アドバイスも一覧から外れる(cascadeはown-viewでも維持)", async () => {
+      const consultation = await createApprovedConsultation("global-advices-own-pending-parent-hidden");
+      const advice = await createPendingAdvice(consultation.id, "親相談hide後は本人一覧からも消えるべき審査中アドバイス本文です。");
+      const hideRes = await hide("consultations", consultation.id, { reason: "own-view cascade検証" });
+      expect(hideRes.status).toBe(200);
+
+      const res = await listAdvices(author.cookie, { userId: author.appUserId });
+      expect(res.status).toBe(200);
+      const data = await res.json() as { data: Array<{ id: number }> };
+      // own-viewの未承認緩和はアドバイス自身の承認条件だけを外すもので、親相談の可視性cascade(ADR 011 §4.1)は
+      // 維持する。親がhideされたら本人でも審査中アドバイスは見えない(相談own-viewがhidden相談を除外するのと対称)。
+      expect(data.data.some((item) => item.id === advice.id)).toBe(false);
+    });
+
+    it("公開一覧(userId無し)でも承認済みは review_status=\"approved\" を持つ", async () => {
+      const consultation = await createApprovedConsultation("global-advices-public-review-status");
+      const advice = await createApprovedAdvice(consultation.id, "公開一覧のreview_status検証用アドバイス本文です。");
+
+      const res = await listAdvices(viewer.cookie);
+      expect(res.status).toBe(200);
+      const data = await res.json() as { data: Array<{ id: number; review_status?: string }> };
+      const found = findItem(data, advice.id);
+      expect(found).toBeDefined();
+      expect(found?.review_status).toBe("approved");
+    });
+  });
+
+  describe("Cache-Control境界(#179: own-viewは未承認を含むため公開キャッシュに乗せない)", () => {
+    it("?userId=自分(own-view)は no-store", async () => {
+      const res = await listAdvices(author.cookie, { userId: author.appUserId });
+      expect(res.status).toBe(200);
+      expect(res.headers.get("Cache-Control")).toContain("no-store");
+    });
+
+    it("?userId=他人(承認済みのみ返る)は public, max-age=60(一律no-storeを解いた)", async () => {
+      const res = await listAdvices(viewer.cookie, { userId: author.appUserId });
+      expect(res.status).toBe(200);
+      expect(res.headers.get("Cache-Control")).toBe("public, max-age=60");
+    });
+
+    it("userId無しの公開一覧は public, max-age=60 のまま", async () => {
+      const res = await listAdvices(viewer.cookie);
+      expect(res.status).toBe(200);
+      expect(res.headers.get("Cache-Control")).toBe("public, max-age=60");
+    });
   });
 });

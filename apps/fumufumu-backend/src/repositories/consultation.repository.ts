@@ -8,7 +8,7 @@ import { PAGINATION_CONFIG } from "@/types/consultation.types";
 import type { AdviceFilters } from "@/types/advice.types";
 import { DatabaseError, ConflictError, NotFoundError } from "@/errors/AppError";
 import { advices } from "@/db/schema/advices";
-import { contentChecks } from "@/db/schema/content-checks";
+import { contentChecks, type ContentCheckStatus, type ContentCheckTargetType } from "@/db/schema/content-checks";
 
 
 export class ConsultationRepository {
@@ -123,6 +123,48 @@ export class ConsultationRepository {
 		return or(approvedCheckExists, noCheckExists) as SQL;
 	}
 
+	/**
+	 * own-view(未承認込み)一覧の各アイテムに審査状態(reviewStatus)を付与する(#179)。
+	 * 相関サブクエリを RQB の extras に載せる方式は `with` 併用時に外側行へ相関せず NULL に
+	 * なるため採らず、一覧取得後に対象IDの content_checks を IN で一括取得してマップで引き当てる。
+	 * content_checks は (target_type,target_id) が uq 制約で一意なので targetId → status は1対1。
+	 * チェック未登録(既存データ)は NULL を返し、Service層で "approved" 相当へ寄せる。
+	 * own-view 以外の一覧は withNullReviewStatus を使い、この追加クエリを撃たない(理由はそちらのコメント)。
+	 * 相談・アドバイスの一覧で対称に使う。
+	 */
+	private async attachReviewStatus<T extends { id: number }>(
+		rows: T[],
+		targetType: ContentCheckTargetType,
+	): Promise<Array<T & { reviewStatus: ContentCheckStatus | null }>> {
+		if (rows.length === 0) {
+			return [];
+		}
+
+		const ids = rows.map((row) => row.id);
+		const checks = await this.db
+			.select({ targetId: contentChecks.targetId, status: contentChecks.status })
+			.from(contentChecks)
+			.where(and(eq(contentChecks.targetType, targetType), inArray(contentChecks.targetId, ids)));
+
+		const statusById = new Map<number, ContentCheckStatus>(
+			checks.map((check) => [check.targetId, check.status]),
+		);
+
+		return rows.map((row) => ({ ...row, reviewStatus: statusById.get(row.id) ?? null }));
+	}
+
+	/**
+	 * own-view 以外の一覧向け: content_checks を引かずに reviewStatus を null で埋める(#179)。
+	 * pending/rejected が現れ得るのは own-view(未承認込み)だけで、公開/他人/下書き/admin 一覧は
+	 * 可視性条件により中身が常に承認相当。そこで追加クエリ(attachReviewStatus)を省き D1 読み取りを節約する。
+	 * null は Service 層で "approved" 相当へ寄せるため、レスポンスは attachReviewStatus 経由と同一になる。
+	 */
+	private withNullReviewStatus<T>(
+		rows: T[],
+	): Array<T & { reviewStatus: ContentCheckStatus | null }> {
+		return rows.map((row) => ({ ...row, reviewStatus: null }));
+	}
+
 	private buildPublicConsultationCondition(): SQL {
 		return and(
 			eq(consultations.draft, false),
@@ -201,7 +243,14 @@ export class ConsultationRepository {
 			// モデレーションは「承認済みコンテンツの事後hide/unhide」を対象とする方針(ADR 011 §5.1、
 			// approve→事後hideのフロー)であり、未承認(pending/rejected)投稿はcontent-checkの
 			// 投稿チェック待ちタブで扱う。よって「未承認かつhidden」は非表示中タブの対象外(承認後に現れる)。
-			if (!filters?.includeUnapprovedForOwn) {
+			//
+			// own-view(本人一覧)でのみ承認済みonly条件を外し、本人の pending/rejected も含める(#179)。
+			// fail-closed: userId 未指定のまま緩めると全ユーザーの未承認が露出するため、userId を伴う場合に限る。
+			// この緩和は Service が userId===本人 のときだけ includeUnapprovedForOwn を立てる不変条件に依存する
+			// (アドバイス側 buildAdviceWhereConditions と同じ防御パターンに揃える)。
+			const includeOwnUnapproved =
+				filters?.includeUnapprovedForOwn === true && filters?.userId !== undefined;
+			if (!includeOwnUnapproved) {
 				conditions.push(this.buildPublicVisibilityCondition());
 			}
 		}
@@ -262,10 +311,18 @@ export class ConsultationRepository {
 			return and(...draftConditions) as SQL;
 		}
 
-		const conditions: SQL[] = [
-			eq(advices.draft, false),
-			this.buildAdvicePublicVisibilityCondition(),
-		];
+		// 本人の own-view(userId===本人 のとき Service が includeUnapprovedForOwn を立てる)では
+		// アドバイス自身の承認済みonly条件を外し、本人の pending/rejected も一覧に含める(#179、相談側と対称)。
+		// fail-closed: userId 未指定のまま緩めると他人の未承認まで露出するため、userId が伴う場合に限る
+		// (advices.controller.ts が懸念していた「他人userId指定時に未承認が混入しない」の担保)。
+		const includeOwnUnapproved =
+			filters?.includeUnapprovedForOwn === true && filters?.userId !== undefined;
+
+		const conditions: SQL[] = [eq(advices.draft, false)];
+
+		if (!includeOwnUnapproved) {
+			conditions.push(this.buildAdvicePublicVisibilityCondition());
+		}
 
 		if (filters?.consultationId !== undefined) {
 			conditions.push(eq(advices.consultationId, filters.consultationId));
@@ -355,7 +412,7 @@ export class ConsultationRepository {
 		const { page = PAGINATION_CONFIG.DEFAULT_PAGE, limit = PAGINATION_CONFIG.DEFAULT_LIMIT } = pagination || {};
 		const offset = (page - 1) * limit;
 
-		return await this.db.query.consultations.findMany({
+		const rows = await this.db.query.consultations.findMany({
 			where: this.buildWhereConditions(filters),
 			orderBy: (fields, { desc }) => [desc(fields.createdAt), desc(fields.id)],
 			limit: limit,
@@ -364,6 +421,12 @@ export class ConsultationRepository {
 				author: true,
 			},
 		});
+
+		// own-view(未承認込み)以外は中身が常に承認相当のため、追加クエリを撃たず null を置く(#179)。
+		if (!filters?.includeUnapprovedForOwn) {
+			return this.withNullReviewStatus(rows);
+		}
+		return await this.attachReviewStatus(rows, "consultation");
 	}
 
 	/**
@@ -426,7 +489,7 @@ export class ConsultationRepository {
 		const { page = PAGINATION_CONFIG.DEFAULT_PAGE, limit = PAGINATION_CONFIG.DEFAULT_LIMIT } = pagination || {};
 		const offset = (page - 1) * limit;
 
-		return await this.db.query.advices.findMany({
+		const rows = await this.db.query.advices.findMany({
 			where: this.buildAdviceWhereConditions(filters),
 			orderBy: (fields, { desc }) => [desc(fields.createdAt), desc(fields.id)],
 			limit,
@@ -435,6 +498,12 @@ export class ConsultationRepository {
 				author: true,
 			},
 		});
+
+		// own-view(未承認込み)以外は中身が常に承認相当のため、追加クエリを撃たず null を置く(#179)。
+		if (!filters?.includeUnapprovedForOwn) {
+			return this.withNullReviewStatus(rows);
+		}
+		return await this.attachReviewStatus(rows, "advice");
 	}
 
 	/**

@@ -4,6 +4,12 @@ export interface Author {
   disabled: boolean;
 }
 
+/**
+ * 投稿の審査状態。backend の content_checks.status を mirror する。
+ * src: apps/fumufumu-backend/src/db/schema/content-checks.ts (CONTENT_CHECK_STATUSES)
+ */
+export type ReviewStatus = "pending" | "approved" | "rejected";
+
 export interface Consultation {
   id: number;
   title: string;
@@ -27,6 +33,12 @@ export interface Consultation {
    * 退会済み、または削除されたユーザーの場合は null
    */
   author: Author | null;
+  /**
+   * 本人が自分の投稿一覧(?userId=自分)を見たときのみ意味を持つ審査状態(#179)。
+   * 承認済み一覧やチェック未登録の既存データは "approved"。他人/公開一覧では常に "approved"。
+   * additive: 未指定の可能性があるため optional。
+   */
+  review_status?: ReviewStatus;
 }
 
 /**
@@ -133,6 +145,12 @@ export interface Advice {
   created_at: string;
   updated_at: string;
   author: Author | null;
+  /**
+   * 本人が自分のアドバイス一覧(?userId=自分)を見たときのみ意味を持つ審査状態(#179)。
+   * 承認済み一覧やチェック未登録の既存データは "approved"。他人/公開一覧では常に "approved"。
+   * additive: 未指定の可能性があるため optional。
+   */
+  review_status?: ReviewStatus;
 }
 
 /**
