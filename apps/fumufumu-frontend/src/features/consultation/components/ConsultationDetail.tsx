@@ -6,6 +6,7 @@ import { fetchConsultationDetailApi } from "../api/consultationApi";
 import type { ConsultationDetail as ConsultationDetailType } from "../types";
 import { AdviceList } from "./AdviceList";
 import { ConsultationQuestionCard } from "./ConsultationQuestionCard";
+import { ReviewStatusBanner } from "./ReviewStatusBanner";
 
 type Props = {
   consultationId: string;
@@ -70,6 +71,12 @@ export const ConsultationDetail = async ({ consultationId }: Props) => {
     // 全体背景を薄いグレーにしてカードを浮き立たせる
     <div className="min-h-screen bg-gray-50 pb-20">
       <div className="max-w-4xl mx-auto px-4 py-8">
+        {/* 投稿チェック中/公開見送りのとき本人に公開前状態を伝えるバナー(本文は伏せない, #179 Phase2)。
+            承認済み/未指定では ReviewStatusBanner が null を返すため、empty:hidden で余白ごと畳む。 */}
+        <div className="mb-6 empty:hidden">
+          <ReviewStatusBanner status={consultation.review_status} />
+        </div>
+
         {/* 1. 質問カードエリア */}
         <div className="mb-6">
           <ConsultationQuestionCard consultation={consultation} />
