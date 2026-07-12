@@ -57,6 +57,10 @@ export const listAllAdvicesHandlers = factory.createHandlers(
 		// includeHidden/hiddenOnly(admin限定)、userIdフィルタ(個人に紐づく一覧)、
 		// draft(本人限定の非公開データ)は共有キャッシュに乗せると非表示投稿や個人の
 		// 一覧が他ユーザーに漏れるため禁止する。
+		// NOTE: userIdフィルタは自分/他人を区別せず一律no-storeにしている(listAllAdvicesが
+		// includeUnapprovedForOwn相当のロジックを持たないため、他人指定時の安全性を未検証)。
+		// consultations.controller.ts(#163対応)のように「自分のuserId指定時のみno-store」へ
+		// 緩める場合は、他人のuserId指定時に未承認advicesが混入しないことを別途確認すること。
 		if (!filters.includeHidden && !filters.hiddenOnly && !filters.draft && filters.userId === undefined) {
 			c.header("Cache-Control", "public, max-age=60");
 		} else {
