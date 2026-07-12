@@ -112,11 +112,14 @@ export const listConsultationsHandlers = factory.createHandlers(
 		// NOTE: キャッシュ制御 (D1課金対策 & セキュリティ)
 		// 下書き(draft=true)は「個人情報」に近いのでキャッシュしてはいけない。
 		// includeHidden/hiddenOnly(admin限定)のレスポンスも共有キャッシュに乗せると非表示投稿が他ユーザーに漏れるため同様に禁止する。
+		// isOwnView(?userId=自分)は service 側で includeUnapprovedForOwn が立ち、本人の未承認投稿を含むため
+		// 同様に共有キャッシュへ乗せてはいけない（GitHub issue #163）。
 		// 公開データの場合のみ、60秒間のキャッシュを許可。
-		if (!filters.draft && !filters.includeHidden && !filters.hiddenOnly) {
+		const isOwnView = validatedQuery.userId !== undefined && validatedQuery.userId === appUserId;
+		if (!filters.draft && !filters.includeHidden && !filters.hiddenOnly && !isOwnView) {
 			c.header('Cache-Control', 'public, max-age=60');
 		} else {
-			// 下書き・includeHiddenの場合はキャッシュしない（明示的に指定）
+			// 下書き・includeHidden・isOwnViewの場合はキャッシュしない（明示的に指定）
 			c.header('Cache-Control', 'no-store, max-age=0');
 		}
 
