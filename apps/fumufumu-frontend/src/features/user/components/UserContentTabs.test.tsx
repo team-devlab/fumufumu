@@ -298,13 +298,13 @@ describe("UserContentTabs 下書きタブ", () => {
   });
 });
 
-describe("UserContentTabs 審査状態バッジ(#179)", () => {
-  it("相談タブ: 審査中(pending)は「審査中」バッジを出す", () => {
+describe("UserContentTabs 投稿チェック状態バッジ(#179)", () => {
+  it("相談タブ: 投稿チェック中(pending)は「投稿チェック中」バッジを出す", () => {
     render(
       <UserContentTabs
         consultations={[
           sampleConsultation({
-            title: "審査中の相談",
+            title: "投稿チェック中の相談",
             review_status: "pending",
           }),
         ]}
@@ -313,7 +313,7 @@ describe("UserContentTabs 審査状態バッジ(#179)", () => {
       />,
     );
 
-    expect(screen.getByText("審査中")).toBeInTheDocument();
+    expect(screen.getByText("投稿チェック中")).toBeInTheDocument();
   });
 
   it("相談タブ: 却下(rejected)は「公開見送り」バッジを出す", () => {
@@ -353,11 +353,11 @@ describe("UserContentTabs 審査状態バッジ(#179)", () => {
       />,
     );
 
-    expect(screen.queryByText("審査中")).not.toBeInTheDocument();
+    expect(screen.queryByText("投稿チェック中")).not.toBeInTheDocument();
     expect(screen.queryByText("公開見送り")).not.toBeInTheDocument();
   });
 
-  it("アドバイスタブ: 審査中(pending)は「審査中」バッジを出す", () => {
+  it("アドバイスタブ: 投稿チェック中(pending)は「投稿チェック中」バッジを出す", () => {
     render(
       <UserContentTabs
         consultations={[sampleConsultation()]}
@@ -365,7 +365,7 @@ describe("UserContentTabs 審査状態バッジ(#179)", () => {
           status: "success",
           advices: [
             sampleAdvice({
-              body: "審査中アドバイス",
+              body: "投稿チェック中アドバイス",
               review_status: "pending",
             }),
           ],
@@ -376,6 +376,6 @@ describe("UserContentTabs 審査状態バッジ(#179)", () => {
 
     clickAdviceTab();
 
-    expect(screen.getByText("審査中")).toBeInTheDocument();
+    expect(screen.getByText("投稿チェック中")).toBeInTheDocument();
   });
 });

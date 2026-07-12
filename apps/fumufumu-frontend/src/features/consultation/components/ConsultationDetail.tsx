@@ -6,6 +6,7 @@ import { fetchConsultationDetailApi } from "../api/consultationApi";
 import type { ConsultationDetail as ConsultationDetailType } from "../types";
 import { AdviceList } from "./AdviceList";
 import { ConsultationQuestionCard } from "./ConsultationQuestionCard";
+import { ReviewStatusBanner } from "./ReviewStatusBanner";
 
 type Props = {
   consultationId: string;
@@ -51,8 +52,15 @@ export const ConsultationDetail = async ({ consultationId }: Props) => {
   }
 
   // NOTE(多層防御): フロントエンド側での権限チェック
-  // バックエンドが万が一データを返してしまっても、ここでブロックする
-  if (consultation.draft || consultation.hidden_at !== null) {
+  // バックエンドが万が一データを返してしまっても、ここでブロックする。
+  // draft/hidden に加え、投稿チェック中/公開見送り(pending/rejected)も本人限定の非公開状態のため対象に含める。
+  // これらは backend が本人にしか返さない(#179 Phase2)が、draft/hidden と同じく本人所有を確認して二重に防ぐ。
+  const isUnpublishedForOwnerOnly =
+    consultation.draft ||
+    consultation.hidden_at !== null ||
+    consultation.review_status === "pending" ||
+    consultation.review_status === "rejected";
+  if (isUnpublishedForOwnerOnly) {
     const currentUser = await currentUserPromise;
 
     // 未ログイン、またはIDが不一致の場合は表示しない
@@ -70,6 +78,12 @@ export const ConsultationDetail = async ({ consultationId }: Props) => {
     // 全体背景を薄いグレーにしてカードを浮き立たせる
     <div className="min-h-screen bg-gray-50 pb-20">
       <div className="max-w-4xl mx-auto px-4 py-8">
+        {/* 投稿チェック中/公開見送りのとき本人に公開前状態を伝えるバナー(本文は伏せない, #179 Phase2)。
+            承認済み/未指定では ReviewStatusBanner が null を返すため、empty:hidden で余白ごと畳む。 */}
+        <div className="mb-6 empty:hidden">
+          <ReviewStatusBanner status={consultation.review_status} />
+        </div>
+
         {/* 1. 質問カードエリア */}
         <div className="mb-6">
           <ConsultationQuestionCard consultation={consultation} />

@@ -68,6 +68,9 @@ export const getConsultationHandlers = factory.createHandlers(
 		};
 
 		const result = await service.getConsultation(id, appUserId, pagination);
+		// NOTE: 詳細レスポンスは本人にのみ投稿チェック中/公開見送りの相談(と自分の未公開アドバイス)を含み、
+		// ユーザーごとに内容が変わる。共有キャッシュに乗せて他者へ漏らさないよう no-store を明示する(#163/#179)。
+		c.header('Cache-Control', 'no-store, max-age=0');
 		return c.json(result, 200);
 	}
 );

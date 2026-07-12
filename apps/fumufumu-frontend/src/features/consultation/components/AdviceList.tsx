@@ -1,5 +1,6 @@
 import { CONSULTATION_LABELS } from "@/features/consultation/config/constants";
 import type { Advice } from "../types";
+import { ReviewStatusBadge } from "./ReviewStatusBadge";
 
 type Props = {
   advices: Advice[];
@@ -61,6 +62,10 @@ export const AdviceList = ({ advices }: Props) => {
                   </div>
                 </div>
               </div>
+
+              {/* 本人の投稿チェック中/公開見送り回答にのみバッジを出す(他人/承認済みは null で非表示, #179 Phase2)。
+                  backend が他人の未公開回答を返さないため、バッジが出るのは本人の回答に限られる。 */}
+              <ReviewStatusBadge status={advice.review_status} />
             </div>
 
             {/* アドバイス本文 */}

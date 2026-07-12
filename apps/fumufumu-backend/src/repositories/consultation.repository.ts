@@ -321,7 +321,20 @@ export class ConsultationRepository {
 		const conditions: SQL[] = [eq(advices.draft, false)];
 
 		if (!includeOwnUnapproved) {
-			conditions.push(this.buildAdvicePublicVisibilityCondition());
+			// 相談詳細/相談横断の閲覧で viewerId が渡された場合、公開(承認済み)の回答に加え
+			// 閲覧者本人の非下書き回答(投稿チェック中/公開見送り)も可視にする(#179 Phase2、userId絞り込みとは別軸)。
+			// 他者には公開分のみ(fail-closed)。hidden は下の hidden 条件でなお除外され、相談横断時は
+			// buildAdviceParentVisibilityCondition が別途 AND されるため、本人でも非公開相談配下は漏れない。
+			// admin モデレーション(includeHidden/hiddenOnly)は個別 hide 管理のため viewerId の緩和対象外。
+			const viewerId = filters?.viewerId;
+			const isAdminModeration = filters?.includeHidden === true || filters?.hiddenOnly === true;
+			if (viewerId !== undefined && !isAdminModeration) {
+				conditions.push(
+					or(this.buildAdvicePublicVisibilityCondition(), eq(advices.authorId, viewerId)) as SQL,
+				);
+			} else {
+				conditions.push(this.buildAdvicePublicVisibilityCondition());
+			}
 		}
 
 		if (filters?.consultationId !== undefined) {
@@ -340,6 +353,9 @@ export class ConsultationRepository {
 			conditions.push(this.buildAdviceParentVisibilityCondition());
 		}
 
+		// userId(著者絞り込み)と viewerId(本人ORの緩和)を同時に受けても安全: この author=userId が AND されるため、
+		// 他人の userId を指定した一覧では viewer の OR は「author=userId かつ author=viewer」= 自分を指定した時しか効かず、
+		// 他人の未公開回答は漏れない(fail-closed)。/:id/advices?userId=<他人> の非リークはこの重なりで担保される。
 		if (filters?.userId !== undefined) {
 			conditions.push(eq(advices.authorId, filters.userId));
 		}
@@ -455,7 +471,7 @@ export class ConsultationRepository {
 		const { page = PAGINATION_CONFIG.DEFAULT_PAGE, limit = PAGINATION_CONFIG.DEFAULT_LIMIT } = pagination || {};
 		const offset = (page - 1) * limit;
 
-		return await this.db.query.advices.findMany({
+		const rows = await this.db.query.advices.findMany({
 			where: this.buildAdviceWhereConditions({ ...filters, consultationId }),
 			orderBy: (fields, { asc, desc }) =>
 				sortOrder === "asc"
@@ -467,6 +483,16 @@ export class ConsultationRepository {
 				author: true,
 			},
 		});
+
+		// review_status が pending/rejected になり得るのは「viewer 本人の未公開回答」だけ(他者には承認済みのみ返す)。
+		// よって当ページに viewer 自身の回答が1件も無ければ内容は必ず承認相当で、content_checks の追加読み取りは不要(#179 Phase2)。
+		// バッジが出得るケース(自分の回答がある詳細)に追加クエリを限定し、最頻の第三者閲覧では撃たず D1 read を節約する
+		// (own-view 以外で追加クエリを撃たない findAll/findAllAdvices と同じ方針)。
+		const viewerId = filters?.viewerId;
+		if (viewerId === undefined || !rows.some((row) => row.authorId === viewerId)) {
+			return this.withNullReviewStatus(rows);
+		}
+		return await this.attachReviewStatus(rows, "advice");
 	}
 
 	async countAdvicesByConsultationId(

@@ -5,6 +5,8 @@ import {
   approveAdvice,
   approveConsultation,
   forceSetHidden,
+  rejectAdvice,
+  rejectConsultation,
   setupIntegrationTest,
 } from '../helpers/db-helper';
 import { createAndLoginUser } from '../helpers/auth-helper';
@@ -85,6 +87,166 @@ describe('Consultations API - Detail (GET /:id)', () => {
     expect(data).toHaveProperty('advices');
     expect(Array.isArray(data.advices)).toBe(true);
     expect(data.advices.length).toBe(0);
+
+    // 承認済み相談は review_status="approved" を返す(#179 Phase2)
+    expect(data.review_status).toBe('approved');
+  });
+
+  it('投稿チェック中(pending)の相談は本人なら詳細取得でき review_status=pending を返す', async () => {
+    const createRes = await app.fetch(createApiRequest('/api/consultations', 'POST', {
+      cookie: user.cookie,
+      body: {
+        title: '投稿チェック中の相談',
+        body: '投稿直後で content_check が pending の相談本文です。',
+        draft: false,
+        tagIds: [tagId],
+      },
+    }), env);
+    expect(createRes.status).toBe(201);
+    const created = await createRes.json() as any;
+    // approve せず pending のまま
+
+    const ownerRes = await app.fetch(createApiRequest(`/api/consultations/${created.id}`, 'GET', {
+      cookie: user.cookie,
+    }), env);
+    expect(ownerRes.status).toBe(200);
+    const ownerDetail = await ownerRes.json() as any;
+    expect(ownerDetail.id).toBe(created.id);
+    expect(ownerDetail.body).toBeDefined();
+    expect(ownerDetail.review_status).toBe('pending');
+  });
+
+  it('【404 Not Found】投稿チェック中(pending)の相談は他人からは取得できない（fail-closed）', async () => {
+    const createRes = await app.fetch(createApiRequest('/api/consultations', 'POST', {
+      cookie: user.cookie,
+      body: {
+        title: '他人には見えない投稿チェック中の相談',
+        body: '本人以外には公開前のため漏れてはいけない本文です。',
+        draft: false,
+        tagIds: [tagId],
+      },
+    }), env);
+    expect(createRes.status).toBe(201);
+    const created = await createRes.json() as any;
+
+    const attackerRes = await app.fetch(createApiRequest(`/api/consultations/${created.id}`, 'GET', {
+      cookie: attacker.cookie,
+    }), env);
+    expect(attackerRes.status).toBe(404);
+    const attackerBody = await attackerRes.json() as any;
+    expect(attackerBody).not.toHaveProperty('body');
+    expect(attackerBody).not.toHaveProperty('review_status');
+  });
+
+  it('公開見送り(rejected)の相談は本人なら詳細取得でき review_status=rejected を返す', async () => {
+    const createRes = await app.fetch(createApiRequest('/api/consultations', 'POST', {
+      cookie: user.cookie,
+      body: {
+        title: '公開見送りの相談',
+        body: '公開が見送られた相談を本人が確認できることを検証する本文です。',
+        draft: false,
+        tagIds: [tagId],
+      },
+    }), env);
+    expect(createRes.status).toBe(201);
+    const created = await createRes.json() as any;
+    await rejectConsultation(created.id);
+
+    const ownerRes = await app.fetch(createApiRequest(`/api/consultations/${created.id}`, 'GET', {
+      cookie: user.cookie,
+    }), env);
+    expect(ownerRes.status).toBe(200);
+    const ownerDetail = await ownerRes.json() as any;
+    expect(ownerDetail.review_status).toBe('rejected');
+  });
+
+  it('【404 Not Found】公開見送り(rejected)の相談は他人からは取得できない（fail-closed）', async () => {
+    const createRes = await app.fetch(createApiRequest('/api/consultations', 'POST', {
+      cookie: user.cookie,
+      body: {
+        title: '他人には見えない公開見送りの相談',
+        body: '公開見送りでも他人には漏れてはいけない本文です。',
+        draft: false,
+        tagIds: [tagId],
+      },
+    }), env);
+    expect(createRes.status).toBe(201);
+    const created = await createRes.json() as any;
+    await rejectConsultation(created.id);
+
+    const attackerRes = await app.fetch(createApiRequest(`/api/consultations/${created.id}`, 'GET', {
+      cookie: attacker.cookie,
+    }), env);
+    expect(attackerRes.status).toBe(404);
+  });
+
+  it('相談詳細: 本人の投稿チェック中/公開見送りアドバイスは親相談に inline 表示され review_status が付く（#179 Phase2）', async () => {
+    const cRes = await app.fetch(createApiRequest('/api/consultations', 'POST', {
+      cookie: user.cookie,
+      body: {
+        title: 'アドバイスinline検証用の相談',
+        body: '本人の未公開アドバイスが親相談上にinline表示されることを検証する本文です。',
+        draft: false,
+        tagIds: [tagId],
+      },
+    }), env);
+    expect(cRes.status).toBe(201);
+    const consultation = await cRes.json() as any;
+    await approveConsultation(consultation.id);
+
+    const approvedBody = '承認済みで全員に見える回答です。10文字以上必要です。';
+    const pendingBody = '投稿チェック中で本人のみ見える回答です。10文字以上必要です。';
+    const rejectedBody = '公開見送りで本人のみ見える回答です。10文字以上必要です。';
+
+    const approvedRes = await app.fetch(createApiRequest(`/api/consultations/${consultation.id}/advice`, 'POST', {
+      cookie: user.cookie,
+      body: { body: approvedBody, draft: false },
+    }), env);
+    expect(approvedRes.status).toBe(201);
+    await approveAdvice((await approvedRes.json() as any).id);
+
+    const pendingRes = await app.fetch(createApiRequest(`/api/consultations/${consultation.id}/advice`, 'POST', {
+      cookie: user.cookie,
+      body: { body: pendingBody, draft: false },
+    }), env);
+    expect(pendingRes.status).toBe(201);
+    // pending のまま放置
+
+    const rejectedRes = await app.fetch(createApiRequest(`/api/consultations/${consultation.id}/advice`, 'POST', {
+      cookie: user.cookie,
+      body: { body: rejectedBody, draft: false },
+    }), env);
+    expect(rejectedRes.status).toBe(201);
+    await rejectAdvice((await rejectedRes.json() as any).id);
+
+    // 本人視点: 3件すべて inline 表示され、未公開には review_status が付き、件数にも反映される
+    const ownerRes = await app.fetch(createApiRequest(`/api/consultations/${consultation.id}`, 'GET', {
+      cookie: user.cookie,
+      queryParams: { limit: 100 },
+    }), env);
+    expect(ownerRes.status).toBe(200);
+    const ownerDetail = await ownerRes.json() as any;
+    const ownerBodies = ownerDetail.advices.map((a: any) => a.body);
+    expect(ownerBodies).toContain(approvedBody);
+    expect(ownerBodies).toContain(pendingBody);
+    expect(ownerBodies).toContain(rejectedBody);
+    expect(ownerDetail.advice_pagination.total_items).toBe(3);
+    expect(ownerDetail.advices.find((a: any) => a.body === pendingBody).review_status).toBe('pending');
+    expect(ownerDetail.advices.find((a: any) => a.body === rejectedBody).review_status).toBe('rejected');
+    expect(ownerDetail.advices.find((a: any) => a.body === approvedBody).review_status).toBe('approved');
+
+    // 他人視点: 承認済みのみ。本人の未公開は漏れず、件数も承認済み分だけ
+    const attackerRes = await app.fetch(createApiRequest(`/api/consultations/${consultation.id}`, 'GET', {
+      cookie: attacker.cookie,
+      queryParams: { limit: 100 },
+    }), env);
+    expect(attackerRes.status).toBe(200);
+    const attackerDetail = await attackerRes.json() as any;
+    const attackerBodies = attackerDetail.advices.map((a: any) => a.body);
+    expect(attackerBodies).toContain(approvedBody);
+    expect(attackerBodies).not.toContain(pendingBody);
+    expect(attackerBodies).not.toContain(rejectedBody);
+    expect(attackerDetail.advice_pagination.total_items).toBe(1);
   });
 
   it('【404 Not Found】存在しないIDを取得しようとするとエラーになる', async () => {
