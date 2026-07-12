@@ -4,8 +4,8 @@ import Link from "next/link";
 import type React from "react";
 import { useState } from "react";
 import { ROUTES } from "@/config/routes";
+import { ReviewStatusBadge } from "@/features/consultation/components/ReviewStatusBadge";
 import type { Advice, Consultation } from "@/features/consultation/types";
-import { ReviewStatusBadge } from "./ReviewStatusBadge";
 
 type TabId = "consultations" | "advices" | "drafts";
 
