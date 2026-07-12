@@ -52,8 +52,15 @@ export const ConsultationDetail = async ({ consultationId }: Props) => {
   }
 
   // NOTE(多層防御): フロントエンド側での権限チェック
-  // バックエンドが万が一データを返してしまっても、ここでブロックする
-  if (consultation.draft || consultation.hidden_at !== null) {
+  // バックエンドが万が一データを返してしまっても、ここでブロックする。
+  // draft/hidden に加え、投稿チェック中/公開見送り(pending/rejected)も本人限定の非公開状態のため対象に含める。
+  // これらは backend が本人にしか返さない(#179 Phase2)が、draft/hidden と同じく本人所有を確認して二重に防ぐ。
+  const isUnpublishedForOwnerOnly =
+    consultation.draft ||
+    consultation.hidden_at !== null ||
+    consultation.review_status === "pending" ||
+    consultation.review_status === "rejected";
+  if (isUnpublishedForOwnerOnly) {
     const currentUser = await currentUserPromise;
 
     // 未ログイン、またはIDが不一致の場合は表示しない
