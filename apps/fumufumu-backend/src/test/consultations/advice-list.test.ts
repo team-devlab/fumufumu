@@ -643,5 +643,23 @@ describe('Consultations API - Advice List (GET /:id/advices)', () => {
 			expect(bodies).not.toContain(pendingAdviceBody);
 			expect(bodies).not.toContain(rejectedAdviceBody);
 		});
+
+		it('userId 絞り込みと viewerId を併用しても他人の未公開は漏れない（?userId=<他人>, #179 Phase2）', async () => {
+			// attacker が user の回答だけを絞り込んで取得しようとしても、user の投稿チェック中/公開見送りは出さず承認済みのみ。
+			// viewerId(=attacker) の本人ORは author=userId(=user) と AND されて自分の行にしか効かないため漏れない(fail-closed)。
+			const req = createApiRequest(`/api/consultations/${visibilityConsultationId}/advices`, 'GET', {
+				cookie: attacker.cookie,
+				queryParams: { userId: user.appUserId, limit: 100 },
+			});
+			const res = await app.fetch(req, env);
+			expect(res.status).toBe(200);
+			const body = await res.json() as any;
+			const bodies = body.data.map((a: any) => a.body);
+			expect(bodies).toContain(approvedAdviceBody);
+			expect(bodies).not.toContain(pendingAdviceBody);
+			expect(bodies).not.toContain(rejectedAdviceBody);
+			expect(bodies).not.toContain(pendingAttackerBody); // userId=user 絞り込みなので attacker 自身の回答も出ない
+			expect(body.pagination.total_items).toBe(1);
+		});
 	});
 });

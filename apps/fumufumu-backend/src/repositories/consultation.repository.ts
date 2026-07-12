@@ -353,6 +353,9 @@ export class ConsultationRepository {
 			conditions.push(this.buildAdviceParentVisibilityCondition());
 		}
 
+		// userId(著者絞り込み)と viewerId(本人ORの緩和)を同時に受けても安全: この author=userId が AND されるため、
+		// 他人の userId を指定した一覧では viewer の OR は「author=userId かつ author=viewer」= 自分を指定した時しか効かず、
+		// 他人の未公開回答は漏れない(fail-closed)。/:id/advices?userId=<他人> の非リークはこの重なりで担保される。
 		if (filters?.userId !== undefined) {
 			conditions.push(eq(advices.authorId, filters.userId));
 		}
