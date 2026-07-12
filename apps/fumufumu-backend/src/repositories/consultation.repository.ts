@@ -243,7 +243,14 @@ export class ConsultationRepository {
 			// モデレーションは「承認済みコンテンツの事後hide/unhide」を対象とする方針(ADR 011 §5.1、
 			// approve→事後hideのフロー)であり、未承認(pending/rejected)投稿はcontent-checkの
 			// 投稿チェック待ちタブで扱う。よって「未承認かつhidden」は非表示中タブの対象外(承認後に現れる)。
-			if (!filters?.includeUnapprovedForOwn) {
+			//
+			// own-view(本人一覧)でのみ承認済みonly条件を外し、本人の pending/rejected も含める(#179)。
+			// fail-closed: userId 未指定のまま緩めると全ユーザーの未承認が露出するため、userId を伴う場合に限る。
+			// この緩和は Service が userId===本人 のときだけ includeUnapprovedForOwn を立てる不変条件に依存する
+			// (アドバイス側 buildAdviceWhereConditions と同じ防御パターンに揃える)。
+			const includeOwnUnapproved =
+				filters?.includeUnapprovedForOwn === true && filters?.userId !== undefined;
+			if (!includeOwnUnapproved) {
 				conditions.push(this.buildPublicVisibilityCondition());
 			}
 		}
