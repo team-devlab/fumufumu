@@ -141,7 +141,11 @@ authRouter.post('/signin', async (c) => {
   // leftJoin なのは「メール存在チェックは authUsers 基準のまま維持」するため
   // （マッピング欠落の異常系で 401 に化けさせない。その場合 disabled は null=無効化なし扱い）。
   const existingUser = await db
-    .select({ id: authUsers.id, disabled: users.disabled })
+    .select({
+      id: authUsers.id,
+      appUserId: authMappings.appUserId,
+      disabled: users.disabled,
+    })
     .from(authUsers)
     .leftJoin(authMappings, eq(authMappings.authUserId, authUsers.id))
     .leftJoin(users, eq(users.id, authMappings.appUserId))
@@ -155,6 +159,10 @@ authRouter.post('/signin', async (c) => {
   // disabled(BAN) はここで弾く。Better Auth の signInEmail を呼ぶ前に返すことで、
   // 無効化ユーザーに使えるセッション Cookie を一切発行しない(authGuard の 403 と合わせ多層防御, #136)。
   if (existingUser[0].disabled) {
+    // BAN 済みアカウントへのサインイン試行を記録する(email は PII のため appUserId で追う)。
+    console.warn('signin: disabled account blocked', {
+      appUserId: existingUser[0].appUserId,
+    });
     return c.json(accountDisabledBody, 403);
   }
 

@@ -58,6 +58,13 @@ export const authGuard = async (c: AppContext, next: Next) => {
   // disabled は権限不足(admin API の 404 化)とは別概念。
   // 本人に「無効化されている」ことを明確に伝えるため 403 + 明示メッセージにする (#136)。
   if (account.disabled) {
+    // BAN が本番で効いているかの確認・保持 Cookie での連続アクセス検知のため、
+    // adminGuard の拒否ログと同じ粒度でアクセス試行を記録する。
+    console.warn('authGuard: disabled account blocked', {
+      appUserId: account.appUserId,
+      method: c.req.method,
+      path: c.req.path,
+    });
     return c.json(accountDisabledBody, 403);
   }
 
