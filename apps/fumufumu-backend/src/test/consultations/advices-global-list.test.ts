@@ -242,6 +242,20 @@ describe("Advices API - 相談横断の一覧", () => {
       expect(data.data.some((item) => item.id === approvedAdvice.id)).toBe(true);
     });
 
+    it("own-view: 親相談がhideされると本人の審査中アドバイスも一覧から外れる(cascadeはown-viewでも維持)", async () => {
+      const consultation = await createApprovedConsultation("global-advices-own-pending-parent-hidden");
+      const advice = await createPendingAdvice(consultation.id, "親相談hide後は本人一覧からも消えるべき審査中アドバイス本文です。");
+      const hideRes = await hide("consultations", consultation.id, { reason: "own-view cascade検証" });
+      expect(hideRes.status).toBe(200);
+
+      const res = await listAdvices(author.cookie, { userId: author.appUserId });
+      expect(res.status).toBe(200);
+      const data = await res.json() as { data: Array<{ id: number }> };
+      // own-viewの未承認緩和はアドバイス自身の承認条件だけを外すもので、親相談の可視性cascade(ADR 011 §4.1)は
+      // 維持する。親がhideされたら本人でも審査中アドバイスは見えない(相談own-viewがhidden相談を除外するのと対称)。
+      expect(data.data.some((item) => item.id === advice.id)).toBe(false);
+    });
+
     it("公開一覧(userId無し)でも承認済みは review_status=\"approved\" を持つ", async () => {
       const consultation = await createApprovedConsultation("global-advices-public-review-status");
       const advice = await createApprovedAdvice(consultation.id, "公開一覧のreview_status検証用アドバイス本文です。");
