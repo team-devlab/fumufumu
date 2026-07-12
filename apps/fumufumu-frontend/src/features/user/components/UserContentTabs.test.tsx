@@ -297,3 +297,85 @@ describe("UserContentTabs 下書きタブ", () => {
     expect(screen.getByText("下書きはまだありません")).toBeInTheDocument();
   });
 });
+
+describe("UserContentTabs 審査状態バッジ(#179)", () => {
+  it("相談タブ: 審査中(pending)は「審査中」バッジを出す", () => {
+    render(
+      <UserContentTabs
+        consultations={[
+          sampleConsultation({
+            title: "審査中の相談",
+            review_status: "pending",
+          }),
+        ]}
+        adviceState={{ status: "success", advices: [] }}
+        draftState={emptyDraftState}
+      />,
+    );
+
+    expect(screen.getByText("審査中")).toBeInTheDocument();
+  });
+
+  it("相談タブ: 却下(rejected)は「公開見送り」バッジを出す", () => {
+    render(
+      <UserContentTabs
+        consultations={[
+          sampleConsultation({
+            title: "見送られた相談",
+            review_status: "rejected",
+          }),
+        ]}
+        adviceState={{ status: "success", advices: [] }}
+        draftState={emptyDraftState}
+      />,
+    );
+
+    expect(screen.getByText("公開見送り")).toBeInTheDocument();
+  });
+
+  it("相談タブ: 承認済み(approved)・未指定はバッジを出さない", () => {
+    render(
+      <UserContentTabs
+        consultations={[
+          sampleConsultation({
+            id: 1,
+            title: "承認済み",
+            review_status: "approved",
+          }),
+          sampleConsultation({
+            id: 2,
+            title: "未指定",
+            review_status: undefined,
+          }),
+        ]}
+        adviceState={{ status: "success", advices: [] }}
+        draftState={emptyDraftState}
+      />,
+    );
+
+    expect(screen.queryByText("審査中")).not.toBeInTheDocument();
+    expect(screen.queryByText("公開見送り")).not.toBeInTheDocument();
+  });
+
+  it("アドバイスタブ: 審査中(pending)は「審査中」バッジを出す", () => {
+    render(
+      <UserContentTabs
+        consultations={[sampleConsultation()]}
+        adviceState={{
+          status: "success",
+          advices: [
+            sampleAdvice({
+              body: "審査中アドバイス",
+              review_status: "pending",
+            }),
+          ],
+        }}
+        draftState={emptyDraftState}
+      />,
+    );
+
+    clickAdviceTab();
+
+    expect(screen.getByText("審査中")).toBeInTheDocument();
+  });
+});

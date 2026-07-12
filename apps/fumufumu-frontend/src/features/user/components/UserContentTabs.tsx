@@ -5,6 +5,7 @@ import type React from "react";
 import { useState } from "react";
 import { ROUTES } from "@/config/routes";
 import type { Advice, Consultation } from "@/features/consultation/types";
+import { ReviewStatusBadge } from "./ReviewStatusBadge";
 
 type TabId = "consultations" | "advices" | "drafts";
 
@@ -164,6 +165,9 @@ const AdviceTabContent: React.FC<{ state: AdviceTabState }> = ({ state }) => {
           className="block"
         >
           <div className="bg-white rounded-xl border border-gray-100 shadow-sm p-5 hover:shadow-md transition-shadow duration-200">
+            <div className="mb-2 empty:hidden">
+              <ReviewStatusBadge status={advice.review_status} />
+            </div>
             <p className="text-sm text-gray-700 leading-relaxed line-clamp-3 whitespace-pre-wrap">
               {advice.body}
             </p>
@@ -224,6 +228,9 @@ export const UserContentTabs: React.FC<Props> = ({
                   className="block"
                 >
                   <div className="bg-white rounded-xl border border-gray-100 shadow-sm p-5 hover:shadow-md transition-shadow duration-200">
+                    <div className="mb-2 empty:hidden">
+                      <ReviewStatusBadge status={consultation.review_status} />
+                    </div>
                     <p className="text-sm text-gray-700 leading-relaxed">
                       {consultation.title}
                     </p>
