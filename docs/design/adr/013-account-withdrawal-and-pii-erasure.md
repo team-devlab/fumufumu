@@ -33,8 +33,8 @@
   - アドバイスをくれた他者 … 自分の回答を巻き添えで消されたくない
   - 閲覧者（同じ悩みを持つ将来のユーザー）… 参考になったスレッドを失いたくない
 - **② DB 保守性**: ①で差がつかない軸を判断する第2の軸。**必要があれば列・テーブルは足す**——保守性とは「列数の少なさ」ではない。避けたいのは、必要性に見合わない複雑さと、**常に整合を取り続けねばならない状態**（例: `deletedAt` を立てる＋`name` を scrub の二重表現の同期）や、**全クエリで守り続けねばならない不変条件**（例: `deletedAt` を全所で除外し忘れると消したはずのユーザーが漏れる）。同じ①価値なら、この継続的な負債が小さい方を採る。
-- **③ テスト容易性**: 削除処理の順序・原子性・冪等性が単体テストで検証できる形。
-- **法令・プラットフォーム**: GDPR 消去権 / APPI 消去、Apple 5.1.1(v)（将来 iOS を出すなら必須）。
+- **③ テスト容易性**: 削除処理の順序・原子性・冪等性が自動テスト（バックエンド単体 / API テスト・フロントのコンポーネントテスト）で検証できる形。
+- **法令・プラットフォーム**: GDPR 消去権 / APPI 消去に適合すること。Apple 5.1.1(v) は「アカウント作成を提供するアプリはアプリ内退会も必須」とする App Store 審査要件で、Web のみの現状は対象外だが将来 iOS アプリを出すと必須になる（各用語は §11 参照）。
 - **最終形態を見据える**: 通報/モデレーション（#136）、監査ログ（#148/#150）の最終形まで含めて破壊的変更を避ける。
 
 ### 0.3 推奨案
@@ -292,13 +292,17 @@ authGuard は disabled(BAN) を 403 で弾く（`authGuard.middleware.ts:60`）�
 
 ## 11. 参照
 
-- issue #180、#136（disabled/BAN）、#148 / #150（監査ログ）
+### 関連 issue / 社内ドキュメント
+- issue #180（本件）、#136（disabled/BAN の enforce）、#148 / #150（監査ログ）
 - ADR 010: 管理画面の権限制御（role / adminGuard / 404 化）
 - CLAUDE.md: フロントエンドの `useEffect` 既定禁止
-- 外部（検証済み・要点）:
-  - Apple App Store Review Guideline 5.1.1(v): アカウント作成を提供するなら**アプリ内削除必須**、deactivate/disable は不十分、即時削除を提供すれば猶予期間併設可。
-  - GDPR Art.17 / Art.12(3): 消去権、原則 1 か月以内。真の匿名化は消去の代替たり得るが不可逆性の立証が必要。
-  - APPI Art.35: 消去は「識別不能化を含む」。substitute measures 可、期限は「遅滞なく」。
-  - Better Auth v1.4.5: `user.deleteUser`（sessions+accounts cascade、password/fresh-session/email 検証、before/afterDelete フック）。
-  - Cloudflare D1: FK 既定強制、`set null`/`cascade` ランタイム発火、`db.transaction()` 不可 → `db.batch()`。
-  - UGC 慣行: 他者が依存する thread は匿名化保持、依存の無いものは削除可（Stack Overflow「回答付き質問は削除不可」等）。
+
+### 用語と外部参照（索引）
+本ADRの前提になる用語の簡単な説明と出典（すべて検証済み）。
+
+- **GDPR 消去権（第17条「忘れられる権利」）**: EU 一般データ保護規則。本人は自分の個人データの削除を請求でき、管理者は原則1か月以内（第12条(3)）に応じる。真の（不可逆な）匿名化は削除の代替になり得るが、識別子だけ消して本人を特定できる内容を残すのは不十分。 https://gdpr-info.eu/art-17-gdpr/
+- **APPI（個人情報保護法）第35条**: 日本の法律。本人は一定要件で保有個人データの利用停止・消去を請求できる。「消去」は「特定の個人を識別できないようにすること等を含む」と定義され、GDPR より匿名化で満たしやすい。対応期限は「遅滞なく」。 https://www.ppc.go.jp/personalinfo/faq/APPI_QA/
+- **Apple App Store Review Guideline 5.1.1(v)（アカウント削除）**: 「アカウント作成を提供するアプリは、アプリ内での退会も提供しなければならない」という審査必須要件。一時的な無効化（deactivate/disable）は代替として不可。即時削除を提供すれば猶予期間の併設は可。Web には直接かからないが、同じバックエンドで iOS アプリを出す場合に必須。 https://developer.apple.com/support/offering-account-deletion-in-your-app/ （ガイドライン本文 https://developer.apple.com/app-store/review/guidelines/ の 5.1.1(v)）
+- **Better Auth `deleteUser`**: 本プロジェクトが使う認証ライブラリの退会機能。`user.deleteUser.enabled` で有効化し、セッション・連携アカウントを cascade 削除、before/afterDelete フックや再認証（パスワード / fresh-session / メール確認）に対応（v1.4.5 ソースで確認）。 https://www.better-auth.com/docs/concepts/users-accounts
+- **Cloudflare D1 の外部キー**: 本番 DB。FK は既定で強制され `ON DELETE SET NULL / CASCADE` はランタイムで発火する。`db.transaction()` は非対応で、複数文の原子的実行は `db.batch()` を使う。 https://developers.cloudflare.com/d1/sql-api/foreign-keys/
+- **UGC の退会慣行**: 他者が返信した thread は匿名化して残し、依存の無いものは本人が削除、が業界標準（例: Stack Overflow は回答が付いた質問を本人でも削除不可）。
