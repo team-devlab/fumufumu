@@ -8,13 +8,29 @@ import { accountDisabledBody } from '../lib/account-status';
 type AppContext = Context<{ Bindings: Env, Variables: Variables }>;
 
 /**
- * 保護ミドルウェアの定義: 認証・無効化チェック・ID/role 注入
+ * 認証ガードの生成オプション。
+ */
+type AuthGuardOptions = {
+  /**
+   * disabled(BAN) 中のユーザーを 403 で弾かずに通すかどうか。
+   *
+   * 既定(false)は従来どおり disabled を 403 で enforce する (#136)。
+   * true は退会エンドポイント専用。退会は消去権の行使であり BAN 中でも行えねばならないため、
+   * disabled の 403 ゲートだけを外す(セッション認証そのものは必須のまま)。詳細は ADR 013 §5.5。
+   */
+  allowDisabled: boolean;
+};
+
+/**
+ * 認証ミドルウェアのファクトリ: 認証・無効化チェック・ID/role 注入
  * 責務: 1. セッション検証 2. disabled(BAN) の enforce 3. appUserId と userRole を Context に注入
  *
- * @param c Hono Context (Context型を使用することでget()メソッド等が利用可能に)
- * @param next Next function
+ * disabled の扱いだけを allowDisabled で切り替える。セッション検証・マッピング取得・401 分岐は
+ * 常に共通で、通常ガードと退会ガードで二重管理にならないよう 1 実装に集約する。
+ *
+ * @param options allowDisabled で disabled(BAN) を通すかを指定
  */
-export const authGuard = async (c: AppContext, next: Next) => {
+export const createAuthGuard = (options: AuthGuardOptions) => async (c: AppContext, next: Next) => {
   const auth = c.get('auth');
   const db = c.get('db');
 
@@ -57,7 +73,8 @@ export const authGuard = async (c: AppContext, next: Next) => {
 
   // disabled は権限不足(admin API の 404 化)とは別概念。
   // 本人に「無効化されている」ことを明確に伝えるため 403 + 明示メッセージにする (#136)。
-  if (account.disabled) {
+  // ただし allowDisabled(退会) のときはこの 403 ゲートを通す(BAN 中でも消去権を行使できる, ADR 013 §5.5)。
+  if (!options.allowDisabled && account.disabled) {
     // BAN が本番で効いているかの確認・保持 Cookie での連続アクセス検知のため、
     // adminGuard の拒否ログと同じ粒度でアクセス試行を記録する。
     console.warn('authGuard: disabled account blocked', {
@@ -74,3 +91,15 @@ export const authGuard = async (c: AppContext, next: Next) => {
 
   await next();
 };
+
+/**
+ * 標準の認証ガード。disabled(BAN) を 403 で弾く従来挙動 (#136)。
+ * 認証必須 API はこれを使う。
+ */
+export const authGuard = createAuthGuard({ allowDisabled: false });
+
+/**
+ * 退会専用の認証ガード。disabled(BAN) 中でも通す（消去権は BAN 中でも行使できる。ADR 013 §5.5）。
+ * セッション認証は必須。退会エンドポイント以外では使わない。
+ */
+export const withdrawalAuthGuard = createAuthGuard({ allowDisabled: true });

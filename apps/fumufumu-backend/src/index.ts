@@ -14,6 +14,7 @@ import * as tagsSchema from '@/db/schema/tags';
 import * as contentChecksSchema from '@/db/schema/content-checks';
 import * as moderationActionsSchema from '@/db/schema/moderation-actions';
 
+import { parseAllowedOrigins } from '@/lib/origin';
 import { authRouter } from '@/routes/auth.routes';
 import { consultationsRoute } from '@/routes/consultations.controller';
 import { advicesRoute } from '@/routes/advices.controller';
@@ -137,11 +138,8 @@ app.use('*', async (c, next) => {
 
 // 1. CORSミドルウェアの設定 (Authの前に配置)
 app.use('/api/*', async (c, next) => {
-  // 環境変数から許可するOriginを取得（カンマ区切りで複数指定可能にする）
-    // 💡 運用ミス防止のため、末尾のスラッシュがあれば自動で削除する
-    const allowedOrigins = (c.env.FRONTEND_URL || '')
-      .split(',')
-      .map(url => url.trim().replace(/\/$/, ''));
+  // 許可 Origin は CSRF(Origin 検証) と同じ許可リストを使う（parseAllowedOrigins に集約）。
+    const allowedOrigins = parseAllowedOrigins(c.env.FRONTEND_URL);
 
   const corsMiddleware = cors({
     origin: (origin) => {
