@@ -80,16 +80,37 @@ export const WithdrawalSection = ({ preview }: Props) => {
         退会すると、メールアドレスなどの登録情報とパスワードは完全に削除され、元に戻せません。
       </p>
 
-      <ul className="mt-4 list-disc space-y-1 pl-5 text-sm text-gray-700">
-        <li>
-          <strong>{preview.delete.total}</strong>{" "}
-          件の投稿は完全に削除されます（下書き・回答のない相談）。
-        </li>
-        <li>
-          <strong>{preview.anonymize.total}</strong>{" "}
-          件の投稿は、他の方の回答を守るため「退会済みユーザー」として匿名化して残ります。
-        </li>
-      </ul>
+      <div className="mt-4 space-y-4 text-sm text-gray-700">
+        <div>
+          <p className="font-medium text-gray-900">完全に削除されるもの</p>
+          <ul className="mt-1 list-disc space-y-0.5 pl-5">
+            <li>
+              相談（回答のないもの）:{" "}
+              <strong>{preview.consultations.delete}</strong> 件
+            </li>
+            <li>
+              アドバイス: <strong>{preview.advices.delete}</strong> 件
+            </li>
+            <li>
+              下書き: <strong>{preview.drafts.delete}</strong> 件
+            </li>
+          </ul>
+        </div>
+        <div>
+          <p className="font-medium text-gray-900">
+            「退会済みユーザー」として匿名化して残るもの（他の方の回答を守るため）
+          </p>
+          <ul className="mt-1 list-disc space-y-0.5 pl-5">
+            <li>
+              相談（回答のあるもの）:{" "}
+              <strong>{preview.consultations.anonymize}</strong> 件
+            </li>
+            <li>
+              アドバイス: <strong>{preview.advices.anonymize}</strong> 件
+            </li>
+          </ul>
+        </div>
+      </div>
 
       <div className="mt-6">
         <button

@@ -257,7 +257,7 @@ describe("退会 投稿の非対称処理", () => {
 		expect(await count("SELECT COUNT(*) AS c FROM advices WHERE id = ?", draftAdviceId)).toBe(0);
 	});
 
-	it("getWithdrawalContentPlan: 混在ケースの件数（内訳＋合計）が正しい", async () => {
+	it("getWithdrawalContentPlan: 混在ケースの件数（相談/アドバイス/下書きの内訳）が正しい", async () => {
 		const user = await createAndLoginUser();
 		const other = await createAndLoginUser();
 		const tagId = await createTag(`t-plan-${Date.now()}`);
@@ -280,11 +280,11 @@ describe("退会 投稿の非対称処理", () => {
 
 		const plan = await repository.getWithdrawalContentPlan(user.appUserId);
 
-		expect(plan.counts.delete.consultations).toBe(2);
-		expect(plan.counts.delete.advices).toBe(1);
-		expect(plan.counts.delete.total).toBe(3);
-		expect(plan.counts.anonymize.consultations).toBe(1);
-		expect(plan.counts.anonymize.advices).toBe(1);
-		expect(plan.counts.anonymize.total).toBe(2);
+		// タブ準拠の内訳: 相談(公開)=回答0削除1・回答あり匿名化1、アドバイス(公開)=削除0・匿名化1、下書き=削除2
+		expect(plan.counts.consultations.delete).toBe(1);
+		expect(plan.counts.consultations.anonymize).toBe(1);
+		expect(plan.counts.advices.delete).toBe(0);
+		expect(plan.counts.advices.anonymize).toBe(1);
+		expect(plan.counts.drafts.delete).toBe(2);
 	});
 });

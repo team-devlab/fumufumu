@@ -24,9 +24,12 @@ export type WithdrawalContentPlan = {
 	anonymizeAdviceIds: number[];
 	// 削除される相談に載る全アドバイス（他者含む・cascade で消える）の id。content_checks 明示削除用。
 	contentCheckAdviceIds: number[];
+	// プロフィールのタブ(相談/アドバイス/下書き)に合わせた内訳。相談=公開相談、アドバイス=公開アドバイス、
+	// 下書き=下書き(相談・アドバイス)。下書きは常に削除されるため anonymize は持たない。
 	counts: {
-		delete: { consultations: number; advices: number; total: number };
-		anonymize: { consultations: number; advices: number; total: number };
+		consultations: { delete: number; anonymize: number };
+		advices: { delete: number; anonymize: number };
+		drafts: { delete: number };
 	};
 };
 
@@ -201,10 +204,12 @@ export class UserRepository {
 			contentCheckAdviceIds = rows.map((r) => r.id);
 		}
 
-		const consultationsDeleted = deleteConsultationIds.length;
-		const consultationsAnonymized = anonymizeConsultationIds.length;
-		const advicesDeleted = deleteAdviceIds.length + cascadeDeletedOwnAdviceCount;
-		const advicesAnonymized = anonymizeAdviceIds.length;
+		// プレビュー件数はプロフィールのタブ(相談/アドバイス/下書き)に合わせた内訳で返す。
+		// 相談=公開相談(回答0は削除・回答ありは匿名化)、アドバイス=公開アドバイス(自分の削除相談への
+		// 巻き添え削除・それ以外は匿名化)、下書き=下書き相談＋下書きアドバイス(常に削除)。
+		const publishedConsultationsAnonymized = anonymizeConsultationIds.length;
+		const publishedConsultationsDeleted =
+			publishedConsultationIds.length - publishedConsultationsAnonymized;
 
 		return {
 			deleteConsultationIds,
@@ -213,15 +218,16 @@ export class UserRepository {
 			anonymizeAdviceIds,
 			contentCheckAdviceIds,
 			counts: {
-				delete: {
-					consultations: consultationsDeleted,
-					advices: advicesDeleted,
-					total: consultationsDeleted + advicesDeleted,
+				consultations: {
+					delete: publishedConsultationsDeleted,
+					anonymize: publishedConsultationsAnonymized,
 				},
-				anonymize: {
-					consultations: consultationsAnonymized,
-					advices: advicesAnonymized,
-					total: consultationsAnonymized + advicesAnonymized,
+				advices: {
+					delete: cascadeDeletedOwnAdviceCount,
+					anonymize: anonymizeAdviceIds.length,
+				},
+				drafts: {
+					delete: draftConsultationIds.length + deleteAdviceIds.length,
 				},
 			},
 		};

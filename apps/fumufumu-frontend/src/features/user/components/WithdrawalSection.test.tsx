@@ -32,8 +32,9 @@ vi.mock("next/navigation", () => ({
 }));
 
 const preview: WithdrawalPreview = {
-  delete: { consultations: 1, advices: 1, total: 2 },
-  anonymize: { consultations: 1, advices: 0, total: 1 },
+  consultations: { delete: 1, anonymize: 1 },
+  advices: { delete: 0, anonymize: 1 },
+  drafts: { delete: 2 },
 };
 
 const openDialog = async (user: ReturnType<typeof userEvent.setup>) => {
@@ -49,12 +50,12 @@ describe("WithdrawalSection", () => {
     vi.restoreAllMocks();
   });
 
-  it("削除/匿名化の件数を表示する", () => {
+  it("相談/アドバイス/下書きの内訳を表示する", () => {
     render(<WithdrawalSection preview={preview} />);
-    expect(screen.getByText(/完全に削除されます/)).toBeInTheDocument();
-    expect(screen.getByText(/匿名化して残ります/)).toBeInTheDocument();
-    expect(screen.getByText("2")).toBeInTheDocument(); // 削除 total
-    expect(screen.getByText("1")).toBeInTheDocument(); // 匿名化 total
+    expect(screen.getByText(/完全に削除されるもの/)).toBeInTheDocument();
+    expect(screen.getByText(/匿名化して残る/)).toBeInTheDocument();
+    expect(screen.getByText("2")).toBeInTheDocument(); // 下書き 削除
+    expect(screen.getByText("0")).toBeInTheDocument(); // アドバイス 削除
   });
 
   it("メール未入力では退会ボタンが無効、入力すると有効になる（type-to-confirm）", async () => {

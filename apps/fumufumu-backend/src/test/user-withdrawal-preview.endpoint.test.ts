@@ -19,8 +19,9 @@ import { createApiRequest } from "./helpers/request-helper";
 const BODY = "テスト用の本文です。十分な長さを確保しています。";
 
 type PreviewResponse = {
-	delete: { consultations: number; advices: number; total: number };
-	anonymize: { consultations: number; advices: number; total: number };
+	consultations: { delete: number; anonymize: number };
+	advices: { delete: number; anonymize: number };
+	drafts: { delete: number };
 };
 
 const getPreview = (cookie?: string) =>
@@ -83,6 +84,9 @@ describe("GET /api/users/me/withdrawal-preview（退会プレビュー）", () =
 		// 削除: 下書き相談1
 		await draftConsultation(user.cookie, "プレビュー下書き");
 
+		// 削除: 回答0の公開相談1
+		await publishConsultation(user.cookie, tagId, "プレビュー回答0");
+
 		// 匿名化: 回答あり公開相談1（他者approved回答）
 		const answered = await publishConsultation(user.cookie, tagId, "プレビュー回答あり");
 		await approveConsultation(answered);
@@ -99,8 +103,9 @@ describe("GET /api/users/me/withdrawal-preview（退会プレビュー）", () =
 		expect(res.status).toBe(200);
 		const data = (await res.json()) as PreviewResponse;
 
-		expect(data.delete).toEqual({ consultations: 1, advices: 1, total: 2 });
-		expect(data.anonymize).toEqual({ consultations: 1, advices: 1, total: 2 });
+		expect(data.consultations).toEqual({ delete: 1, anonymize: 1 });
+		expect(data.advices).toEqual({ delete: 0, anonymize: 1 });
+		expect(data.drafts).toEqual({ delete: 2 });
 	});
 
 	it("投稿が無ければすべて0を返す", async () => {
@@ -110,8 +115,9 @@ describe("GET /api/users/me/withdrawal-preview（退会プレビュー）", () =
 		expect(res.status).toBe(200);
 		const data = (await res.json()) as PreviewResponse;
 
-		expect(data.delete).toEqual({ consultations: 0, advices: 0, total: 0 });
-		expect(data.anonymize).toEqual({ consultations: 0, advices: 0, total: 0 });
+		expect(data.consultations).toEqual({ delete: 0, anonymize: 0 });
+		expect(data.advices).toEqual({ delete: 0, anonymize: 0 });
+		expect(data.drafts).toEqual({ delete: 0 });
 	});
 
 	it("BAN(disabled)中でもプレビューできる", async () => {

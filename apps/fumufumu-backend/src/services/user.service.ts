@@ -24,12 +24,14 @@ export interface UserResponse {
 }
 
 /**
- * 退会プレビューのレスポンス型。退会確認画面の「◯件削除／◯件匿名化」表示に使う（ADR 013 §4.3）。
- * 対象は投稿（相談・アドバイス）。認証情報・PII は常に削除されるため件数には含めない。
+ * 退会プレビューのレスポンス型。退会確認画面の件数明示に使う（ADR 013 §4.3）。
+ * プロフィールのタブ（相談/アドバイス/下書き）に合わせた内訳。認証情報・PII は常に削除されるため含めない。
+ * 下書きは常に削除されるため anonymize は持たない。
  */
 export interface WithdrawalPreview {
-	delete: { consultations: number; advices: number; total: number };
-	anonymize: { consultations: number; advices: number; total: number };
+	consultations: { delete: number; anonymize: number };
+	advices: { delete: number; anonymize: number };
+	drafts: { delete: number };
 }
 
 export class UserService {
