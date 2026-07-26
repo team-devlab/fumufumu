@@ -45,16 +45,17 @@ describe("DELETE /api/users/me（退会エンドポイント）", () => {
 		await setupIntegrationTest();
 	});
 
-	it("成功: 認証情報を全削除し、投稿は匿名化して残し、セッションを失効させる", async () => {
+	it("成功: 認証情報を全削除し、投稿を非対称処理し、セッションを失効させる", async () => {
 		const user = await createAndLoginUser();
 
-		// 本人の相談（下書き）を用意し、退会後に author_id が NULL 化される（set null 匿名化）ことを見る。
+		// 本人の下書き相談を用意し、退会で削除される（非対称処理: 下書きは削除）ことを見る。
+		// 匿名化（回答ありの相談・本人の公開アドバイス）の分岐は user-withdrawal-content で網羅する。
 		const consultationRes = await app.fetch(
 			createApiRequest("/api/consultations", "POST", {
 				cookie: user.cookie,
 				body: {
 					title: "退会テスト相談",
-					body: "退会後に匿名化されて残ることを確認する本文です。",
+					body: "退会で削除されることを確認するための下書き本文です。",
 					draft: true,
 				},
 			}),
@@ -91,14 +92,13 @@ describe("DELETE /api/users/me（退会エンドポイント）", () => {
 			await count("SELECT COUNT(*) AS c FROM auth_verifications WHERE identifier = ?", user.email),
 		).toBe(0);
 
-		// 匿名化: 相談は残るが author_id は NULL（他者の文脈を壊さず著者だけ伏せる）。
+		// 非対称処理: 下書き相談は削除される。
 		const consultationRow = (await env.DB.prepare(
 			"SELECT author_id FROM consultations WHERE id = ?",
 		)
 			.bind(consultation.id)
 			.first()) as { author_id: number | null } | null;
-		expect(consultationRow).not.toBeNull();
-		expect(consultationRow?.author_id).toBeNull();
+		expect(consultationRow).toBeNull();
 
 		// セッション失効: 退会後は同じ cookie でも 401。
 		const afterRes = await app.fetch(

@@ -23,6 +23,15 @@ export interface UserResponse {
 	updatedAt: string;
 }
 
+/**
+ * 退会プレビューのレスポンス型。退会確認画面の「◯件削除／◯件匿名化」表示に使う（ADR 013 §4.3）。
+ * 対象は投稿（相談・アドバイス）。認証情報・PII は常に削除されるため件数には含めない。
+ */
+export interface WithdrawalPreview {
+	delete: { consultations: number; advices: number; total: number };
+	anonymize: { consultations: number; advices: number; total: number };
+}
+
 export class UserService {
 	constructor(private repository: UserRepository) { }
 
@@ -66,7 +75,8 @@ export class UserService {
 	 * 退会（アカウント削除・PII 消去）。認証情報・PII・業務ユーザー行を物理削除する。
 	 *
 	 * 認証済み前提だが disabled(BAN) 中でも呼ばれうる（消去権のため。ADR 013 §5.5）。
-	 * 投稿は authorId の FK(set null) に委ねて匿名化し、この層では投稿を触らない（ADR 013 §5.2）。
+	 * 投稿は非対称に処理する（下書き・回答0の相談は削除、回答ありの相談と本人の公開アドバイスは
+	 * 匿名化）。分類と削除は Repository が原子的に行う（ADR 013 §4.3 / §5.2）。
 	 *
 	 * @throws {ForbiddenError} 管理者ロール（一時的に退会不可）
 	 * @throws {ValidationError} 入力メールが登録メールと一致しない
@@ -103,5 +113,14 @@ export class UserService {
 
 		// 退会イベントは PII なしで記録する（email/name は残さない。ADR 013 §6）。
 		console.info("withdrawal: account deleted", { appUserId });
+	}
+
+	/**
+	 * 退会プレビュー: 削除/匿名化される投稿の件数を返す。
+	 * 実際の退会（withdraw）と同じ分類ロジックを共有し、表示件数と実削除がずれないようにする。
+	 */
+	async getWithdrawalPreview(appUserId: number): Promise<WithdrawalPreview> {
+		const plan = await this.repository.getWithdrawalContentPlan(appUserId);
+		return plan.counts;
 	}
 }
