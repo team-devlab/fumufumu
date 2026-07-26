@@ -4,6 +4,7 @@
 export const ROUTES = {
   HOME: "/",
   USER: "/user",
+  USER_WITHDRAWAL: "/user/withdrawal",
   CONSULTATION: {
     LIST: "/consultations",
     NEW: "/consultations/new",
