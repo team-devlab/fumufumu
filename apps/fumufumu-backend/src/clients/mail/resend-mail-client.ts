@@ -56,7 +56,7 @@ export class ResendMailClient implements MailClient {
 	}
 
 	/**
-	 * 承認通知メールを Resend API へ送信する。
+	 * 公開のお知らせメールを Resend API へ送信する。
 	 * HTTP失敗・ネットワーク失敗を MailSendError へ分類して投げる。
 	 */
 	async sendApproved(input: SendApprovedMailInput): Promise<void> {
@@ -127,8 +127,8 @@ export class ResendMailClient implements MailClient {
 	 */
 	private buildPayload(input: SendApprovedMailInput): ResendSendEmailPayload {
 		const subject = input.targetType === "consultation"
-			? "【ふむふむ】相談が承認されました"
-			: "【ふむふむ】アドバイスが承認されました";
+			? "【ふむふむ】相談が公開されました"
+			: "【ふむふむ】アドバイスが公開されました";
 
 		const text = input.targetType === "consultation"
 			? this.buildConsultationApprovedText(input)
@@ -143,7 +143,7 @@ export class ResendMailClient implements MailClient {
 	}
 
 	/**
-	 * 相談承認メール本文（text）を組み立てる。
+	 * 相談の公開お知らせメール本文（text）を組み立てる。
 	 */
 	private buildConsultationApprovedText(input: Extract<SendApprovedMailInput, { targetType: "consultation" }>): string {
 		const recipient = input.recipientName?.trim();
@@ -153,7 +153,7 @@ export class ResendMailClient implements MailClient {
 			`${greeting}`,
 			"",
 			"ふむふむからのお知らせです。",
-			"投稿いただいた相談が承認されました。",
+			"投稿いただいた相談の投稿チェックが終わり、公開されました。",
 			`タイトル: ${input.consultationTitle}`,
 			"",
 			`相談詳細: ${actionUrl ?? "現在リンクを表示できません。アプリからご確認ください。"}`,
@@ -161,7 +161,7 @@ export class ResendMailClient implements MailClient {
 	}
 
 	/**
-	 * アドバイス承認メール本文（text）を組み立てる。
+	 * アドバイスの公開お知らせメール本文（text）を組み立てる。
 	 */
 	private buildAdviceApprovedText(input: Extract<SendApprovedMailInput, { targetType: "advice" }>): string {
 		const recipient = input.recipientName?.trim();
@@ -171,7 +171,7 @@ export class ResendMailClient implements MailClient {
 			`${greeting}`,
 			"",
 			"ふむふむからのお知らせです。",
-			"投稿いただいたアドバイスが承認されました。",
+			"投稿いただいたアドバイスの投稿チェックが終わり、公開されました。",
 			...(input.consultationTitle ? [`相談タイトル: ${input.consultationTitle}`] : []),
 			"",
 			`相談詳細: ${actionUrl ?? "現在リンクを表示できません。アプリからご確認ください。"}`,
