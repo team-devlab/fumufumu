@@ -12,8 +12,11 @@ import { createApiRequest } from "./helpers/request-helper";
  * 当該ユーザー行が 0）・投稿の匿名化（set null）・セッション失効を HTTP 経由で検証する。
  */
 
-// .dev.vars の FRONTEND_URL と一致させ、正当な Origin として使う。
 const ALLOWED_ORIGIN = "http://localhost:3000";
+
+// FRONTEND_URL は .dev.vars 由来でローカルにしか無く CI には無い。origin 検証を環境非依存に
+// するため、許可 Origin をテスト内で明示的に与える（app-config の CORS テストと同じ方針）。
+const TEST_ENV = { ...env, FRONTEND_URL: ALLOWED_ORIGIN };
 
 const deleteMe = (options: {
 	cookie?: string;
@@ -55,7 +58,7 @@ describe("DELETE /api/users/me（退会エンドポイント）", () => {
 					draft: true,
 				},
 			}),
-			env,
+			TEST_ENV,
 		);
 		expect(consultationRes.status).toBe(201);
 		const consultation = (await consultationRes.json()) as { id: number };
@@ -66,7 +69,7 @@ describe("DELETE /api/users/me（退会エンドポイント）", () => {
 				body: { email: user.email },
 				origin: ALLOWED_ORIGIN,
 			}),
-			env,
+			TEST_ENV,
 		);
 		expect(res.status).toBe(200);
 		// セッション cookie のクリアヘッダが返る。
@@ -100,7 +103,7 @@ describe("DELETE /api/users/me（退会エンドポイント）", () => {
 		// セッション失効: 退会後は同じ cookie でも 401。
 		const afterRes = await app.fetch(
 			createApiRequest("/api/users/me", "GET", { cookie: user.cookie }),
-			env,
+			TEST_ENV,
 		);
 		expect(afterRes.status).toBe(401);
 	});
@@ -114,7 +117,7 @@ describe("DELETE /api/users/me（退会エンドポイント）", () => {
 				body: { email: `wrong-${user.email}` },
 				origin: ALLOWED_ORIGIN,
 			}),
-			env,
+			TEST_ENV,
 		);
 		expect(res.status).toBe(400);
 		expect(await count("SELECT COUNT(*) AS c FROM auth_users WHERE id = ?", user.authUserId)).toBe(1);
@@ -125,7 +128,7 @@ describe("DELETE /api/users/me（退会エンドポイント）", () => {
 
 		const res = await app.fetch(
 			deleteMe({ cookie: user.cookie, body: {}, origin: ALLOWED_ORIGIN }),
-			env,
+			TEST_ENV,
 		);
 		expect(res.status).toBe(400);
 		expect(await count("SELECT COUNT(*) AS c FROM auth_users WHERE id = ?", user.authUserId)).toBe(1);
@@ -138,7 +141,7 @@ describe("DELETE /api/users/me（退会エンドポイント）", () => {
 		// 対比: 通常の認証必須 API は disabled だと 403 で弾かれる。
 		const guardedRes = await app.fetch(
 			createApiRequest("/api/users/me", "GET", { cookie: user.cookie }),
-			env,
+			TEST_ENV,
 		);
 		expect(guardedRes.status).toBe(403);
 
@@ -149,7 +152,7 @@ describe("DELETE /api/users/me（退会エンドポイント）", () => {
 				body: { email: user.email },
 				origin: ALLOWED_ORIGIN,
 			}),
-			env,
+			TEST_ENV,
 		);
 		expect(res.status).toBe(200);
 		expect(await count("SELECT COUNT(*) AS c FROM auth_users WHERE id = ?", user.authUserId)).toBe(0);
@@ -165,7 +168,7 @@ describe("DELETE /api/users/me（退会エンドポイント）", () => {
 				body: { email: admin.email },
 				origin: ALLOWED_ORIGIN,
 			}),
-			env,
+			TEST_ENV,
 		);
 		expect(res.status).toBe(403);
 		expect(await count("SELECT COUNT(*) AS c FROM auth_users WHERE id = ?", admin.authUserId)).toBe(1);
@@ -176,7 +179,7 @@ describe("DELETE /api/users/me（退会エンドポイント）", () => {
 
 		const res = await app.fetch(
 			deleteMe({ cookie: user.cookie, body: { email: user.email }, origin: null }),
-			env,
+			TEST_ENV,
 		);
 		expect(res.status).toBe(403);
 		expect(await count("SELECT COUNT(*) AS c FROM auth_users WHERE id = ?", user.authUserId)).toBe(1);
@@ -191,7 +194,7 @@ describe("DELETE /api/users/me（退会エンドポイント）", () => {
 				body: { email: user.email },
 				origin: "https://evil.example.com",
 			}),
-			env,
+			TEST_ENV,
 		);
 		expect(res.status).toBe(403);
 		expect(await count("SELECT COUNT(*) AS c FROM auth_users WHERE id = ?", user.authUserId)).toBe(1);
@@ -200,7 +203,7 @@ describe("DELETE /api/users/me（退会エンドポイント）", () => {
 	it("未認証は 401（Origin は正当・cookie なし）", async () => {
 		const res = await app.fetch(
 			deleteMe({ body: { email: "someone@example.com" }, origin: ALLOWED_ORIGIN }),
-			env,
+			TEST_ENV,
 		);
 		expect(res.status).toBe(401);
 	});
