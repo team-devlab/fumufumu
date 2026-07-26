@@ -121,20 +121,28 @@ jobs:
         # worker-deployステップの出力を参照
         PREVIEW_URL="${{ steps.worker-deploy.outputs.deployment-url }}"
 
-        echo "Waiting 5 seconds for Worker to propagate..."
-        sleep 5
-
         echo "Checking health at: $PREVIEW_URL/health"
 
-        # curlでリクエストを送信し、ステータスコードが200であることを確認
-        curl -fS "$PREVIEW_URL/health"
+        # 新規 Worker 名の workers.dev サブドメインは伝播に時間がかかることがあり、固定の短い待機だと
+        # 初回デプロイで 404/接続不可になりうる（cleanup で毎回 Worker を消すため各実行が初回デプロイ扱い）。
+        # そこで固定 sleep ではなく、200 になるまでの retry-with-timeout で伝播を吸収する（issue #140）。
+        MAX_ATTEMPTS=20
+        SLEEP_SECONDS=6
+        for attempt in $(seq 1 "$MAX_ATTEMPTS"); do
+          # 接続不可(000)・伝播中(404)も拾えるよう、HTTP ステータスコードだけを取得する（curl 失敗でも継続）。
+          STATUS=$(curl -s -o /dev/null -w "%{http_code}" "$PREVIEW_URL/health" || true)
+          if [ "$STATUS" = "200" ]; then
+            echo "✅ Health check successful (attempt $attempt/$MAX_ATTEMPTS). D1 connection is confirmed."
+            exit 0
+          fi
+          echo "Attempt $attempt/$MAX_ATTEMPTS: got HTTP $STATUS."
+          if [ "$attempt" -lt "$MAX_ATTEMPTS" ]; then
+            sleep "$SLEEP_SECONDS"
+          fi
+        done
 
-        if [ $? -eq 0 ]; then
-          echo "✅ Health check successful! D1 connection is confirmed."
-        else
-          echo "::error::Health check failed. Worker or D1 connection is down."
-          exit 1
-        fi
+        echo "::error::Health check failed after $MAX_ATTEMPTS attempts (last HTTP $STATUS). Worker or D1 connection is down."
+        exit 1
     # --- 【ステップ 4: Workerの削除（クリーンアップ）】 ---
     - name: Delete Preview Worker (Cleanup)
       if: always() # 後のステップで失敗しても、必ず実行する 
