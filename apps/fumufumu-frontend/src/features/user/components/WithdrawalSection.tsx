@@ -87,7 +87,7 @@ export const WithdrawalSection = ({ preview }: Props) => {
           <p className="font-medium text-gray-900">完全に削除されるもの</p>
           <ul className="mt-1 list-disc space-y-0.5 pl-5">
             <li>
-              相談（回答のないもの）:{" "}
+              相談（アドバイスの付いていないもの）:{" "}
               <strong>{preview.consultations.delete}</strong> 件
             </li>
             <li>
@@ -100,11 +100,11 @@ export const WithdrawalSection = ({ preview }: Props) => {
         </div>
         <div>
           <p className="font-medium text-gray-900">
-            「退会済みユーザー」として匿名化して残るもの（他の方の回答を守るため）
+            「退会済みユーザー」として匿名化して残るもの（他の方のアドバイスを守るため）
           </p>
           <ul className="mt-1 list-disc space-y-0.5 pl-5">
             <li>
-              相談（回答のあるもの）:{" "}
+              相談（アドバイスの付いているもの）:{" "}
               <strong>{preview.consultations.anonymize}</strong> 件
             </li>
             <li>
