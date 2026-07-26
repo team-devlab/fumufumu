@@ -76,6 +76,15 @@ export const withdrawCurrentUserHandlers = factory.createHandlers(
 	},
 );
 
+// 退会プレビュー: 削除/匿名化される投稿の件数を返す（確認画面の「◯件削除／◯件匿名化」表示用）。
+// GET（副作用なし）なので CSRF は不要。認証は退会と同じく BAN 中でも通す。
+export const getWithdrawalPreviewHandlers = factory.createHandlers(async (c) => {
+	const appUserId = c.get("appUserId");
+	const service = c.get("userService");
+	const preview = await service.getWithdrawalPreview(appUserId);
+	return c.json(preview, 200);
+});
+
 // ============================================
 // ルーター設定
 // ============================================
@@ -85,6 +94,12 @@ export const userRoute = new Hono<AppBindings>();
 // 退会だけ別ガード（BAN 中でも通す）＋ CSRF が要るため、ミドルウェアはルート毎に付ける。
 // GET /me は従来どおり authGuard（disabled は 403）。
 userRoute.get("/me", authGuard, injectUserService, ...getCurrentUserHandlers);
+userRoute.get(
+	"/me/withdrawal-preview",
+	withdrawalAuthGuard,
+	injectUserService,
+	...getWithdrawalPreviewHandlers,
+);
 userRoute.delete(
 	"/me",
 	originCheck,
