@@ -1,8 +1,10 @@
 "use client";
 
+import Link from "next/link";
 import { useRouter } from "next/navigation";
 import { useId, useRef, useState } from "react";
 import toast from "react-hot-toast";
+import { ROUTES } from "@/config/routes";
 import { withdrawAccount } from "@/features/user/api/userClientApi";
 import type { WithdrawalPreview } from "@/features/user/types";
 import { ApiError } from "@/lib/api/client";
@@ -111,6 +113,17 @@ export const WithdrawalSection = ({ preview }: Props) => {
           </ul>
         </div>
       </div>
+
+      <p className="mt-4 text-sm text-gray-600">
+        退会後に残る投稿の扱いや、復旧用の控えにデータが残る期間については
+        <Link
+          href={ROUTES.PRIVACY}
+          className="mx-1 font-medium text-teal-700 hover:underline"
+        >
+          プライバシーポリシー
+        </Link>
+        をご確認ください。
+      </p>
 
       <div className="mt-6">
         <button
