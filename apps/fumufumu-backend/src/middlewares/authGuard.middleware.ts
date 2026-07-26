@@ -97,3 +97,9 @@ export const createAuthGuard = (options: AuthGuardOptions) => async (c: AppConte
  * 認証必須 API はこれを使う。
  */
 export const authGuard = createAuthGuard({ allowDisabled: false });
+
+/**
+ * 退会専用の認証ガード。disabled(BAN) 中でも通す（消去権は BAN 中でも行使できる。ADR 013 §5.5）。
+ * セッション認証は必須。退会エンドポイント以外では使わない。
+ */
+export const withdrawalAuthGuard = createAuthGuard({ allowDisabled: true });
