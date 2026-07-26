@@ -8,6 +8,8 @@ type Props = {
 };
 
 export const UserProfile: React.FC<Props> = ({ user }) => {
+  const isAdmin = user.role === "admin";
+
   return (
     <div className="bg-white rounded-xl border border-gray-200 shadow-sm p-8 mb-6">
       <div className="flex items-center gap-5">
@@ -37,6 +39,30 @@ export const UserProfile: React.FC<Props> = ({ user }) => {
             編集
           </Link>
         </div>
+      </div>
+
+      {/* 退会導線。退会は正当な権利なので、入口(発見の場)は中立色にして警告しすぎない。
+          赤(要注意)は確認ページ/ダイアログの不可逆操作に限定する。視認できる大きさ(text-sm)は確保する
+          (小さすぎると発見しづらくダークパターン化するため)。管理者は無効化して存在を示す(バックエンドも 403)。 */}
+      <div className="mt-6 flex justify-end border-t border-gray-100 pt-4">
+        {isAdmin ? (
+          <button
+            type="button"
+            disabled
+            aria-disabled="true"
+            title="管理者アカウントは退会できません"
+            className="cursor-not-allowed rounded-md border border-gray-300 px-4 py-1.5 text-sm font-medium text-gray-400"
+          >
+            退会する
+          </button>
+        ) : (
+          <Link
+            href={ROUTES.USER_WITHDRAWAL}
+            className="rounded-md border border-gray-300 px-4 py-1.5 text-sm font-medium text-gray-700 hover:bg-gray-50"
+          >
+            退会する
+          </Link>
+        )}
       </div>
     </div>
   );

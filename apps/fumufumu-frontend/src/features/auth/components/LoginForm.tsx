@@ -38,6 +38,11 @@ export const LoginForm = ({ reason, returnTo }: LoginFormProps) => {
       message: "アカウントが無効化されました。",
       className: "border-red-300 bg-red-50 text-red-800",
     },
+    // 退会完了でログイン画面へ戻された場合の告知。
+    withdrawn: {
+      message: "退会が完了しました。\nご利用ありがとうございました。",
+      className: "border-sky-200 bg-sky-50 text-sky-800",
+    },
   };
 
   const reasonInfo = reason ? reasonConfig[reason] : null;
