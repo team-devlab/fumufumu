@@ -1,12 +1,13 @@
 "use client";
 
 import Link from "next/link";
-import { useState } from "react";
+import { useId, useState } from "react";
 import { Button } from "@/components/ui/Button";
 import { useAuth } from "../hooks/useAuth";
 
 export const SignupForm = () => {
   const { signup, isLoading, error } = useAuth();
+  const nameHintId = useId();
 
   // 入力ステート
   const [name, setName] = useState("");
@@ -31,7 +32,7 @@ export const SignupForm = () => {
       )}
 
       <form onSubmit={handleSubmit} className="space-y-4">
-        {/* 名前入力欄 */}
+        {/* 名前入力欄。投稿の著者として他の利用者に見えるため、本名不要であることを明示する。 */}
         <div>
           <input
             type="text"
@@ -39,8 +40,15 @@ export const SignupForm = () => {
             value={name}
             onChange={(e) => setName(e.target.value)}
             required
+            aria-describedby={nameHintId}
             className="w-full p-3 border border-gray-300 rounded-lg focus:ring-blue-500 focus:border-blue-500"
           />
+          <p
+            id={nameHintId}
+            className="text-xs text-gray-400 text-left mt-1 ml-1"
+          >
+            ※投稿したときに表示される名前です。本名でなくてかまいません
+          </p>
         </div>
 
         {/* メールアドレス入力欄 */}
