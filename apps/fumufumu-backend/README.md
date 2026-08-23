@@ -174,3 +174,21 @@ curl -fS https://<backend-production-url>/health
 - smoke確認は専用ユーザーで実行し、`[smoke]` プレフィックスのデータを運用側で定期クリーンアップする。
 - smokeデータの削除例: `pnpm exec wrangler d1 execute DB --remote --command "DELETE FROM consultations WHERE author_id = <smoke_user_id> AND title LIKE '[smoke]%';" --config "${WRANGLER_D1_CONFIG:-wrangler.local.jsonc}"`
 - 将来、同一 config のまま複数 DB を切り替えて実行する要件が出た場合は、`D1_DATABASE_NAME` のような env 引数方式へ戻す。
+
+## Better Auth 1.7 の issuer 列について
+
+1.7 から `auth_accounts` に `issuer` 列が必須になり、アカウントの同一性を `(issuer, account_id)` の組で判定するようになった。列がないとサインアップが 400 で失敗する（`The field "issuer" does not exist in the "authAccounts" Drizzle schema`）。
+
+対応は migration `0012` で入れた。
+
+- `issuer` は既定値 `local:credential` 付きの NOT NULL 列として追加する。SQLite は既定値なしに NOT NULL 列を追加できないので、この既定値が既存行の埋め合わせも兼ねる
+- メールとパスワードのみの構成なので、値は常に `local:credential` になる。新規行は Better Auth が明示的に入れる
+- `(issuer, account_id)` に一意索引を張る。`account_id` は資格情報アカウントでは利用者の `id` と一致するため、既存データで衝突は起きない
+
+本番の D1 に適用する前に、衝突がないことを確認する。
+
+```bash
+pnpm exec wrangler d1 execute DB --remote --command "SELECT account_id, COUNT(*) c FROM auth_accounts GROUP BY account_id HAVING c > 1;" --config "${WRANGLER_D1_CONFIG:-wrangler.local.jsonc}"
+```
+
+結果が空でなければ、`issuer` を入れる前に重複を解消する。
