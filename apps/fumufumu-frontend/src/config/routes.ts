@@ -3,6 +3,7 @@
  */
 export const ROUTES = {
   HOME: "/",
+  PRIVACY: "/privacy",
   USER: "/user",
   USER_WITHDRAWAL: "/user/withdrawal",
   CONSULTATION: {

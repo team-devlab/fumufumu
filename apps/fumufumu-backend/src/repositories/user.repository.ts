@@ -306,6 +306,12 @@ export class UserRepository {
 		// 認証情報・PII・業務ユーザー行（PR1 と同じ。子→親の順）。
 		statements.push(this.db.delete(authSessions).where(eq(authSessions.userId, authUserId)));
 		statements.push(this.db.delete(authAccounts).where(eq(authAccounts.userId, authUserId)));
+		// 注意: この条件は現状どの行にも一致せず、削除は常に0件になる。メール＋パスワードのみの現構成で
+		// Better Auth が identifier に入れるのは "reset-password:<トークン>" のような書式で、素のメール
+		// アドレスではないため。今は該当行自体が作られないので実害はないが、issue #186（パスワード忘却時の
+		// リセット導線）やメールでのログインを有効にすると、退会後に行が残る。有効化する際は identifier と
+		// value の実際の書式を確認して条件を直し、完全性テストも直すこと（退会前に行を作っていないため、
+		// 現状のテストは条件が空振りしていても必ず合格してしまう）。
 		statements.push(this.db.delete(authVerifications).where(eq(authVerifications.identifier, email)));
 		statements.push(this.db.delete(authMappings).where(eq(authMappings.appUserId, appUserId)));
 		statements.push(this.db.delete(users).where(eq(users.id, appUserId)));

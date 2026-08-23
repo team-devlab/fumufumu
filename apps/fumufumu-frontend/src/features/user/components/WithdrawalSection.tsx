@@ -1,8 +1,10 @@
 "use client";
 
+import Link from "next/link";
 import { useRouter } from "next/navigation";
 import { useId, useRef, useState } from "react";
 import toast from "react-hot-toast";
+import { ROUTES } from "@/config/routes";
 import { withdrawAccount } from "@/features/user/api/userClientApi";
 import type { WithdrawalPreview } from "@/features/user/types";
 import { ApiError } from "@/lib/api/client";
@@ -85,7 +87,7 @@ export const WithdrawalSection = ({ preview }: Props) => {
           <p className="font-medium text-gray-900">完全に削除されるもの</p>
           <ul className="mt-1 list-disc space-y-0.5 pl-5">
             <li>
-              相談（回答のないもの）:{" "}
+              相談（アドバイスの付いていないもの）:{" "}
               <strong>{preview.consultations.delete}</strong> 件
             </li>
             <li>
@@ -98,11 +100,11 @@ export const WithdrawalSection = ({ preview }: Props) => {
         </div>
         <div>
           <p className="font-medium text-gray-900">
-            「退会済みユーザー」として匿名化して残るもの（他の方の回答を守るため）
+            「退会済みユーザー」として匿名化して残るもの（他の方のアドバイスを守るため）
           </p>
           <ul className="mt-1 list-disc space-y-0.5 pl-5">
             <li>
-              相談（回答のあるもの）:{" "}
+              相談（アドバイスの付いているもの）:{" "}
               <strong>{preview.consultations.anonymize}</strong> 件
             </li>
             <li>
@@ -111,6 +113,17 @@ export const WithdrawalSection = ({ preview }: Props) => {
           </ul>
         </div>
       </div>
+
+      <p className="mt-4 text-sm text-gray-600">
+        退会後に残る投稿の扱いや、復旧用の控えにデータが残る期間については
+        <Link
+          href={ROUTES.PRIVACY}
+          className="mx-1 font-medium text-teal-700 hover:underline"
+        >
+          プライバシーポリシー
+        </Link>
+        をご確認ください。
+      </p>
 
       <div className="mt-6">
         <button
