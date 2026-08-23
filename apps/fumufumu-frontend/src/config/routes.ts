@@ -3,6 +3,8 @@
  */
 export const ROUTES = {
   HOME: "/",
+  LOGIN: "/login",
+  SIGNUP: "/signup",
   PRIVACY: "/privacy",
   USER: "/user",
   USER_WITHDRAWAL: "/user/withdrawal",

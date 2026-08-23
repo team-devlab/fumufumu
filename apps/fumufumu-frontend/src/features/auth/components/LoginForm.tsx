@@ -1,9 +1,21 @@
 "use client";
 
-import Image from "next/image";
+import Link from "next/link";
 import { useState } from "react";
 import { Button } from "@/components/ui/Button";
+import { ROUTES } from "@/config/routes";
+import {
+  AUTH_CARD_CLASS,
+  AUTH_CONTAINER_CLASS,
+  AUTH_FOOTER_LINK_CLASS,
+  AUTH_FOOTER_TEXT_CLASS,
+  AUTH_INPUT_CLASS,
+  AUTH_LABEL_CLASS,
+  AUTH_NOTICE_CLASS,
+  AUTH_SUBMIT_BUTTON_CLASS,
+} from "../config/formStyles";
 import { useAuth } from "../hooks/useAuth";
+import { AuthFormHeader } from "./AuthFormHeader";
 
 type LoginFormProps = {
   reason?: string | null;
@@ -49,44 +61,27 @@ export const LoginForm = ({ reason, returnTo }: LoginFormProps) => {
   const showReasonMessage = Boolean(reasonInfo) && !error && !isLoading;
 
   return (
-    <div className="mx-auto w-[calc(100%-32px)] max-w-[424px]">
-      <div className="text-center">
-        <div className="mx-auto w-full max-w-[424px]">
-          <Image
-            src="/fumufumu-login-logo-lockup.svg"
-            alt="ふむふむ"
-            width={1100}
-            height={420}
-            priority
-            className="h-auto w-full"
-          />
-        </div>
-        <p className="mt-5 text-[18px] font-semibold tracking-tight text-[#0F9F92] sm:text-[19px]">
-          エンジニアのお悩み相談プラットフォーム
-        </p>
-      </div>
+    <div className={AUTH_CONTAINER_CLASS}>
+      <AuthFormHeader />
 
-      <div className="mt-9 rounded-[20px] border border-[rgba(126,231,220,0.6)] bg-white px-7 py-8 shadow-[0_12px_26px_rgba(13,85,77,0.12)] sm:px-8 sm:py-9">
+      <div className={`mt-9 ${AUTH_CARD_CLASS}`}>
         {showReasonMessage && reasonInfo && (
-          <div
-            className={`mb-5 rounded-xl border px-4 py-3 text-sm ${reasonInfo.className}`}
-          >
+          <div className={`${AUTH_NOTICE_CLASS} ${reasonInfo.className}`}>
             {reasonInfo.message}
           </div>
         )}
 
         {error && (
-          <div className="mb-5 rounded-xl border border-red-300 bg-red-50 px-4 py-3 text-sm text-red-800">
+          <div
+            className={`${AUTH_NOTICE_CLASS} border-red-300 bg-red-50 text-red-800`}
+          >
             {error}
           </div>
         )}
 
         <form onSubmit={handleSubmit} className="space-y-6">
           <div className="space-y-2">
-            <label
-              htmlFor="login-email"
-              className="block text-left text-[14px] font-semibold text-[#0F8F84]"
-            >
+            <label htmlFor="login-email" className={AUTH_LABEL_CLASS}>
               メールアドレス
             </label>
             <input
@@ -96,15 +91,12 @@ export const LoginForm = ({ reason, returnTo }: LoginFormProps) => {
               value={email}
               onChange={(e) => setEmail(e.target.value)}
               required
-              className="h-11 w-full rounded-xl border border-[rgba(126,231,220,0.5)] bg-white px-3 text-[14px] text-slate-700 placeholder:text-[13px] placeholder:text-slate-400 transition focus:border-[rgba(15,159,146,0.8)] focus:outline-none focus:ring-2 focus:ring-[rgba(15,159,146,0.2)]"
+              className={AUTH_INPUT_CLASS}
             />
           </div>
 
           <div className="space-y-2">
-            <label
-              htmlFor="login-password"
-              className="block text-left text-[14px] font-semibold text-[#0F8F84]"
-            >
+            <label htmlFor="login-password" className={AUTH_LABEL_CLASS}>
               パスワード
             </label>
             <input
@@ -114,19 +106,27 @@ export const LoginForm = ({ reason, returnTo }: LoginFormProps) => {
               value={password}
               onChange={(e) => setPassword(e.target.value)}
               required
-              className="h-11 w-full rounded-xl border border-[rgba(126,231,220,0.5)] bg-white px-3 text-[14px] text-slate-700 placeholder:text-[13px] placeholder:text-slate-400 transition focus:border-[rgba(15,159,146,0.8)] focus:outline-none focus:ring-2 focus:ring-[rgba(15,159,146,0.2)]"
+              className={AUTH_INPUT_CLASS}
             />
           </div>
 
           <Button
             type="submit"
             disabled={isLoading}
-            className="h-11 w-full rounded-xl bg-[#0F9F92] text-[15px] font-semibold text-white shadow-none transition hover:bg-[#0C8F84] disabled:bg-[#70CFC5]"
+            className={AUTH_SUBMIT_BUTTON_CLASS}
           >
             {isLoading ? "ログイン中..." : "ログイン"}
           </Button>
         </form>
       </div>
+
+      {/* LP から来て、まだアカウントを持っていない人がここで詰まらないようにする。 */}
+      <p className={AUTH_FOOTER_TEXT_CLASS}>
+        アカウントをお持ちでないですか？{" "}
+        <Link href={ROUTES.SIGNUP} className={AUTH_FOOTER_LINK_CLASS}>
+          アカウント作成
+        </Link>
+      </p>
     </div>
   );
 };
