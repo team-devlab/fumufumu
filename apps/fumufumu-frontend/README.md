@@ -54,8 +54,8 @@ DEPLOY_APPROVED=1 pnpm deploy:cf
 成功時の主な確認ポイント:
 
 - `Worker saved in .open-next/worker.js` が出ていること（OpenNext bundle が生成済み）
-- `Uploaded fumufumu-frontend (...)` が出ていること（wrangler の upload 完了）
-- `Deployed fumufumu-frontend triggers (...)` が出ていること
+- `Uploaded www (...)` が出ていること（wrangler の upload 完了。`www` は Worker 名で、設定ファイルの `name` と一致する）
+- `Deployed www triggers (...)` が出ていること
 - 末尾に `https://<frontend-production-url>` と `Current Version ID: ...` が表示されること
 - `env.BACKEND (fumufumu-worker)` が Bindings に列挙されていること（Service Binding 維持）
 
