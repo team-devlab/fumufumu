@@ -1,7 +1,7 @@
 import type { ConsultationRepository } from "@/repositories/consultation.repository";
 import type { ConsultationFilters, PaginationMeta, PaginationParams } from "@/types/consultation.types";
 import type { AdviceFilters } from "@/types/advice.types";
-import type { ConsultationResponse, ConsultationListResponse, ConsultationSavedResponse, AdviceSavedResponse } from "@/types/consultation.response";
+import type { ConsultationResponse, ConsultationListResponse, ConsultationSavedResponse, AdviceSavedResponse, ConsultationTagResponse } from "@/types/consultation.response";
 import type {
 	CreateConsultationContent,
 	UpdateConsultationContent,
@@ -84,7 +84,8 @@ export class ConsultationService {
             //    あえて同一のレスポンス型定義を使用し、一覧時はここを空にする運用としている。
             //    詳細取得APIで呼び出す場合に限り、上位メソッドで正しいデータに上書きされる。
            	response.advices = [];
-           	// tags も advices と同様、詳細取得時のみ上位メソッド(getConsultation)で実データに上書きする。
+           	// tags は一覧・詳細のどちらでも実データを返す。ここでは空配列で初期化し、
+           	// 一覧は listConsultations、詳細は getConsultation が上書きする。
            	response.tags = [];
         }
 
@@ -291,6 +292,25 @@ export class ConsultationService {
 		};
 	}
 
+	/**
+	 * 相談IDごとのタグ一覧を作る。タグを持たない相談はキーを持たない。
+	 * 並び順はクエリ側の sort_order → id をそのまま保つ。
+	 */
+	private async findTagsGroupedByConsultationId(
+		consultationIds: number[],
+	): Promise<Map<number, ConsultationTagResponse[]>> {
+		const rows = await this.repository.findTagsByConsultationIds(consultationIds);
+		const grouped = new Map<number, ConsultationTagResponse[]>();
+
+		for (const row of rows) {
+			const tagsOfConsultation = grouped.get(row.consultationId) ?? [];
+			tagsOfConsultation.push({ id: row.id, name: row.name });
+			grouped.set(row.consultationId, tagsOfConsultation);
+		}
+
+		return grouped;
+	}
+
 	async listConsultations(
 		filters?: ConsultationFilters,
 		pagination?: PaginationParams,
@@ -334,6 +354,15 @@ export class ConsultationService {
 			this.repository.count(secureFilters),
 		]);
 		const responses = consultationList.map(consultation => this.toConsultationResponse(consultation, false));
+
+		// 相談カードにタグを表示するため、一覧でも実データを返す(issue #193)。
+		// 相談ごとにクエリを撃たないよう、表示するページ分をまとめて引いて束ねる。
+		const tagsByConsultationId = await this.findTagsGroupedByConsultationId(
+			consultationList.map(consultation => consultation.id),
+		);
+		for (const response of responses) {
+			response.tags = tagsByConsultationId.get(response.id) ?? [];
+		}
 
 		return { 
 			data: responses,

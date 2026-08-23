@@ -3,7 +3,7 @@ import type { AdviceResponse } from "@/types/advice.response";
 import type { PaginationMeta } from "@/types/consultation.types";
 import type { ContentCheckStatus } from "@/db/schema/content-checks";
 
-// 相談詳細に含める、紐づくタグ（下書き編集画面でのプリロード用に id/name のみ）
+// 相談に紐づくタグ（表示と下書き編集画面のプリロードに使うため id/name のみ）
 export type ConsultationTagResponse = {
 	id: number;
 	name: string;
@@ -31,7 +31,8 @@ export type ConsultationResponse = {
 
     advices?: AdviceResponse[];
 	advice_pagination?: PaginationMeta;
-	// 詳細取得時のみ含める。一覧では付与しない（body/advices と同じ扱い）
+	// 一覧・詳細のどちらでも含める。相談カードにタグを表示するため(issue #193)。
+	// 一覧に追加したのはフィールドの追加のみで、既存の呼び出しは壊れない。
 	tags?: ConsultationTagResponse[];
 };
 

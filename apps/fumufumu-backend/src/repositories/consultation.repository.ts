@@ -415,6 +415,33 @@ export class ConsultationRepository {
 	}
 
 	/**
+	 * 複数の相談に紐づくタグをまとめて取得する（一覧表示用）
+	 *
+	 * 相談1件ごとに findTagsByConsultationId を呼ぶと件数分のクエリになるため、
+	 * まとめて1クエリで引き、呼び出し側で相談IDごとに束ねる。
+	 * 並び順は詳細取得と揃えて sort_order → id とする（ADR 006）。
+	 *
+	 * @param consultationIds - 対象の相談ID。空配列のときはクエリを撃たず空を返す
+	 */
+	async findTagsByConsultationIds(consultationIds: number[]) {
+		if (consultationIds.length === 0) {
+			return [];
+		}
+
+		return await this.db
+			.select({
+				consultationId: consultationTaggings.consultationId,
+				id: tags.id,
+				name: tags.name,
+				sortOrder: tags.sortOrder,
+			})
+			.from(consultationTaggings)
+			.innerJoin(tags, eq(consultationTaggings.tagId, tags.id))
+			.where(inArray(consultationTaggings.consultationId, consultationIds))
+			.orderBy(tags.sortOrder, tags.id);
+	}
+
+	/**
 	 * 相談一覧を取得する（RQB使用）
 	 * 
 	 * @param filters - フィルタ条件（オプショナル）
