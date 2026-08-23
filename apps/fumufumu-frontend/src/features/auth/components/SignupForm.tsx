@@ -3,6 +3,7 @@
 import Link from "next/link";
 import { useId, useState } from "react";
 import { Button } from "@/components/ui/Button";
+import { ROUTES } from "@/config/routes";
 import { useAuth } from "../hooks/useAuth";
 
 export const SignupForm = () => {
@@ -78,6 +79,20 @@ export const SignupForm = () => {
             ※8文字以上で入力してください
           </p>
         </div>
+
+        {/* 登録前にポリシーを読める状態にしておくための導線。
+            本文に体調や病気のことを書いた場合の扱いもポリシー側に書いてあるため、
+            アカウントを作る前に読めることが前提になる。 */}
+        <p className="text-xs text-gray-400 text-left mt-1 ml-1">
+          ※ご登録の前に、お預かりする情報の扱いをまとめた
+          <Link
+            href={ROUTES.PRIVACY}
+            className="mx-1 font-medium text-blue-600 hover:text-blue-700 hover:underline"
+          >
+            プライバシーポリシー
+          </Link>
+          をご確認ください
+        </p>
 
         <Button
           type="submit"

@@ -1,5 +1,6 @@
 import { cookies } from "next/headers";
 import { redirect } from "next/navigation";
+import { Footer } from "@/components/common/Footer";
 import { Header } from "./_components/Header";
 
 // Better Auth のセッション Cookie 名。
@@ -31,8 +32,15 @@ export default async function MainLayout({
     <div className="flex flex-col h-screen">
       <Header />
       <div className="flex flex-1 overflow-hidden">
-        <main className="flex-1 overflow-y-auto bg-gray-100 p-6">
-          {children}
+        {/* スクロールするのは main の中なので、フッターも同じ中に入れる。
+            外に出すと画面下に貼り付いて常時表示になってしまう。 */}
+        <main className="flex-1 overflow-y-auto bg-gray-100">
+          {/* 内容が短いページでフッターが画面の途中に浮かないよう、
+              最低でも表示領域の高さを確保して下端に寄せる。 */}
+          <div className="flex min-h-full flex-col">
+            <div className="flex-1 p-6">{children}</div>
+            <Footer />
+          </div>
         </main>
       </div>
     </div>
