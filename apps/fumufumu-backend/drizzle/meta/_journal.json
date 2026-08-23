@@ -85,6 +85,13 @@
       "when": 1783157599028,
       "tag": "0011_giant_oracle",
       "breakpoints": true
+    },
+    {
+      "idx": 12,
+      "version": "6",
+      "when": 1787482385201,
+      "tag": "0012_freezing_talon",
+      "breakpoints": true
     }
   ]
 }

@@ -1,5 +1,10 @@
 import { sql } from "drizzle-orm";
-import { sqliteTable, text, integer } from "drizzle-orm/sqlite-core";
+import {
+  sqliteTable,
+  text,
+  integer,
+  uniqueIndex,
+} from "drizzle-orm/sqlite-core";
 
 export const authUsers = sqliteTable("auth_users", {
   id: text("id").primaryKey(),
@@ -38,6 +43,11 @@ export const authSessions = sqliteTable("auth_sessions", {
 export const authAccounts = sqliteTable("auth_accounts", {
   id: text("id").primaryKey(),
   accountId: text("account_id").notNull(),
+  // Better Auth 1.7 から必須になった、認証方法の出所を表す列。
+  // メールとパスワードのみの構成では常に "local:credential" になる。
+  // 既定値を DB 側にも持たせているのは、1.7 へ上げる際に既存行を埋めるため
+  // (SQLite は既定値なしに NOT NULL 列を追加できない)。新規行は Better Auth が明示的に入れる。
+  issuer: text("issuer").notNull().default("local:credential"),
   providerId: text("provider_id").notNull(),
   userId: text("user_id")
     .notNull()
@@ -59,7 +69,13 @@ export const authAccounts = sqliteTable("auth_accounts", {
   updatedAt: integer("updated_at", { mode: "timestamp_ms" })
     .$onUpdate(() => /* @__PURE__ */ new Date())
     .notNull(),
-});
+}, (table) => [
+  // Better Auth 1.7 はアカウントの同一性を (issuer, accountId) の組で判定する。
+  uniqueIndex("uq_auth_accounts_issuer_account_id").on(
+    table.issuer,
+    table.accountId,
+  ),
+]);
 
 export const authVerifications = sqliteTable("auth_verifications", {
   id: text("id").primaryKey(),
