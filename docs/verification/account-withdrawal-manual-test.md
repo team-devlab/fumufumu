@@ -48,7 +48,15 @@
 | `apps/fumufumu-backend/.dev.vars` | `FRONTEND_URL` が空になり、**退会 API が常に 403** になる |
 | `apps/fumufumu-frontend/.env.local` | `NEXT_PUBLIC_API_URL` が既定値になる |
 
-remote D1 を見るときは、本番用の設定ファイルを `WRANGLER_D1_CONFIG` で指す。
+**`wrangler.local.jsonc` が本番用の設定でもある。** 名前に `.local` が付いていて紛らわしいが、
+`README.md` のデプロイ手順も `WRANGLER_DEPLOY_CONFIG=wrangler.local.jsonc` を渡している。
+本書の `--remote` のコマンドはこのファイルを指定している。
+
+なお `--config` を省くとコミット済みの `wrangler.jsonc` が読まれ、`YOUR_CLOUDFLARE_ACCOUNT_ID`
+というプレースホルダーがそのまま送られて失敗する（`code: 7003`）。**必ず `--config` を付ける。**
+
+`wrangler` が古いと remote D1 の操作が `code: 7403`（アカウント権限エラー）で失敗する。
+アカウントも権限も正しいのにこれが出たら、まず `wrangler` を更新する。
 
 ### 確認する環境
 
@@ -95,52 +103,50 @@ curl -s -c /tmp/wd-other.txt -X POST http://127.0.0.1:8787/api/auth/signup \
 **本番では画面から作るため id が返らない。** 確認1で使うので、退会する前に引いておく。
 
 ```bash
-pnpm exec wrangler d1 execute DB --remote --config "$WRANGLER_D1_CONFIG" --command "SELECT au.id AS auth_user_id, am.app_user_id FROM auth_users au JOIN auth_mappings am ON am.auth_user_id = au.id WHERE au.email = 'wd-target@example.com';"
+pnpm exec wrangler d1 execute DB --remote --config wrangler.local.jsonc --command "SELECT au.id AS auth_user_id, am.app_user_id FROM auth_users au JOIN auth_mappings am ON am.auth_user_id = au.id WHERE au.email = 'wd-target@example.com';"
 ```
 
 ### 相談とアドバイスを1組作る
 
 **この順序で行う。** アドバイスは投稿チェックで**公開になった**相談にしか付けられず、
-投稿チェック中でも公開見送りでも 404 になる。
+投稿チェック中でも公開見送りでも 404 になる。相談とアドバイスは画面から投稿する。
 
-1. タグの id を確認する。**公開する相談はタグが1個以上必須**で、0個だと 400
-   （エラー文は汎用の「入力内容に誤りがあります」なので原因が分かりにくい）。
-
-```bash
-curl -s -b /tmp/wd-target.txt http://127.0.0.1:8787/api/tags | jq
-```
-
-0件なら追加する。`tags:add` は `.sqlite` を直接開く実装なので、**追加後に必ず
-`GET /api/tags` で見えているか確かめる**（別のファイルに入ることがある）。
+**1. タグがあるか確認する。** 公開する相談はタグが1個以上必須で、0個だと 400 になる
+（エラー文は汎用の「入力内容に誤りがあります」なので原因が分かりにくい）。3個を超えても 400。
+実在しない id を渡した場合は 409 で「存在しないタグIDが含まれています」と返る。
 
 ```bash
-pnpm --dir apps/fumufumu-backend tags:add キャリア
+pnpm exec wrangler d1 execute DB --remote --config wrangler.local.jsonc --command "SELECT id, name, sort_order FROM tags ORDER BY sort_order;"
 ```
 
-2. 本人で公開の相談を作る（本文は10文字以上）。`tagIds` には手順1で見た id を入れる。
+0件なら投入する。**`pnpm tags:add` は本番では使えない** ―― `better-sqlite3` でローカルの
+`.sqlite` を直接開く実装のため、本番には届かない。SQL で入れる。
 
 ```bash
-curl -s -b /tmp/wd-target.txt -X POST http://127.0.0.1:8787/api/consultations \
-  -H 'Content-Type: application/json' \
-  -d '{"title":"退会確認用の相談","body":"退会したあとの表示を確認するための相談です。","draft":false,"tagIds":[<タグのid>]}' | jq
+pnpm exec wrangler d1 execute DB --remote --config wrangler.local.jsonc --command "INSERT INTO tags (name, sort_order) VALUES ('キャリア',10);"
 ```
 
-3. その相談の投稿チェックを終わらせて公開にする。管理画面（`/admin`）からでもよい。
+**2. 退会させる本人で、公開の相談を作る。** 本文は10文字以上。タグを1つ以上選ぶ。
+
+**3. その相談を公開状態にする。**
+
+**管理画面（`/admin`）ではなく SQL で行う。** 管理画面から操作すると投稿チェック完了の
+通知メールが Resend 社を経由して送信され、テスト用の存在しないアドレスへ送ろうとする。
+SQL ならそれを避けられる。条件は API 側の実装と揃えてある（`reason` を空にし、
+`pending` のときだけ更新する。二重処理を防ぐため）。
 
 ```bash
-pnpm exec wrangler d1 execute DB --local --config wrangler.local.jsonc --command "UPDATE content_checks SET status='approved', checked_at=(cast(unixepoch('subsecond')*1000 as integer)), updated_at=(cast(unixepoch('subsecond')*1000 as integer)) WHERE target_type='consultation' AND target_id=<相談のid>;"
+pnpm exec wrangler d1 execute DB --remote --config wrangler.local.jsonc --command "UPDATE content_checks SET status='approved', reason=NULL, checked_at=(cast(unixepoch('subsecond')*1000 as integer)), updated_at=(cast(unixepoch('subsecond')*1000 as integer)) WHERE target_type='consultation' AND target_id=<相談のid> AND status='pending';"
 ```
 
-4. **アドバイス役**でその相談にアドバイスを書く。
+SQL で済ませると `notified_at` が NULL のまま残るが、これは「公開されたが未通知」という
+正常な状態である。定期実行（cron）は設定されていないため、放置しても送信されない。
 
-```bash
-curl -s -b /tmp/wd-other.txt -X POST http://127.0.0.1:8787/api/consultations/<相談のid>/advice \
-  -H 'Content-Type: application/json' \
-  -d '{"body":"退会確認用のアドバイスです。","draft":false}' | jq
-```
+**4. アドバイス役でその相談にアドバイスを書く。** 自分が書いたアドバイスは「ほかの人からの
+アドバイス」に数えないため、必ず別のアカウントから書く。
 
-5. そのアドバイスも公開にする（`target_type='advice'`）。公開になっていないと
-   「表示されているほかの人のアドバイス」に数えられず、相談が削除側に回ってしまう。
+**5. そのアドバイスも同じ SQL で公開にする**（`target_type='advice'` に変える）。公開に
+なっていないと「表示されているほかの人のアドバイス」に数えられず、相談が削除側に回る。
 
 作った id を控える。
 
@@ -148,6 +154,15 @@ curl -s -b /tmp/wd-other.txt -X POST http://127.0.0.1:8787/api/consultations/<�
 |---|---|
 | 相談（アドバイス付き。匿名化して残る） | |
 | アドバイス（アドバイス役が書いた。無傷で残る） | |
+
+### 引き返せる最後の地点
+
+退会させる本人で `/user/withdrawal` を開き、
+**「匿名化して残るもの・相談（アドバイスの付いているもの）」が 1 件**になっていることを確かめる。
+削除側はすべて 0 件になるはず。
+
+ここが「削除されるもの・相談: 1 件」になっていたら、アドバイスが公開になっていないか、
+本人がアドバイスを書いてしまっている。**その状態で退会すると確認3が成立しない。**
 
 ---
 
@@ -158,7 +173,7 @@ curl -s -b /tmp/wd-other.txt -X POST http://127.0.0.1:8787/api/consultations/<�
 #### 1-1. 退会前の行数を控える
 
 ```bash
-pnpm exec wrangler d1 execute DB --remote --config "$WRANGLER_D1_CONFIG" --command "SELECT (SELECT COUNT(*) FROM users WHERE id=<app_user_id>) AS users, (SELECT COUNT(*) FROM auth_mappings WHERE app_user_id=<app_user_id>) AS mappings, (SELECT COUNT(*) FROM auth_users WHERE id='<auth_user_id>') AS auth_users, (SELECT COUNT(*) FROM auth_sessions WHERE user_id='<auth_user_id>') AS sessions, (SELECT COUNT(*) FROM auth_accounts WHERE user_id='<auth_user_id>') AS accounts;"
+pnpm exec wrangler d1 execute DB --remote --config wrangler.local.jsonc --command "SELECT (SELECT COUNT(*) FROM users WHERE id=<app_user_id>) AS users, (SELECT COUNT(*) FROM auth_mappings WHERE app_user_id=<app_user_id>) AS mappings, (SELECT COUNT(*) FROM auth_users WHERE id='<auth_user_id>') AS auth_users, (SELECT COUNT(*) FROM auth_sessions WHERE user_id='<auth_user_id>') AS sessions, (SELECT COUNT(*) FROM auth_accounts WHERE user_id='<auth_user_id>') AS accounts;"
 ```
 
 Cloudflare のダッシュボードの D1 コンソールから同じ SQL を流してもよい。
@@ -200,6 +215,8 @@ Cloudflare のダッシュボードの D1 コンソールから同じ SQL を流
 **確認ポイント:**
 
 - 403 が出たら、開いている URL が `FRONTEND_URL` と完全に一致しているか確認する
+- 本番では API はフロントと同じドメイン（`/api/*` をフロントの Worker がサービスバインディング
+  経由でバックエンドへ渡す）。ブラウザから操作していれば Origin は自然に一致する
 - 開発者ツールのネットワークタブで `DELETE /api/users/me` が 200 を返し、
   レスポンスに `Set-Cookie` が付いていること
 
@@ -223,7 +240,7 @@ Cloudflare のダッシュボードの D1 コンソールから同じ SQL を流
 データベース側も確認する。
 
 ```bash
-pnpm exec wrangler d1 execute DB --remote --config "$WRANGLER_D1_CONFIG" --command "SELECT id, title, author_id FROM consultations WHERE id=<相談のid>;"
+pnpm exec wrangler d1 execute DB --remote --config wrangler.local.jsonc --command "SELECT id, title, author_id FROM consultations WHERE id=<相談のid>;"
 ```
 
 **期待結果:** 行が返り、`author_id` が `NULL` になっている
@@ -282,6 +299,35 @@ Origin 検証で弾かれている。原因は3つ。
 
 `apps/fumufumu-backend/scripts/seed.ts` はデータベースのファイルパスをベタ書きしており、
 現在使われているファイルと異なる。テストデータは本書のとおり API か画面から作る。
+
+---
+
+## 🧹 確認後の片付け
+
+**本番にテストデータが残る。** 確認3は「退会しても相談が残る」ことを見る確認なので、
+匿名化された相談とアドバイス役のアカウントが残ったままになる。**公開前に必ず消す。**
+
+**1. 相談を削除する。** `content_checks` は外部キーを持たないため明示的に消す。アドバイスと
+タグの紐付けは相談の削除で連鎖削除される。
+
+```bash
+pnpm exec wrangler d1 execute DB --remote --config wrangler.local.jsonc --command "DELETE FROM content_checks WHERE (target_type='consultation' AND target_id=<相談のid>) OR (target_type='advice' AND target_id=<アドバイスのid>);"
+```
+
+```bash
+pnpm exec wrangler d1 execute DB --remote --config wrangler.local.jsonc --command "DELETE FROM consultations WHERE id=<相談のid>;"
+```
+
+**2. アドバイス役のアカウントを退会させる。** 画面から退会すればよい。1でアドバイスが消えて
+いるので投稿0件になり、何も残らない。
+
+**3. 残っていないことを確認する。**
+
+```bash
+pnpm exec wrangler d1 execute DB --remote --config wrangler.local.jsonc --command "SELECT (SELECT COUNT(*) FROM consultations) AS consultations, (SELECT COUNT(*) FROM advices) AS advices, (SELECT COUNT(*) FROM content_checks) AS content_checks;"
+```
+
+投入したタグは残してよい（本番に必要なマスタデータ）。
 
 ---
 
