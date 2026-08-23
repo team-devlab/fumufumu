@@ -10,12 +10,14 @@
 
 | ディレクトリ | 内容 |
 | :---- | :---- |
-| `apps/fumufumu-frontend/` | 画面。Next.js 16（App Router）を OpenNext 経由で Cloudflare Workers に載せる。Tailwind CSS、Zustand |
+| `apps/fumufumu-frontend/` | 画面。Next.js（App Router）を OpenNext 経由で Cloudflare Workers に載せる。Tailwind CSS、Zustand |
 | `apps/fumufumu-backend/` | API。Cloudflare Workers + Hono。データは D1（Drizzle ORM）、認証は Better Auth |
 
 ブラウザから見て同一のドメインになるよう、フロントエンドの Worker が `/api/*` をバックエンドの Worker へ内部で転送している（経緯は `docs/design/adr/008-frontend-deployment-platform-and-split-cicd.md`）。
 
 パッケージマネージャーは pnpm。リンターとフォーマッタは Biome（現在の対象はフロントエンドのみ）。
+
+各ライブラリのバージョンは各アプリの `package.json` を参照する。README には書かない（更新のたびに古くなり、古い記述は書いていないより誤解を招くため）。
 
 ## ローカルで動かす
 
