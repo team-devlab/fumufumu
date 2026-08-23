@@ -737,7 +737,9 @@ describe('Consultations API - Detail (GET /:id)', () => {
     expect(attackerBody).not.toHaveProperty('tags');
   });
 
-  it('相談一覧取得: 一覧では tags を付与しない（詳細取得のみ）', async () => {
+  // 一覧は以前 tags を付与していなかったが、相談カードにタグを表示するため
+  // 一覧でも返すようにした(issue #193)。一覧の中身は list.test.ts で検証する。
+  it('相談一覧取得: 一覧でも tags を配列で返す', async () => {
     const listRes = await app.fetch(createApiRequest('/api/consultations', 'GET', {
       cookie: user.cookie,
     }), env);
@@ -746,7 +748,7 @@ describe('Consultations API - Detail (GET /:id)', () => {
     expect(Array.isArray(list.data)).toBe(true);
     expect(list.data.length).toBeGreaterThan(0);
     for (const item of list.data) {
-      expect(item.tags).toBeUndefined();
+      expect(Array.isArray(item.tags)).toBe(true);
     }
   });
 });

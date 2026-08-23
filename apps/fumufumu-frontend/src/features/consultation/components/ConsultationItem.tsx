@@ -3,15 +3,13 @@ import type React from "react";
 import { ROUTES } from "@/config/routes";
 import { CONSULTATION_LABELS } from "@/features/consultation/config/constants";
 import type { Consultation } from "@/features/consultation/types";
+import { formatDateTimeInJapan } from "@/lib/datetime";
 
 type Props = {
   consultation: Consultation;
 };
 
 export const ConsultationItem: React.FC<Props> = ({ consultation }) => {
-  // TODO: 日付フォーマット用のライブラリ(date-fns等)を導入して動的に計算する
-  const timeAgo = "2時間前";
-
   const isResolved = !!consultation.solved_at;
 
   return (
@@ -43,7 +41,9 @@ export const ConsultationItem: React.FC<Props> = ({ consultation }) => {
                 {consultation.author?.name ??
                   CONSULTATION_LABELS.ANONYMOUS_USER}
               </span>
-              <span className="text-xs text-gray-400">{timeAgo}</span>
+              <span className="text-xs text-gray-400">
+                {formatDateTimeInJapan(consultation.created_at)}
+              </span>
             </div>
           </div>
 
@@ -65,18 +65,19 @@ export const ConsultationItem: React.FC<Props> = ({ consultation }) => {
           </p>
         </div>
 
-        {/* Footer */}
-        <div className="flex items-center justify-between">
-          <div className="flex items-center justify-between">
-            <div className="flex space-x-2">
-              {/* TODO: タグ機能はBackend未実装のため仮の値を表示 */}
-              <span className="px-3 py-1 bg-gray-100 text-gray-600 text-xs rounded-full">
-                {/* MOCKデータを仮利用 */}
-                {CONSULTATION_LABELS.MOCK_TAG_CAREER}
+        {/* Footer: タグ。未設定のときは行ごと出さない */}
+        {consultation.tags && consultation.tags.length > 0 && (
+          <div className="flex flex-wrap gap-2">
+            {consultation.tags.map((tag) => (
+              <span
+                key={tag.id}
+                className="px-3 py-1 bg-gray-100 text-gray-600 text-xs rounded-full"
+              >
+                {tag.name}
               </span>
-            </div>
+            ))}
           </div>
-        </div>
+        )}
       </div>
     </Link>
   );

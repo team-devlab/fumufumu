@@ -131,6 +131,99 @@ describe('Consultations API - List & Filtering', () => {
     expect(firstItem.author).not.toHaveProperty('updatedAt');
   });
 
+  // --- 一覧のタグ(issue #193: 一覧が仮の固定値を出していた) ---
+
+  describe('タグ(issue #193: 一覧でも実データを返す)', () => {
+    const createTag = async (name: string, sortOrder: number) => {
+      await env.DB
+        .prepare('INSERT INTO tags (name, sort_order) VALUES (?, ?)')
+        .bind(name, sortOrder)
+        .run();
+      const row = await env.DB
+        .prepare('SELECT id FROM tags WHERE name = ?')
+        .bind(name)
+        .first() as { id: number } | null;
+      expect(row?.id).toBeDefined();
+      return { id: row!.id, name };
+    };
+
+    const createConsultationWithTags = async (title: string, tagIds: number[]) => {
+      const res = await app.fetch(createApiRequest('/api/consultations', 'POST', {
+        cookie: user.cookie,
+        body: {
+          title,
+          body: `${title} のためのタグ検証用の本文です（10文字以上）。`,
+          draft: false,
+          tagIds,
+        },
+      }), env);
+      expect(res.status).toBe(201);
+      const created = await res.json() as { id: number };
+      await approveConsultation(created.id);
+      return created.id;
+    };
+
+    const fetchListItem = async (consultationId: number) => {
+      const res = await app.fetch(createApiRequest('/api/consultations', 'GET', {
+        cookie: user.cookie,
+      }), env);
+      expect(res.status).toBe(200);
+      const body = await res.json() as { data: Array<{ id: number; tags?: Array<{ id: number; name: string }> }> };
+      const item = body.data.find((candidate) => candidate.id === consultationId);
+      expect(item).toBeDefined();
+      return item!;
+    };
+
+    it('紐づくタグを id/name で返す', async () => {
+      const tag = await createTag(`list-tags-single-${Date.now()}`, 10);
+      const consultationId = await createConsultationWithTags('タグ1件の相談', [tag.id]);
+
+      const item = await fetchListItem(consultationId);
+
+      expect(item.tags).toEqual([{ id: tag.id, name: tag.name }]);
+    });
+
+    it('複数タグは sort_order の順で返す', async () => {
+      const later = await createTag(`list-tags-later-${Date.now()}`, 90);
+      const earlier = await createTag(`list-tags-earlier-${Date.now()}`, 20);
+      // 登録順とは逆になる並びを渡し、sort_order で並ぶことを確かめる
+      const consultationId = await createConsultationWithTags('タグ複数の相談', [later.id, earlier.id]);
+
+      const item = await fetchListItem(consultationId);
+
+      expect(item.tags).toEqual([
+        { id: earlier.id, name: earlier.name },
+        { id: later.id, name: later.name },
+      ]);
+    });
+
+    // 公開相談はタグが1個以上必須だが、下書きはタグなしを許している
+    // (consultation-tag.rule.ts)。タグを持たない相談はこの経路で実際に起こる。
+    it('タグを持たない下書きは空配列を返す', async () => {
+      const createRes = await app.fetch(createApiRequest('/api/consultations', 'POST', {
+        cookie: user.cookie,
+        body: {
+          title: 'タグなしの下書き',
+          body: 'タグを付けずに保存した下書きの本文です（10文字以上）。',
+          draft: true,
+        },
+      }), env);
+      expect(createRes.status).toBe(201);
+      const created = await createRes.json() as { id: number };
+
+      const listRes = await app.fetch(createApiRequest('/api/consultations', 'GET', {
+        cookie: user.cookie,
+        queryParams: { draft: 'true' },
+      }), env);
+      expect(listRes.status).toBe(200);
+      const body = await listRes.json() as { data: Array<{ id: number; tags?: unknown }> };
+      const item = body.data.find((candidate) => candidate.id === created.id);
+
+      expect(item).toBeDefined();
+      expect(item!.tags).toEqual([]);
+    });
+  });
+
   it('フィルタ: solved=true: 解決済みの相談のみを取得できる', async () => {
     const req = createApiRequest('/api/consultations', 'GET', {
       cookie: user.cookie,
