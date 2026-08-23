@@ -1,4 +1,5 @@
 import { CONSULTATION_LABELS } from "@/features/consultation/config/constants";
+import { formatDateTimeInJapan } from "@/lib/datetime";
 import type { ConsultationDetail } from "../types";
 
 type Props = {
@@ -6,17 +7,7 @@ type Props = {
 };
 
 export const ConsultationQuestionCard = ({ consultation }: Props) => {
-  // TODO: アプリ全体で日付フォーマット処理を統一する（例: date-fnsの導入など）。現在は暫定的にtoLocaleStringを使用。
-  const formattedDate = new Date(consultation.created_at).toLocaleString(
-    "ja-JP",
-    {
-      year: "numeric",
-      month: "2-digit",
-      day: "2-digit",
-      hour: "2-digit",
-      minute: "2-digit",
-    },
-  );
+  const formattedDate = formatDateTimeInJapan(consultation.created_at);
 
   return (
     // 一覧画面 (ConsultationItem) と同じスタイルベースを使用
@@ -61,13 +52,19 @@ export const ConsultationQuestionCard = ({ consultation }: Props) => {
         {consultation.body}
       </div>
 
-      {/* タグ (今回は仮置き) */}
-      <div className="flex gap-2">
-        {/* TODO: タグ機能はバックエンド未実装のため、仮の静的値を表示 */}
-        <span className="px-3 py-1 bg-teal-600 text-white text-sm font-medium rounded-full">
-          #React
-        </span>
-      </div>
+      {/* タグ。未設定のときは行ごと出さない */}
+      {consultation.tags.length > 0 && (
+        <div className="flex flex-wrap gap-2">
+          {consultation.tags.map((tag) => (
+            <span
+              key={tag.id}
+              className="px-3 py-1 bg-teal-600 text-white text-sm font-medium rounded-full"
+            >
+              #{tag.name}
+            </span>
+          ))}
+        </div>
+      )}
     </div>
   );
 };

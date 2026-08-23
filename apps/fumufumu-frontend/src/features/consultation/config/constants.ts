@@ -25,7 +25,6 @@ export const CONSULTATION_LABELS = {
   // 一覧表示用
   STATUS_SOLVED: "解決済み",
   ANONYMOUS_USER: "退会済みユーザー",
-  MOCK_TAG_CAREER: "キャリア", // 仮実装用
 } as const;
 
 export const STORAGE_KEYS = {

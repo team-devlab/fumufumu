@@ -39,6 +39,11 @@ export interface Consultation {
    * additive: 未指定の可能性があるため optional。
    */
   review_status?: ReviewStatus;
+  /**
+   * 相談に紐づくタグ。相談一覧 GET /api/consultations は常に配列を返す(issue #193)。
+   * 管理画面の投稿チェック一覧など、この型を共有しつつタグを返さない経路があるため optional。
+   */
+  tags?: ConsultationFormTag[];
 }
 
 /**
@@ -173,8 +178,8 @@ export interface ConsultationDetail extends Consultation {
   advices: Advice[];
 
   /**
-   * 相談に紐づくタグ（下書き編集画面でのプリロード用）。
-   * 詳細取得時のみ付与され、タグ未設定なら空配列。
+   * 相談に紐づくタグ。詳細取得では必ず付与され、タグ未設定なら空配列。
+   * 詳細画面の表示と、下書き編集画面のプリロードに使う。
    */
   tags: ConsultationFormTag[];
 }
