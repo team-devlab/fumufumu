@@ -1,6 +1,6 @@
 ## 現在の production 環境
 
-- Worker URL: `https://fumufumu-frontend.fumufumu.workers.dev`
+- Worker URL: `https://www.fumufumu.workers.dev`（Worker 名 `www` + アカウントのサブドメイン `fumufumu`）
 - backend (`fumufumu-worker`) を **Service Binding 経由** で同一 origin として扱う構成（ADR 008 §4.6 / PR #128）。`worker.ts` の custom worker が `/api/*` を `env.BACKEND.fetch(...)` に振り分け、それ以外を OpenNext (Next.js) でレンダリングする。
 - Cloudflare account / Worker 名 / Service Binding (`services` セクション) 等は git ignored の `wrangler.local.jsonc` で管理（リポジトリには `wrangler.local.jsonc.example` のみ）。
 - Cloudflare plan: Free。
